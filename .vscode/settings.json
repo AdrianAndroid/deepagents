@@ -67,7 +67,33 @@
     "editor.insertSpaces": true
   },
   "python.terminal.activateEnvironment": false,
-  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.defaultInterpreterPath": "./libs/code/.venv/bin/python",
+  "ty.interpreter": [
+    "./libs/code/.venv/bin/python"
+  ],
+  "ty.configuration": {
+    "environment": {
+      "python": "./libs/code/.venv",
+      "root": [
+        "./libs/code",
+        "./libs/deepagents",
+        "./libs/partners/daytona",
+        "./libs/partners/modal",
+        "./libs/partners/quickjs",
+        "./libs/partners/runloop",
+        "./libs/partners/vercel"
+      ],
+      "extra-paths": [
+        "./libs/deepagents",
+        "./libs/partners/daytona",
+        "./libs/partners/modal",
+        "./libs/partners/quickjs",
+        "./libs/partners/runloop",
+        "./libs/partners/vercel"
+      ],
+      "python-version": "3.11"
+    }
+  },
   "github.copilot.chat.commitMessageGeneration.instructions": [
     {
       "file": ".github/workflows/pr_lint.yml"
