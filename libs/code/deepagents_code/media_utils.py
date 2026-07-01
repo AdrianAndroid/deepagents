@@ -143,8 +143,9 @@ def _get_windows_clipboard_image() -> ImageData | None:
             return None
 
         # Read the image file
-        if pathlib.Path(temp_path).exists() and pathlib.Path(temp_path).stat().st_size > 0:
-            image_bytes = pathlib.Path(temp_path).read_bytes()
+        temp_file = pathlib.Path(temp_path)
+        if temp_file.exists() and temp_file.stat().st_size > 0:
+            image_bytes = temp_file.read_bytes()
             try:
                 Image.open(io.BytesIO(image_bytes))
                 base64_data = base64.b64encode(image_bytes).decode("utf-8")
@@ -154,7 +155,11 @@ def _get_windows_clipboard_image() -> ImageData | None:
                     placeholder="[image]",
                 )
             except (UnidentifiedImageError, OSError) as e:
-                logger.debug("Invalid image data from Windows clipboard: %s", e, exc_info=True)
+                logger.debug(
+                    "Invalid image data from Windows clipboard: %s",
+                    e,
+                    exc_info=True,
+                )
         return None
     finally:
         # Clean up temp file
@@ -200,7 +205,11 @@ def _get_linux_clipboard_image() -> ImageData | None:
                             placeholder="[image]",
                         )
                     except (UnidentifiedImageError, OSError) as e:
-                        logger.debug("Invalid image data from wl-paste: %s", e, exc_info=True)
+                        logger.debug(
+                            "Invalid image data from wl-paste: %s",
+                            e,
+                            exc_info=True,
+                        )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
 
@@ -234,7 +243,11 @@ def _get_linux_clipboard_image() -> ImageData | None:
                             placeholder="[image]",
                         )
                     except (UnidentifiedImageError, OSError) as e:
-                        logger.debug("Invalid image data from xclip: %s", e, exc_info=True)
+                        logger.debug(
+                            "Invalid image data from xclip: %s",
+                            e,
+                            exc_info=True,
+                        )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
 
@@ -254,9 +267,16 @@ def get_clipboard_image() -> ImageData | None:
     """
     if sys.platform == "darwin":
         return _get_macos_clipboard_image()
-    elif sys.platform == "win32":
+    if sys.platform == "win32":
         return _get_windows_clipboard_image()
-    elif sys.platform.startswith("linux"):
+    if sys.platform == "linux":
+        logger.warning(
+            "Clipboard image paste is not supported on %s. "
+            "You can still attach images by dragging and dropping file paths.",
+            sys.platform,
+        )
+        return None
+    if sys.platform.startswith("linux"):
         return _get_linux_clipboard_image()
     logger.warning(
         "Clipboard image paste is not supported on %s. "

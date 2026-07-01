@@ -1215,7 +1215,6 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
             ModelConfig,
             get_credential_env_var,
             resolve_env_var,
-            resolved_env_var_name,
         )
 
         base_url = ModelConfig.load().get_base_url(provider)
@@ -1225,6 +1224,10 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
         if not key_env:
             return None
         key = resolve_env_var(key_env)
+        resolved_key_env = key_env
+        prefixed_key_env = f"DEEPAGENTS_CODE_{key_env}"
+        if os.environ.get(prefixed_key_env) == key:
+            resolved_key_env = prefixed_key_env
     except Exception:
         # The wrapped config/credential reads are not expected to raise (they
         # degrade to empty/None internally), so reaching here signals API drift
@@ -1234,7 +1237,7 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
         return None
     if not key or key.startswith(_LANGSMITH_KEY_PREFIX):
         return None
-    return resolved_env_var_name(key_env)
+    return resolved_key_env
 
 
 def _build_agent_error_body(

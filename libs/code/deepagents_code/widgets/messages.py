@@ -101,7 +101,7 @@ _MAX_INLINE_ARGS = 3
 
 # Truncation limits for display
 _MAX_TODO_CONTENT_LEN = 70
-_DEFAULT_TODO_WRAP_WIDTH = 80
+_DEFAULT_TODO_WRAP_WIDTH = 60
 _TODO_WRAP_GUARD_COLUMNS = 4
 _MAX_WEB_CONTENT_LEN = 100
 
@@ -1580,10 +1580,13 @@ class ToolCallMessage(Vertical):
             Width available for todo content wrapping.
         """
         display_width = 0
-        for widget in (self._full_widget, self._preview_widget, self):
+        for widget in (self._full_widget, self._preview_widget):
             if widget and widget.is_mounted and widget.size.width > 0:
                 display_width = widget.size.width
                 break
+
+        if not display_width and self.is_mounted and self.size.width > 0:
+            display_width = self.size.width
 
         if not display_width:
             try:
