@@ -104,19 +104,162 @@ class VideoData:
         )
 
 
+def _get_windows_clipboard_image() -> ImageData | None:
+    """Get clipboard image on Windows using PowerShell.
+
+    Returns:
+        ImageData if an image is found, None otherwise.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    powershell_path = _get_executable("powershell")
+    if not powershell_path:
+        return None
+
+    # Create temp file for image
+    fd, temp_path = tempfile.mkstemp(suffix=".png")
+    os.close(fd)
+
+    try:
+        # PowerShell script to get clipboard image and save to file
+        script = f"""
+        Add-Type -AssemblyName System.Windows.Forms
+        if ([System.Windows.Forms.Clipboard]::ContainsImage()) {{
+            $image = [System.Windows.Forms.Clipboard]::GetImage()
+            $image.Save('{temp_path}', [System.Drawing.Imaging.ImageFormat]::Png)
+            Write-Output "success"
+        }}
+        """
+
+        result = subprocess.run(  # noqa: S603
+            [powershell_path, "-Command", script],
+            capture_output=True,
+            check=False,
+            timeout=3,
+            text=True,
+        )
+
+        if result.returncode != 0 or "success" not in result.stdout:
+            return None
+
+        # Read the image file
+        if pathlib.Path(temp_path).exists() and pathlib.Path(temp_path).stat().st_size > 0:
+            image_bytes = pathlib.Path(temp_path).read_bytes()
+            try:
+                Image.open(io.BytesIO(image_bytes))
+                base64_data = base64.b64encode(image_bytes).decode("utf-8")
+                return ImageData(
+                    base64_data=base64_data,
+                    format="png",
+                    placeholder="[image]",
+                )
+            except (UnidentifiedImageError, OSError) as e:
+                logger.debug("Invalid image data from Windows clipboard: %s", e, exc_info=True)
+        return None
+    finally:
+        # Clean up temp file
+        if pathlib.Path(temp_path).exists():
+            pathlib.Path(temp_path).unlink()
+
+
+def _get_linux_clipboard_image() -> ImageData | None:
+    """Get clipboard image on Linux using xclip (X11) or wl-paste (Wayland).
+
+    Returns:
+        ImageData if an image is found, None otherwise.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    # Try wl-paste first (Wayland)
+    wl_paste_path = _get_executable("wl-paste")
+    if wl_paste_path:
+        try:
+            # Check if clipboard has image
+            check_result = subprocess.run(  # noqa: S603
+                [wl_paste_path, "-l"],
+                capture_output=True,
+                check=False,
+                timeout=2,
+                text=True,
+            )
+            if check_result.returncode == 0 and "image/" in check_result.stdout:
+                # Get image data
+                result = subprocess.run(  # noqa: S603
+                    [wl_paste_path, "-t", "image/png"],
+                    capture_output=True,
+                    check=False,
+                    timeout=3,
+                )
+                if result.returncode == 0 and result.stdout:
+                    try:
+                        Image.open(io.BytesIO(result.stdout))
+                        base64_data = base64.b64encode(result.stdout).decode("utf-8")
+                        return ImageData(
+                            base64_data=base64_data,
+                            format="png",
+                            placeholder="[image]",
+                        )
+                    except (UnidentifiedImageError, OSError) as e:
+                        logger.debug("Invalid image data from wl-paste: %s", e, exc_info=True)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+    # Fall back to xclip (X11)
+    xclip_path = _get_executable("xclip")
+    if xclip_path:
+        try:
+            # Check if clipboard has image
+            check_result = subprocess.run(  # noqa: S603
+                [xclip_path, "-selection", "clipboard", "-t", "TARGETS", "-o"],
+                capture_output=True,
+                check=False,
+                timeout=2,
+                text=True,
+            )
+            if check_result.returncode == 0 and "image/png" in check_result.stdout:
+                # Get image data
+                result = subprocess.run(  # noqa: S603
+                    [xclip_path, "-selection", "clipboard", "-t", "image/png", "-o"],
+                    capture_output=True,
+                    check=False,
+                    timeout=3,
+                )
+                if result.returncode == 0 and result.stdout:
+                    try:
+                        Image.open(io.BytesIO(result.stdout))
+                        base64_data = base64.b64encode(result.stdout).decode("utf-8")
+                        return ImageData(
+                            base64_data=base64_data,
+                            format="png",
+                            placeholder="[image]",
+                        )
+                    except (UnidentifiedImageError, OSError) as e:
+                        logger.debug("Invalid image data from xclip: %s", e, exc_info=True)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+    return None
+
+
 def get_clipboard_image() -> ImageData | None:
     """Attempt to read an image from the system clipboard.
 
-    Supports macOS via `pngpaste` or `osascript`.
+    Supports:
+    - macOS via `pngpaste` or `osascript`
+    - Windows via PowerShell
+    - Linux via `wl-paste` (Wayland) or `xclip` (X11)
 
     Returns:
         ImageData if an image is found, None otherwise.
     """
     if sys.platform == "darwin":
         return _get_macos_clipboard_image()
+    elif sys.platform == "win32":
+        return _get_windows_clipboard_image()
+    elif sys.platform.startswith("linux"):
+        return _get_linux_clipboard_image()
     logger.warning(
         "Clipboard image paste is not supported on %s. "
-        "Only macOS is currently supported. "
         "You can still attach images by dragging and dropping file paths.",
         sys.platform,
     )

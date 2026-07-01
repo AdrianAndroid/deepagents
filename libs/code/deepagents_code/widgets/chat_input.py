@@ -15,11 +15,14 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.content import Content
 from textual.css.query import NoMatches
+from textual.events import Paste
 from textual.geometry import Offset, Size
 from textual.message import Message
 from textual.reactive import reactive
 from textual.strip import Strip
 from textual.widgets import Static, TextArea
+
+from deepagents_code.media_utils import get_clipboard_image
 
 from deepagents_code import theme
 from deepagents_code.command_registry import SLASH_COMMANDS, CommandEntry
@@ -753,6 +756,8 @@ class ChatTextArea(TextArea):
             return
         await super()._on_mouse_down(event)
 
+
+
     def set_completion_active(self, *, active: bool) -> None:
         """Set whether completion suggestions are visible."""
         self._completion_active = active
@@ -1256,7 +1261,19 @@ class ChatTextArea(TextArea):
         return None
 
     async def _on_paste(self, event: events.Paste) -> None:
-        """Handle paste events and detect dragged file paths."""
+        """Handle paste events and detect dragged file paths or images."""
+        # First check if clipboard has an image
+        image = await asyncio.to_thread(get_clipboard_image)
+        if image is not None:
+            event.prevent_default()
+            event.stop()
+            # Add image to media tracker to get numbered placeholder
+            placeholder = self._chat_input_owner._image_tracker.add_image(image)
+            # Insert placeholder at cursor position
+            self.insert(placeholder)
+            return
+        
+        # Original text paste logic
         self._backslash_pending_time = None
         if self._paste_burst_buffer:
             await self._flush_paste_burst()
