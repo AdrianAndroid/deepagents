@@ -11,16 +11,203 @@ This is a Python monorepo with multiple independently versioned packages:
 ```txt
 deepagents/
 ├── libs/
-│   ├── deepagents/  # SDK
-│   ├── cli/         # CLI tool
-│   ├── acp/         # Agent Context Protocol support
+│   ├── deepagents/  # Core SDK
+│   ├── code/        # Terminal coding agent (`dcode`)
+│   ├── cli/         # Managed deployment CLI
+│   ├── acp/         # Agent Client Protocol support
 │   ├── evals/       # Evaluation suite and Harbor integration
+│   ├── talon/       # Experimental local runtime host
 │   └── partners/    # Integration packages
-│       └── daytona/
-│       └── ...
-├── .github/         # CI/CD workflows and templates
-└── README.md        # Information about Deep Agents
+│       ├── daytona/
+│       ├── modal/
+│       ├── quickjs/
+│       ├── runloop/
+│       └── vercel/
+├── examples/        # User-facing example agents and patterns
+├── .github/         # CI/CD workflows, issue templates, helper scripts
+├── action.yml       # Composite GitHub Action wrapping `deepagents-code`
+└── README.md        # Product overview
 ```
+
+### Repository analysis for future AI agents
+
+This repository is not a single Python package. Treat it as a collection of independently versioned, independently released packages that share source-control, CI, release tooling, examples, and contributor policy.
+
+#### High-level product model
+
+Deep Agents is an opinionated harness on top of the LangChain/LangGraph stack:
+
+```txt
+Deep Agents      opinionated agent harness: defaults, middleware, backends, profiles
+LangChain        agent abstraction: model + tools + middleware -> agent loop
+LangGraph        runtime: state, checkpoints, streaming, interrupts
+```
+
+The central public API is `deepagents.create_deep_agent()`. It assembles:
+
+- a chat model, resolved from a LangChain `provider:model` string or a supplied `BaseChatModel`;
+- the default Deep Agents middleware stack;
+- filesystem, execution, memory, skills, and context backends;
+- sync subagents, compiled subagents, and async/remote subagents;
+- optional human-in-the-loop interrupts;
+- provider and harness profiles; and
+- a LangGraph compiled agent graph with Deep Agents metadata.
+
+Runtime behavior is mostly owned by middleware and backends, not by a custom runtime. LangGraph provides execution, streaming, checkpointing, state, and interrupts.
+
+#### Package inventory
+
+Current package directories and their roles:
+
+| Path | Distribution | Role |
+| --- | --- | --- |
+| `libs/deepagents` | `deepagents` | Core SDK. Exports `create_deep_agent`, `DeepAgentState`, middleware classes, provider/harness profile registration, and backend integration points. |
+| `libs/code` | `deepagents-code` | Prebuilt terminal coding agent (`dcode` / `deepagents-code`) with Textual TUI, headless mode, MCP support, skills, provider auth, sandboxes, sessions, and GitHub Action support. |
+| `libs/cli` | `deepagents-cli` | Managed Deep Agents deployment CLI. Scaffolds project folders, deploys to LangSmith Managed Deep Agents, manages remote agents, and manages MCP server registrations. |
+| `libs/acp` | `deepagents-acp` | Agent Client Protocol adapter for exposing a Python Deep Agent to ACP-capable editors such as Zed. |
+| `libs/evals` | `deepagents-evals` | Behavioral eval suite, trial aggregation CLI, model/catalog generation, Harbor integration, and Terminal Bench / CLBench support. |
+| `libs/talon` | `deepagents-talon` | Experimental local runtime host for long-running agents, channels, cron, WhatsApp bridge, Fleet exports, MCP loading, and tracing. |
+| `libs/partners/daytona` | `langchain-daytona` | Daytona sandbox backend integration. |
+| `libs/partners/modal` | `langchain-modal` | Modal sandbox backend integration. |
+| `libs/partners/runloop` | `langchain-runloop` | Runloop sandbox provider/backend integration. |
+| `libs/partners/vercel` | `langchain-vercel-sandbox` | Vercel Sandbox backend integration. |
+| `libs/partners/quickjs` | `langchain-quickjs` | Persistent sandboxed JavaScript REPL middleware backed by QuickJS, including programmatic tool calling and subagent dispatch support. |
+
+`release-please-config.json` currently manages release automation for all packages above except `libs/evals`. Version baselines live in `.release-please-manifest.json`.
+
+#### Source-code map
+
+Use this map before changing code:
+
+```txt
+libs/deepagents/deepagents/
+├── graph.py                 # create_deep_agent, DeepAgentState, prompt + middleware assembly
+├── _models.py               # model resolution helpers
+├── _messages_reducer.py     # DeltaChannel reducer support for messages
+├── _tools.py                # built-in tool description override helpers
+├── backends/                # state/store/filesystem/context-hub/langsmith/sandbox/local shell backends
+├── middleware/              # filesystem, skills, memory, subagents, async subagents, summarization, permissions
+└── profiles/                # provider and harness profiles for model/provider-specific behavior
+
+libs/code/deepagents_code/
+├── main.py                  # dcode CLI argument parsing and dispatch
+├── app.py                   # Textual app and interactive command handling
+├── agent.py                 # coding-agent construction/runtime integration
+├── server*.py               # local server graph/runtime support
+├── command_registry.py      # slash command registry; COMMANDS.md is generated from this
+├── model_config.py          # provider env vars, auth, endpoint handling
+├── config*.py               # configuration schema, commands, manifests
+├── mcp_*.py, mcp_providers/ # MCP integration, auth, trust, provider-specific handling
+├── skills/                  # skill management commands and logic
+├── built_in_skills/         # packaged skills
+├── widgets/                 # Textual UI widgets
+└── system_prompt.md         # coding-agent prompt content
+
+libs/cli/deepagents_cli/
+├── main.py                  # argparse entrypoint and top-level dispatch
+├── deploy/commands.py       # init, deploy, agents, and mcp-servers commands
+├── deploy/project.py        # managed-agent project loading and validation
+├── deploy/payload.py        # API payload and directory delta construction
+├── deploy/api_client.py     # LangSmith Managed Deep Agents API client
+├── deploy/mcp_resolver.py   # MCP server lookup and validation
+└── deploy/state.py          # local deploy state
+
+libs/evals/
+├── deepagents_evals/        # eval CLI, catalog/model-group helpers, reporting utilities
+├── deepagents_harbor/       # Harbor/LangSmith integration helpers
+├── deepagents_clbench/      # CLBench sync/system files
+├── tests/evals/             # behavioral eval cases and vendored data
+└── tests/unit_tests/        # CLI/reporting/helper tests
+```
+
+#### Core SDK execution model
+
+`create_deep_agent()` in `libs/deepagents/deepagents/graph.py` is the assembly point. Its default visible tools include todo management, filesystem operations, shell execution when supported by the backend, and subagent delegation. The function:
+
+1. resolves the model and active harness profile;
+2. validates profile exclusions so required scaffolding middleware cannot be removed;
+3. applies tool description overrides;
+4. resolves the backend, defaulting to `StateBackend`;
+5. processes declarative `SubAgent`, `CompiledSubAgent`, and `AsyncSubAgent` specs;
+6. auto-adds the default `general-purpose` subagent unless disabled or overridden;
+7. assembles base middleware, user middleware, profile middleware, prompt caching, memory, and HITL middleware;
+8. composes the final system prompt with user prompt first, SDK/profile content after it; and
+9. delegates to LangChain `create_agent()` with `DeepAgentState` by default.
+
+Important exported SDK symbols are listed in `libs/deepagents/deepagents/__init__.py`; changing these is a public API change. `DeepAgentState.messages` uses a `DeltaChannel` reducer to avoid quadratic checkpoint growth during long runs.
+
+#### Backend and middleware responsibilities
+
+When debugging SDK behavior, distinguish these layers:
+
+- **Tool visibility**: controlled by middleware assembly, caller tools, and harness profile `excluded_tools`.
+- **Tool execution capability**: controlled by the backend. The `execute` tool needs a backend implementing the sandbox protocol.
+- **Filesystem policy**: `FilesystemMiddleware` enforces `FilesystemPermission` rules for built-in filesystem tools; direct backend calls are separate.
+- **Prompt and request shaping**: handled by middleware and provider/harness profiles.
+- **Persistence**: graph state/checkpoints come from LangGraph; filesystem and memory persistence come from Deep Agents backends.
+
+Do not solve backend capability problems by hiding tools unless the user explicitly needs the model request surface changed.
+
+#### Dependency relationships
+
+Local development uses editable sources via `[tool.uv.sources]` in each package:
+
+- `deepagents-code` depends on the SDK and local partner packages for optional sandbox/QuickJS integrations.
+- `deepagents-cli`, `deepagents-acp`, partner packages, and `deepagents-talon` depend on the SDK.
+- `deepagents-evals` depends on the SDK, `deepagents-code`, and `langchain-quickjs`.
+- Partner packages should be thin integration layers and should not introduce SDK-breaking assumptions.
+
+Because packages are independently versioned, do not assume all package versions move together. When a change crosses package boundaries, update version pins/ranges and tests deliberately.
+
+#### Examples map
+
+Examples under `examples/` are user-facing patterns, not core library code. They are useful for compatibility checks and public API usage searches.
+
+| Path | Purpose |
+| --- | --- |
+| `examples/deep_research` | Multi-step research with Tavily, subagents, reflection, notebook/server options. |
+| `examples/content-builder-agent` | File-configured content agent using `AGENTS.md`, skills, memory, and subagents. |
+| `examples/text-to-sql-agent` | Natural-language-to-SQL agent on Chinook with skill-oriented workflows. |
+| `examples/async-subagent-server` | FastAPI server exposing a researcher as an async subagent. |
+| `examples/deploy-*` | Managed deployment examples with `agent.json`, `AGENTS.md`, tools, skills, and subagents. |
+| `examples/llm-wiki` | Script-first wiki/Context Hub workflow. |
+| `examples/nvidia_deep_agent` | Nemotron/GPU-oriented research and execution example. |
+| `examples/better-harness` | Eval-driven outer-loop harness optimization. |
+| `examples/ralph_mode` | Autonomous looping with filesystem persistence and optional sandboxes. |
+| `examples/talon-whatsapp` | Docker/local topology for Talon WhatsApp channel. |
+| `examples/downloading_agents` | "Agents as folders" packaging pattern. |
+
+When changing a public interface, search examples as well as tests.
+
+#### CI and automation map
+
+Important automation files:
+
+- `.github/workflows/ci.yml` detects changed package paths and fans out lint/test jobs.
+- `.github/workflows/_lint.yml` and `_test.yml` are reusable package lint/test workflows.
+- `.github/workflows/_benchmark.yml` and `_benchmark_nightly.yml` run CodSpeed benchmarks.
+- `.github/workflows/release-please.yml` creates release PRs.
+- `.github/workflows/release.yml` builds, tests, publishes to Test PyPI/PyPI, and creates GitHub releases.
+- `.github/workflows/pr_lint.yml`, `pr_scope_file_check.yml`, `release_please_parse_check.yml`, and related workflows enforce PR title/body/release-please correctness.
+- `.github/workflows/check_*` workflows validate lockfiles, versions, extras, dependency bounds, SDK pins, and release dependencies.
+- `.github/workflows/evals*.yml`, `harbor.yml`, and `clbench.yml` run eval workflows.
+- `action.yml` defines the composite GitHub Action for running `deepagents-code` in workflows.
+
+All GitHub Actions used in workflows must be pinned to full-length commit SHAs, not tags.
+
+#### Pre-commit and generated artifacts
+
+`.pre-commit-config.yaml` runs Conventional Commit validation, syntax checks, whitespace/smart-quote hooks, package-specific format/lint hooks, lockfile checks, extras sync, version equality checks, eval catalog generation, and `deepagents-code` command catalog generation.
+
+Generated or drift-checked artifacts include:
+
+- `libs/code/COMMANDS.md`, generated from `deepagents_code/command_registry.py`;
+- `libs/evals/EVAL_CATALOG.md`, generated from eval tests;
+- `libs/evals/MODEL_GROUPS.md`, generated from the eval model registry;
+- `uv.lock` files for every package and example with a `pyproject.toml`;
+- `_version.py`, `pyproject.toml`, changelogs, and release manifest entries managed by release-please.
+
+Do not hand-edit generated catalogs unless the generator expects that file as input.
 
 ### Development tools & commands
 
@@ -250,19 +437,25 @@ See `libs/code/AGENTS.md` for package-specific guidance — Textual, startup per
 
 ### Deep Agents CLI (`libs/cli/`)
 
-As of `deepagents-cli==0.1.0` this package contains only the deployment subcommands — `init`, `dev`, and `deploy`. The interactive Textual REPL moved to `libs/code/` (`deepagents-code`); see [Deep Agents Code](#deep-agents-code-libscode) above for Textual/widget/slash-command guidance.
+As of `deepagents-cli==0.1.0` the interactive Textual REPL moved to `libs/code/` (`deepagents-code`). This package contains deployment and managed-agent administration commands only; see [Deep Agents Code](#deep-agents-code-libscode) above for Textual/widget/slash-command guidance.
 
 #### Surface
 
 - Entry points: `deepagents` and `deepagents-cli` console scripts → `deepagents_cli.cli_main`.
-- Subcommands: `init` (scaffold project), `dev` (`langgraph dev` against a bundled project), `deploy` (`langgraph deploy` to LangGraph Platform).
+
+- Subcommands: `init` (scaffold a managed-agent project), `deploy` (upsert managed agents), `agents` (list/get/delete remote agents), and `mcp-servers` (register, inspect, connect, update, delete, and list tools for workspace MCP servers).
 - Bare `deepagents` invocations print a deprecation notice pointing at `deepagents-code` and exit non-zero.
 
 #### Layout
 
 - `deepagents_cli/main.py` — argparse wiring + `cli_main` dispatch.
-- `deepagents_cli/deploy/` — the entire deploy/dev/init pipeline (`commands.py`, `bundler.py`, `config.py`, `templates.py`, `context_hub.py`, `frontend_dist/`).
-- `deepagents_cli/config.py` — slim `_load_dotenv` helper used by deploy/dev.
+- `deepagents_cli/deploy/commands.py` — argparse wiring and handlers for `init`, `deploy`, `agents`, and `mcp-servers`.
+- `deepagents_cli/deploy/project.py` — project layout loading and validation for `agent.json`, `AGENTS.md`, tools, skills, and subagents.
+- `deepagents_cli/deploy/payload.py` — API payload construction and remote directory delta generation.
+- `deepagents_cli/deploy/api_client.py` — LangSmith Managed Deep Agents API client.
+- `deepagents_cli/deploy/mcp_resolver.py` — MCP server lookup and validation for deploy payloads.
+- `deepagents_cli/deploy/state.py` — local deployment state keyed by endpoint.
+- `deepagents_cli/config.py` — slim `_load_dotenv` helper used by deploy/admin commands.
 - `deepagents_cli/model_config.py` — slim `resolve_env_var` helper for the `DEEPAGENTS_CLI_` env-var prefix.
 - `deepagents_cli/_version.py` — `__version__` (managed by release-please).
 
@@ -283,7 +476,7 @@ Each package's `Makefile` defines `bench` (walltime) and `bench-memory` (heap) t
 ```bash
 # Single package (same target CI invokes):
 make -C libs/deepagents bench
-make -C libs/cli bench
+make -C libs/code bench
 
 # All benched packages in one go:
 make -C libs bench-all
