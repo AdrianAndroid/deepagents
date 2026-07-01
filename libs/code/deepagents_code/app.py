@@ -86,6 +86,7 @@ from deepagents_code.widgets.messages import (
     AssistantMessage,
     ErrorMessage,
     QueuedUserMessage,
+    SessionSeparator,
     SkillMessage,
     ToolCallMessage,
     UserMessage,
@@ -8032,6 +8033,7 @@ class DeepAgentsApp(App):
         Args:
             message: The user's message
         """
+        await self._mount_message(SessionSeparator())
         # Mount the user message, tracking it so it can be dimmed on interrupt.
         user_message = UserMessage(message)
         await self._mount_message(user_message)

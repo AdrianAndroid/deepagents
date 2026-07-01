@@ -188,6 +188,33 @@ def _select_prompt_body(widget: Static) -> None:
     }
 
 
+class SessionSeparator(Static):
+    """Widget displaying a session separator between different sessions."""
+
+    DEFAULT_CSS = """
+    SessionSeparator {
+        height: auto;
+        padding: 1 0;
+        margin: 2 0;
+        width: 100%;
+        color: $primary;
+        text-align: center;
+        background: transparent;
+    }
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize a session separator.
+
+        Args:
+            **kwargs: Additional arguments passed to parent.
+        """
+        super().__init__(
+            "---\n✨ ✨ ✨ ✨ ✨ ✨ 【 NEW SESSION 】 ✨ ✨ ✨ ✨ ✨ ✨\n---",
+            **kwargs,
+        )
+
+
 class UserMessage(Static):
     """Widget displaying a user message."""
 

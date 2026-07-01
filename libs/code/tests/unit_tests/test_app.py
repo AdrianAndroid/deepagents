@@ -56,6 +56,7 @@ from deepagents_code.widgets.messages import (
     AppMessage,
     ErrorMessage,
     QueuedUserMessage,
+    SessionSeparator,
     SummarizationMessage,
     UserMessage,
 )
@@ -381,6 +382,21 @@ class TestInitialPromptOnMount:
 
 class TestStartupSequence:
     """Tests for post-connect startup sequencing."""
+
+    async def test_user_message_mounts_separator_before_prompt(self) -> None:
+        """Each user turn should start with a visible session separator."""
+        app = DeepAgentsApp(agent=MagicMock(), thread_id="thread-123")
+        mounted: list[object] = []
+
+        async def capture(widget: object) -> None:  # noqa: RUF029
+            mounted.append(widget)
+
+        app._mount_message = capture  # ty: ignore
+        app._send_to_agent = AsyncMock()  # ty: ignore
+
+        await app._handle_user_message("hello")
+
+        assert [type(widget) for widget in mounted] == [SessionSeparator, UserMessage]
 
     async def test_session_start_sequence_is_idempotent_across_server_ready(
         self,
