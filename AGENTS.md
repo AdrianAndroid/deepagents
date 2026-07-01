@@ -556,3 +556,9 @@ This repository require actions to be pinned to a full-length commit SHA. Attemp
 
 - **Documentation:** https://docs.langchain.com/oss/python/deepagents/overview and source at https://github.com/langchain-ai/docs or `../docs/`. Prefer the local install and use file search tools for best results. If needed, use the docs MCP server as defined in `.mcp.json` for programmatic access.
 - **Contributing Guide:** [Contributing Guide](https://docs.langchain.com/oss/python/contributing/overview)
+
+## 文档留存规则
+1. 会话记录留存要求：每次和用户的交互会话结束后，必须对会话内容进行结构化总结，提取有价值的信息（需求说明、技术方案、问题排查过程、开发指南、架构分析、决策记录等）整理成规范的Markdown文档
+2. 统一存储路径：所有会话总结文档必须保存到项目根目录的`doc/`文件夹中
+3. 命名规范：文档统一采用`YYYY-MM-DD-主题-内容摘要.md`格式命名，确保命名清晰可追溯，方便后续检索复用
+4. 内容质量要求：总结内容需要具备可复用性，信息准确完整，避免重复解决相同问题，沉淀为项目知识库的一部分
