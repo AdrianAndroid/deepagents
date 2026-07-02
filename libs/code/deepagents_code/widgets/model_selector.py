@@ -16,7 +16,7 @@ from textual.events import (
 from textual.fuzzy import Matcher
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.widgets import Input, Static
+from textual.widgets import Input, Static, Button
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -232,6 +232,13 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             "ctrl+r",
             "toggle_recommended",
             "Recommended only",
+            show=False,
+            priority=True,
+        ),
+        Binding(
+            "ctrl+a",
+            "add_custom_provider",
+            "Add custom provider",
             show=False,
             priority=True,
         ),
@@ -463,7 +470,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             "Enter select",
         ]
         if not self._curated:
-            parts.extend(("Ctrl+S set default", "Ctrl+R recommended"))
+            parts.extend(("Ctrl+S set default", "Ctrl+R recommended", "Ctrl+A add provider"))
         sep = f" {glyphs.bullet} "
         return sep.join(parts)
 
@@ -532,6 +539,10 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 
             # Model detail footer
             yield Static("", classes="model-detail-footer", id="model-detail-footer")
+
+            # Add custom provider button (only in non-curated mode)
+            if not self._curated:
+                yield Button("Add Custom Provider (Ctrl+A)", id="add-custom-provider-btn", variant="primary")
 
             yield Static(self._help_text(), classes="model-selector-help")
 
@@ -798,6 +809,11 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         if not self._loaded:
             return  # on_mount will re-apply filter after data loads
         self._update_filtered_list()
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "add-custom-provider-btn":
+            await self.action_add_custom_provider()
         self.call_after_refresh(self._update_display)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -1798,3 +1814,186 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         if self._result_callback is not None:
             self._result_callback(result)
         self.dismiss(result)
+
+    async def action_add_custom_provider(self) -> None:
+        """Open the custom provider add modal."""
+        def _on_provider_saved(success: bool) -> None:
+            if success:
+                # Reload model list to show new provider
+                asyncio.create_task(self._reload_model_list())
+                help_widget = self.query_one(".model-selector-help", Static)
+                help_widget.update(Content.styled("Custom provider added successfully!", "bold green"))
+                self.set_timer(3.0, self._restore_help_text)
+            else:
+                help_widget = self.query_one(".model-selector-help", Static)
+                help_widget.update(Content.styled("Failed to add custom provider", "bold red"))
+                self.set_timer(3.0, self._restore_help_text)
+
+        self.app.push_screen(CustomProviderModalScreen(), _on_provider_saved)
+
+    async def _reload_model_list(self) -> None:
+        """Reload the model list after adding a custom provider."""
+        # Offload to thread because get_available_models does filesystem I/O
+        try:
+            data = await asyncio.to_thread(
+                self._load_model_data,
+                self._cli_profile_override,
+                include_uninstalled=True,
+                include_recent=not self._curated,
+            )
+        except Exception:
+            logger.exception("Failed to reload model data")
+            self.notify(
+                "Could not reload model list.",
+                severity="error",
+                timeout=3.0,
+                markup=False,
+            )
+            return
+
+        # Screen may have been dismissed while the thread was running
+        if not self.is_running:
+            return
+
+        self._unfiltered_models = data.all_models
+        self._default_spec = data.default_spec
+        self._profiles = data.profiles
+        self._recent_specs = data.recent_specs
+        self._install_extras = data.install_extras
+        self._all_models = self._apply_subset(self._unfiltered_models)
+        self._filtered_models = list(self._all_models)
+        self._selected_index = self._initial_selected_index()
+
+        # Re-apply any filter text
+        if self._filter_text:
+            self._update_filtered_list()
+
+        await self._update_display()
+        self._update_footer()
+
+
+class CustomProviderModalScreen(ModalScreen[bool]):
+    """Modal screen for adding a custom OpenAI-compatible provider."""
+
+    CSS = """
+    CustomProviderModalScreen {
+        align: center middle;
+    }
+
+    CustomProviderModalScreen > Vertical {
+        background: $surface;
+        border: thick $primary;
+        width: 60;
+        height: auto;
+        padding: 1 2;
+    }
+
+    CustomProviderModalScreen .form-title {
+        text-align: center;
+        width: 100%;
+        height: 1;
+        margin-bottom: 1;
+    }
+
+    CustomProviderModalScreen .form-label {
+        width: 100%;
+        height: 1;
+        margin-top: 1;
+    }
+
+    CustomProviderModalScreen Input {
+        width: 100%;
+        height: 3;
+    }
+
+    CustomProviderModalScreen .form-buttons {
+        width: 100%;
+        height: 3;
+        align: right middle;
+        margin-top: 1;
+    }
+
+    CustomProviderModalScreen Button {
+        margin-left: 1;
+    }
+
+    CustomProviderModalScreen .error-message {
+        color: $error;
+        height: 1;
+        margin-top: 1;
+        text-align: center;
+    }
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", priority=True),
+        Binding("enter", "submit", "Submit", priority=True),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static("Add Custom Provider", classes="form-title")
+            yield Static("Provider ID (lowercase, numbers, hyphens, underscores):", classes="form-label")
+            yield Input(id="provider-id", placeholder="e.g. my-provider")
+            yield Static("Display Name:", classes="form-label")
+            yield Input(id="display-name", placeholder="e.g. My Custom Provider")
+            yield Static("Base URL:", classes="form-label")
+            yield Input(id="base-url", placeholder="e.g. https://api.example.com/v1")
+            yield Static("API Key (optional):", classes="form-label")
+            yield Input(id="api-key", placeholder="sk-...", password=True)
+            yield Static("", id="error-message", classes="error-message")
+            with Container(classes="form-buttons"):
+                yield Button("Cancel", id="cancel-btn", variant="default")
+                yield Button("Save", id="save-btn", variant="primary")
+
+    def on_mount(self) -> None:
+        """Focus the first input field on mount."""
+        self.query_one("#provider-id", Input).focus()
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "cancel-btn":
+            self.action_cancel()
+        elif event.button.id == "save-btn":
+            await self.action_submit()
+
+    async def action_submit(self) -> None:
+        """Validate and submit the form."""
+        provider_id = self.query_one("#provider-id", Input).value.strip()
+        display_name = self.query_one("#display-name", Input).value.strip()
+        base_url = self.query_one("#base-url", Input).value.strip()
+        api_key = self.query_one("#api-key", Input).value.strip() or None
+        error_widget = self.query_one("#error-message", Static)
+
+        # Validate inputs
+        if not provider_id:
+            error_widget.update("Provider ID is required")
+            return
+        if not all(c.islower() or c.isdigit() or c in "-_" for c in provider_id):
+            error_widget.update("Provider ID can only contain lowercase letters, numbers, hyphens, and underscores")
+            return
+        if not display_name:
+            error_widget.update("Display name is required")
+            return
+        if not base_url:
+            error_widget.update("Base URL is required")
+            return
+        if not base_url.startswith(("http://", "https://")):
+            error_widget.update("Base URL must start with http:// or https://")
+            return
+
+        # Save the provider
+        from deepagents_code.model_config import save_custom_provider
+        success = await asyncio.to_thread(
+            save_custom_provider,
+            provider_id=provider_id,
+            display_name=display_name,
+            base_url=base_url,
+            api_key=api_key,
+        )
+
+        self.dismiss(success)
+
+    def action_cancel(self) -> None:
+        """Cancel the form."""
+        self.dismiss(False)

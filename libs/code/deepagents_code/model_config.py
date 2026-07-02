@@ -2862,6 +2862,86 @@ def clear_default_model(config_path: Path | None = None) -> bool:
         return True
 
 
+def save_custom_provider(
+    provider_id: str,
+    display_name: str,
+    base_url: str,
+    models: list[str],
+    class_path: str = "langchain_openai:ChatOpenAI",
+    api_key_env: str | None = None,
+    config_path: Path | None = None,
+) -> bool:
+    """Save a custom provider configuration to config file.
+
+    Args:
+        provider_id: Unique identifier for the provider (e.g., "huoshan1").
+        display_name: Human-readable name to show in UI (e.g., "火山引擎").
+        base_url: API endpoint URL for the provider.
+        models: List of model IDs supported by this provider.
+        class_path: Fully qualified model class path (default: "langchain_openai:ChatOpenAI).
+        api_key_env: Environment variable name for API key (optional, default: <PROVIDER_ID>_API_KEY).
+        config_path: Path to config file (defaults to ~/.deepagents/config.toml).
+
+    Returns:
+        True if save succeeded, False on I/O errors.
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+
+    # Generate default api_key_env if not provided
+    if not api_key_env:
+        api_key_env = f"{provider_id.upper()}_API_KEY"
+
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Read existing config or start fresh
+        if config_path.exists():
+            with config_path.open("rb") as f:
+                data = tomllib.load(f)
+        else:
+            data = {}
+
+        # Ensure models section exists
+        if "models" not in data:
+            data["models"] = {}
+        # Ensure models.providers section exists (where custom providers are stored)
+        if "providers" not in data["models"]:
+            data["models"]["providers"] = {}
+
+        # Build provider config
+        provider_config = {
+            "display_name": display_name,
+            "base_url": base_url,
+            "class_path": class_path,
+            "models": models,
+            "api_key_env": api_key_env,
+        }
+
+        # Save to config under models.providers
+        data["models"]["providers"][provider_id] = provider_config
+
+        # Write to temp file then rename to prevent corruption
+        fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                tomli_w.dump(data, f)
+            Path(tmp_path).replace(config_path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                Path(tmp_path).unlink()
+            raise
+    except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
+        logger.exception(f"Could not save custom provider {provider_id}")
+        return False
+    else:
+        # Invalidate all config caches
+        global _default_config_cache, _available_models_cache
+        _default_config_cache = None
+        _available_models_cache = None
+        return True
+
+
 def is_warning_suppressed(key: str, config_path: Path | None = None) -> bool:
     """Check if a warning key is suppressed in the config file.
 
@@ -3632,3 +3712,89 @@ def _load_agents_field(field: str, config_path: Path | None = None) -> str | Non
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def save_custom_provider(
+    provider_id: str,
+    display_name: str,
+    base_url: str,
+    api_key: str | None = None,
+    config_path: Path | None = None,
+) -> bool:
+    """Save a custom OpenAI-compatible provider to the config file.
+
+    Args:
+        provider_id: Short identifier for the provider (lowercase letters, numbers, hyphens, underscores only).
+        display_name: Human-readable name for the provider shown in the UI.
+        base_url: Base URL for the provider's OpenAI-compatible API endpoint.
+        api_key: Optional API key to store for the provider. If provided, it will be saved
+            in the secure auth store, not in the config file.
+        config_path: Path to config file. Defaults to `~/.deepagents/config.toml`.
+
+    Returns:
+        True if save succeeded, False if it failed due to I/O errors.
+
+    Note:
+        This function does not preserve comments in the config file.
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Read existing config or start fresh
+        if config_path.exists():
+            with config_path.open("rb") as f:
+                data = tomllib.load(f)
+        else:
+            data = {}
+
+        # Ensure models section exists
+        if "models" not in data:
+            data["models"] = {}
+        models_section = data["models"]
+
+        # Ensure providers section exists
+        if "providers" not in models_section:
+            models_section["providers"] = {}
+        providers_section = models_section["providers"]
+
+        # Add/update the custom provider
+        provider_config: ProviderConfig = {
+            "display_name": display_name,
+            "base_url": base_url,
+            "class_path": "langchain_openai:ChatOpenAI",
+            "models": [],
+        }
+        providers_section[provider_id] = provider_config
+
+        # Write to temp file then rename to prevent corruption if write is interrupted
+        fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                tomli_w.dump(data, f)
+            Path(tmp_path).replace(config_path)
+        except BaseException:
+            # Clean up temp file on any failure
+            with contextlib.suppress(OSError):
+                Path(tmp_path).unlink()
+            raise
+    except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
+        logger.exception("Could not save custom provider %s", provider_id)
+        return False
+    else:
+        # Invalidate config cache so the next load() picks up the change
+        global _default_config_cache
+        _default_config_cache = None
+
+        # Save API key if provided
+        if api_key:
+            try:
+                from deepagents_code import auth_store
+                auth_store.set_stored_key(provider_id, api_key, base_url=base_url)
+            except Exception:
+                logger.exception("Could not save API key for provider %s", provider_id)
+                return False
+
+        return True
