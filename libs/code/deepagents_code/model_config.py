@@ -988,6 +988,7 @@ def get_available_models() -> dict[str, list[str]]:
             available[provider] = models
 
     # Merge in models from config file (custom providers like ollama, fireworks)
+    logger.debug("Processing config providers: %s", list(config.providers.keys()))
     for provider_name, provider_config in config.providers.items():
         # Respect enabled = false (hide provider entirely).
         if not config.is_provider_enabled(provider_name):
@@ -2377,6 +2378,19 @@ class ModelConfig:
 
         # Validate config consistency
         config._validate()
+        
+        # Log loaded provider configs for debugging
+        logger.debug("Loaded config from %s", config_path)
+        logger.debug("Default model: %s", config.default_model)
+        logger.debug("Recent model: %s", config.recent_model)
+        for provider_name, provider_config in config.providers.items():
+            logger.debug("Provider '%s' config: display_name=%s, base_url=%s, class_path=%s, models=%s, enabled=%s",
+                        provider_name,
+                        provider_config.get("display_name"),
+                        provider_config.get("base_url"),
+                        provider_config.get("class_path"),
+                        provider_config.get("models"),
+                        provider_config.get("enabled", True))
 
         if is_default:
             _default_config_cache = config
@@ -3720,6 +3734,7 @@ def save_custom_provider(
     display_name: str,
     base_url: str,
     api_key: str | None = None,
+    default_model: str | None = None,
     config_path: Path | None = None,
 ) -> bool:
     """Save a custom OpenAI-compatible provider to the config file.
@@ -3730,6 +3745,7 @@ def save_custom_provider(
         base_url: Base URL for the provider's OpenAI-compatible API endpoint.
         api_key: Optional API key to store for the provider. If provided, it will be saved
             in the secure auth store, not in the config file.
+        default_model: Optional default model ID for this provider.
         config_path: Path to config file. Defaults to `~/.deepagents/config.toml`.
 
     Returns:
@@ -3768,6 +3784,9 @@ def save_custom_provider(
             "class_path": "langchain_openai:ChatOpenAI",
             "models": [],
         }
+        if default_model:
+            provider_config["default_model"] = default_model
+            provider_config["models"] = [default_model]
         providers_section[provider_id] = provider_config
 
         # Write to temp file then rename to prevent corruption if write is interrupted

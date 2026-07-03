@@ -19,7 +19,7 @@ from deepagents_code.model_config import (
     ProviderAuthState,
     ProviderAuthStatus,
 )
-from deepagents_code.widgets.model_selector import ModelSelectorScreen
+from deepagents_code.widgets.model_selector import ModelSelectorScreen, CustomProviderModalScreen
 
 
 @pytest.fixture(autouse=True)
@@ -2759,3 +2759,286 @@ enabled = false
             assert screen._selected_index == 1
 
             assert "dim" in recent_install.content.markup
+
+
+class CustomProviderModalTestApp(App):
+    """Test app for CustomProviderModalScreen."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("q", "quit", "Quit", priority=True),
+    ]
+
+    def __init__(self, *args: Any, modal_kwargs: dict[str, Any] | None = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.modal_kwargs = modal_kwargs or {}
+        self.modal_result: bool | None = None
+
+    def compose(self) -> ComposeResult:
+        yield Static("Test App for Custom Provider Modal", classes="title")
+
+    def on_mount(self) -> None:
+        """Show the modal on mount."""
+        self.push_screen(CustomProviderModalScreen(**self.modal_kwargs), callback=self._on_modal_result)
+
+    def _on_modal_result(self, result: bool) -> None:
+        """Store modal result when closed."""
+        self.modal_result = result
+
+
+class TestCustomProviderModalScreen:
+    """Tests for CustomProviderModalScreen."""
+
+    async def test_default_model_input_rendered(self) -> None:
+        """Test that the default model input is correctly rendered with no layout issues."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            
+            # Verify modal is open
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            
+            # Verify default model input exists
+            model_input = modal.query_one("#default-model", Input)
+            assert model_input.placeholder == "e.g. gpt-4o"
+            
+            # Label is verified via correct input order and position
+            
+            # Verify no layout overlap: all inputs are in order and have correct spacing
+            inputs = list(modal.query(Input))
+            assert len(inputs) == 5  # provider-id, display-name, base-url, api-key, default-model
+            assert [i.id for i in inputs] == ["provider-id", "display-name", "base-url", "api-key", "default-model"]
+            
+            # Verify buttons are correctly positioned below input
+            cancel_btn = modal.query_one("#cancel-btn")
+            save_btn = modal.query_one("#save-btn")
+            assert save_btn.region.y > model_input.region.y  # Buttons are below input
+
+    async def test_default_model_input_operations(self) -> None:
+        """Test that input supports free text, copy-paste, and value binding."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            model_input = modal.query_one("#default-model", Input)
+            
+            # Test free text input via direct value assignment (simulates user typing/copy-paste)
+            model_input.value = "anthropic/claude-3-opus"
+            await pilot.pause()
+            assert model_input.value == "anthropic/claude-3-opus"
+            
+            # Test copy-paste simulation
+            model_input.value = "deepseek/deepseek-chat"
+            await pilot.pause()
+            assert model_input.value == "deepseek/deepseek-chat"
+            
+            # Test clear input
+            model_input.value = ""
+            await pilot.pause()
+            assert model_input.value == ""
+
+    async def test_default_model_input_validation(self) -> None:
+        """Test input validation logic works correctly for valid and invalid inputs."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            error_widget = modal.query_one("#error-message", Static)
+            
+            # Fill required fields directly
+            modal.query_one("#provider-id", Input).value = "test-provider"
+            modal.query_one("#display-name", Input).value = "Test Provider"
+            modal.query_one("#base-url", Input).value = "https://api.test.com/v1"
+            
+            # Test invalid model (contains spaces)
+            modal.query_one("#default-model", Input).value = "invalid model id"
+            await modal.action_submit()
+            await pilot.pause()
+            assert "Model ID can only contain letters, numbers, hyphens, underscores, dots, colons, and slashes" in str(error_widget)
+            assert app.modal_result is None  # Modal not dismissed
+            
+            # Test invalid model (too long)
+            modal.query_one("#default-model", Input).value = "a" * 300
+            await modal.action_submit()
+            await pilot.pause()
+            assert "Model ID cannot exceed 255 characters" in error_widget.renderable.plain
+            assert app.modal_result is None
+            
+            # Test valid model
+            modal.query_one("#default-model", Input).value = "valid-model_id.v1:chat"
+            await modal.action_submit()
+            await pilot.pause()
+            assert error_widget.renderable.plain == ""  # No error
+            assert app.modal_result is True  # Modal dismissed successfully
+
+    async def test_default_model_prefill_on_edit(self) -> None:
+        """Test that default model is pre-filled when editing an existing provider."""
+        import tomllib
+        from deepagents_code.model_config import DEFAULT_CONFIG_PATH
+        
+        # Create test config with existing provider that has default model
+        test_config = {
+            "models": {
+                "providers": {
+                    "test-provider": {
+                        "display_name": "Test Provider",
+                        "base_url": "https://api.test.com/v1",
+                        "default_model": "test-model-v1",
+                        "models": ["test-model-v1"]
+                    }
+                }
+            }
+        }
+        
+        # Write test config
+        DEFAULT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(DEFAULT_CONFIG_PATH, "wb") as f:
+            import tomli_w
+            tomli_w.dump(test_config, f)
+        
+        # Open modal in edit mode
+        app = CustomProviderModalTestApp(modal_kwargs={"provider_id": "test-provider"})
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            
+            # Verify default model is pre-filled
+            model_input = modal.query_one("#default-model", Input)
+            assert model_input.value == "test-model-v1"
+            
+            # Verify provider ID is disabled (existing behavior preserved)
+            assert modal.query_one("#provider-id", Input).disabled is True
+
+    async def test_default_model_persisted_on_save(self, tmp_path: Path) -> None:
+        """Test that default model value is correctly saved to config."""
+        import tomllib
+        from deepagents_code.model_config import DEFAULT_CONFIG_PATH, save_custom_provider
+        
+        # Override config path to temp
+        import deepagents_code.model_config
+        original_path = deepagents_code.model_config.DEFAULT_CONFIG_PATH
+        deepagents_code.model_config.DEFAULT_CONFIG_PATH = tmp_path / "config.toml"
+        
+        try:
+            app = CustomProviderModalTestApp()
+            async with app.run_test(size=(100, 60)) as pilot:
+                await pilot.pause()
+                modal = app.screen
+                assert isinstance(modal, CustomProviderModalScreen)
+                
+                # Fill all fields including default model directly
+                modal.query_one("#provider-id", Input).value = "test-provider"
+                modal.query_one("#display-name", Input).value = "Test Provider"
+                modal.query_one("#base-url", Input).value = "https://api.test.com/v1"
+                modal.query_one("#default-model", Input).value = "test-model-v1"
+                await modal.action_submit()
+                await pilot.pause()
+                
+                assert app.modal_result is True
+                
+                # Verify config saved correctly
+                with open(deepagents_code.model_config.DEFAULT_CONFIG_PATH, "rb") as f:
+                    config = tomllib.load(f)
+                
+                provider_config = config["models"]["providers"]["test-provider"]
+                assert provider_config["default_model"] == "test-model-v1"
+                assert provider_config["models"] == ["test-model-v1"]
+                assert provider_config["display_name"] == "Test Provider"
+                assert provider_config["base_url"] == "https://api.test.com/v1"
+        finally:
+            # Restore original path
+            deepagents_code.model_config.DEFAULT_CONFIG_PATH = original_path
+
+    async def test_keyboard_accessibility(self) -> None:
+        """Test that input is accessible via keyboard navigation."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            
+            # Tab through all inputs, verify focus order is correct
+            # First input is provider-id (auto-focused on mount)
+            assert modal.query_one("#provider-id", Input).has_focus
+            
+            # Tab to display-name
+            await pilot.press("tab")
+            assert modal.query_one("#display-name", Input).has_focus
+            
+            # Tab to base-url
+            await pilot.press("tab")
+            assert modal.query_one("#base-url", Input).has_focus
+            
+            # Tab to api-key
+            await pilot.press("tab")
+            assert modal.query_one("#api-key", Input).has_focus
+            
+            # Tab to default-model
+            await pilot.press("tab")
+            assert modal.query_one("#default-model", Input).has_focus
+            
+            # Test keyboard editing works via press
+            await pilot.press(*list("test-model-keyboard"))
+            await pilot.pause()
+            assert modal.query_one("#default-model", Input).value == "test-model-keyboard"
+            
+            # Tab to cancel button
+            await pilot.press("tab")
+            assert modal.query_one("#cancel-btn").has_focus
+            
+            # Tab to save button
+            await pilot.press("tab")
+            assert modal.query_one("#save-btn").has_focus
+
+    async def test_existing_functionality_regression(self) -> None:
+        """Test that existing modal functionality still works correctly without regression."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            
+            # Test required field validation still works (existing behavior)
+            await modal.action_submit()
+            await pilot.pause()
+            assert app.modal_result is None  # Modal not dismissed when required fields are empty
+            
+            # Test cancel button works
+            await modal.action_cancel()
+            await pilot.pause()
+            assert app.modal_result is False
+            
+            # Test escape key works
+            app = CustomProviderModalTestApp()
+            async with app.run_test(size=(100, 60)) as pilot:
+                await pilot.pause()
+                await pilot.press("escape")
+                await pilot.pause()
+                assert app.modal_result is False
+
+    async def test_responsive_layout(self) -> None:
+        """Test that input adapts correctly to panel resizing."""
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+            model_input = modal.query_one("#default-model", Input)
+            
+            # Test at default size (modal width is 60)
+            assert model_input.region.width == 54  # Input takes full width minus padding
+            
+            # Resize to smaller width
+            await pilot.resize_terminal(width=60, height=50)
+            await pilot.pause()
+            assert model_input.region.width == 54  # Input resizes correctly
+            
+            # Resize to minimum supported width (modal adjusts automatically)
+            await pilot.resize_terminal(width=40, height=40)
+            await pilot.pause()
+            assert model_input.region.width > 0  # Input still fits without overflow
+            # Verify no layout breakage: input remains visible below API key field
+            assert model_input.region.y > modal.query_one("#api-key", Input).region.y

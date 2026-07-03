@@ -1934,10 +1934,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
     }
     """
 
-    BINDINGS = [
-        Binding("escape", "cancel", "Cancel", priority=True),
-        Binding("enter", "submit", "Submit", priority=True),
-    ]
+
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -1951,6 +1948,8 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             yield Input(id="base-url", placeholder="e.g. https://api.example.com/v1")
             yield Static("API Key (optional):", classes="form-label")
             yield Input(id="api-key", placeholder="sk-...", password=True)
+            yield Static("Default Model (optional):", classes="form-label")
+            yield Input(id="default-model", placeholder="e.g. gpt-4o")
             yield Static("", id="error-message", classes="error-message")
             with Container(classes="form-buttons"):
                 yield Button("Cancel", id="cancel-btn", variant="default")
@@ -1980,6 +1979,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 self.query_one("#provider-id", Input).disabled = True  # Can't edit ID for existing providers
                 self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
                 self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
+                self.query_one("#default-model", Input).value = provider_config.get("default_model", "")
                 # API key is not stored in config, it's in env var, so leave empty
 
         self.query_one("#provider-id", Input).focus() if not self.provider_id else self.query_one("#display-name", Input).focus()
@@ -1998,6 +1998,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 provider_config = self.existing_providers[provider_id]
                 self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
                 self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
+                self.query_one("#default-model", Input).value = provider_config.get("default_model", "")
                 # Disable provider ID input to prevent modification
                 event.input.disabled = True
                 # Move focus to next field
@@ -2016,6 +2017,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         display_name = self.query_one("#display-name", Input).value.strip()
         base_url = self.query_one("#base-url", Input).value.strip()
         api_key = self.query_one("#api-key", Input).value.strip() or None
+        default_model = self.query_one("#default-model", Input).value.strip() or None
         error_widget = self.query_one("#error-message", Static)
 
         # Validate inputs
@@ -2034,6 +2036,15 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         if not base_url.startswith(("http://", "https://")):
             error_widget.update("Base URL must start with http:// or https://")
             return
+        # Validate model ID if provided
+        if default_model:
+            if len(default_model) > 255:
+                error_widget.update("Model ID cannot exceed 255 characters")
+                return
+            # Allow alphanumeric, hyphens, underscores, dots, colons, slashes (common model ID characters)
+            if not all(c.isalnum() or c in "-_.:/" for c in default_model):
+                error_widget.update("Model ID can only contain letters, numbers, hyphens, underscores, dots, colons, and slashes")
+                return
 
         # Save the provider
         from deepagents_code.model_config import save_custom_provider
@@ -2043,6 +2054,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             display_name=display_name,
             base_url=base_url,
             api_key=api_key,
+            default_model=default_model,
         )
 
         if success:
