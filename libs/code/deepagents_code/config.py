@@ -791,6 +791,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
     from deepagents_code._git import RepositoryMetadata
+    from deepagents_code.model_config import ModelConfig
 
     # Static type stubs for lazy module attributes resolved by __getattr__.
     # At runtime these are created on first access by _get_settings() /
@@ -3576,14 +3577,54 @@ def detect_provider(model_name: str) -> str | None:
     return None
 
 
+def _format_provider_default_model_spec(provider: str, model: object) -> str | None:
+    from deepagents_code.model_config import ModelSpec
+
+    if not isinstance(model, str):
+        return None
+    stripped = model.strip()
+    if not stripped:
+        return None
+    if ModelSpec.try_parse(stripped):
+        return stripped
+    return f"{provider}:{stripped}"
+
+
+def _get_configured_provider_default_model(config: ModelConfig) -> str | None:
+    from deepagents_code.model_config import get_provider_auth_status
+
+    for provider, provider_config in config.providers.items():
+        if not config.is_provider_enabled(provider):
+            continue
+        spec = _format_provider_default_model_spec(
+            provider,
+            provider_config.get("default_model"),
+        )
+        if spec is None:
+            continue
+        if get_provider_auth_status(provider).as_legacy_bool() is not False:
+            return spec
+    return None
+
+
+def _model_spec_auth_is_usable(model_spec: str) -> bool:
+    from deepagents_code.model_config import ModelSpec, get_provider_auth_status
+
+    parsed = ModelSpec.try_parse(model_spec)
+    if not parsed:
+        return True
+    return get_provider_auth_status(parsed.provider).as_legacy_bool() is not False
+
+
 def _get_default_model_spec() -> str:
     """Get default model specification based on available credentials.
 
     Checks in order:
 
     1. `[models].default` in config file (user's intentional preference).
-    2. `[models].recent` in config file (last `/model` switch).
-    3. Auto-detection based on available API credentials.
+    2. Provider-level `default_model` entries for configured providers.
+    3. `[models].recent` in config file (last `/model` switch).
+    4. Auto-detection based on available API credentials.
 
     Returns:
         Model specification in `provider:model` format.
@@ -3603,16 +3644,13 @@ def _get_default_model_spec() -> str:
     if config.default_model:
         return config.default_model
 
-    if config.recent_model:
+    provider_default = _get_configured_provider_default_model(config)
+    if provider_default:
+        return provider_default
+
+    if config.recent_model and _model_spec_auth_is_usable(config.recent_model):
         return config.recent_model
 
-    # `is True` deliberately excludes `ProviderAuthState.UNKNOWN` (which maps
-    # to `as_legacy_bool() -> None`). For the three explicit-credential
-    # providers below, an UNKNOWN result means we cannot prove auth works, so
-    # we fall through rather than pick an unverifiable default. If an
-    # implicit-auth provider (e.g., Vertex ADC) is added to this fallback
-    # list, switch to checking `state` against the relevant
-    # `ProviderAuthState` members directly.
     if get_provider_auth_status("openai").as_legacy_bool() is True:
         return "openai:gpt-5.5"
     if get_provider_auth_status("anthropic").as_legacy_bool() is True:

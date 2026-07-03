@@ -2325,7 +2325,7 @@ models = ["claude-sonnet-4-5"]
         assert models["anthropic"].count("claude-sonnet-4-5") == 1
 
     def test_adds_config_provider_with_no_models_and_no_class_path(self, tmp_path):
-        """Config provider with no models and no class_path is added with placeholder model."""
+        """Adds config provider with no models and no class path."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.empty]
@@ -3468,7 +3468,7 @@ max_input_tokens = 9999
         assert "max_input_tokens" in entry["overridden_keys"]
 
     def test_class_path_import_failure_graceful(self, tmp_path):
-        """Gracefully handles class_path package not being installed, adds provider with placeholder model."""
+        """Handles missing class path packages gracefully."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.baseten]
@@ -4917,6 +4917,71 @@ recent = "anthropic:claude-sonnet-4-5"
 
         assert result == "ollama:qwen3:4b"
 
+    def test_provider_default_takes_priority_over_unusable_recent(self, tmp_path):
+        """Provider defaults beat stale recent models."""
+        from deepagents_code.config import _get_default_model_spec
+
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("""
+[models]
+recent = "openai:gpt-5.5"
+
+[models.providers.huoshan]
+display_name = "huoshan"
+base_url = "https://ark.cn-beijing.volces.com/api/v3"
+class_path = "langchain_openai:ChatOpenAI"
+models = ["ark-code-latest"]
+default_model = "ark-code-latest"
+""")
+
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch("deepagents_code.auth_store.get_stored_key", return_value=None),
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            result = _get_default_model_spec()
+
+        assert result == "huoshan:ark-code-latest"
+
+    def test_provider_default_keeps_explicit_provider_spec(self, tmp_path):
+        """Provider-level defaults may already include provider:model format."""
+        from deepagents_code.config import _get_default_model_spec
+
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("""
+[models.providers.huoshan]
+display_name = "huoshan"
+base_url = "https://ark.cn-beijing.volces.com/api/v3"
+class_path = "langchain_openai:ChatOpenAI"
+models = ["ark-code-latest"]
+default_model = "huoshan:ark-code-latest"
+""")
+
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch("deepagents_code.auth_store.get_stored_key", return_value=None),
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            result = _get_default_model_spec()
+
+        assert result == "huoshan:ark-code-latest"
+
+    def test_save_custom_provider_defaults_openai_key_env(self, tmp_path):
+        """OpenAI-compatible custom providers read OpenAI env overrides."""
+        config_path = tmp_path / "config.toml"
+
+        assert model_config.save_custom_provider(
+            "huoshan",
+            "huoshan",
+            "https://ark.cn-beijing.volces.com/api/v3",
+            models=["ark-code-latest"],
+            default_model="ark-code-latest",
+            config_path=config_path,
+        )
+
+        config = ModelConfig.load(config_path)
+        assert config.providers["huoshan"]["api_key_env"] == "OPENAI_API_KEY"
+
     def test_recent_takes_priority_over_env(self, tmp_path):
         """[models].recent takes priority over env var auto-detection."""
         from deepagents_code.config import _get_default_model_spec
@@ -4931,7 +4996,7 @@ recent = "openai:gpt-5.2"
             patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
             patch.dict(
                 "os.environ",
-                {"ANTHROPIC_API_KEY": "test-key"},
+                {"ANTHROPIC_API_KEY": "test-key", "OPENAI_API_KEY": "test-key"},
                 clear=False,
             ),
         ):
