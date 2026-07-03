@@ -136,6 +136,7 @@ COMMANDS: tuple[SlashCommand, ...] = (
         name="/model",
         description="Switch models or edit model settings",
         bypass_tier=BypassTier.IMMEDIATE_UI,
+        argument_hint="[<provider>:<model>|--model-params JSON|--default <model>|--clear]",
     ),
     SlashCommand(
         name="/notifications",

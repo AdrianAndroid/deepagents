@@ -9193,7 +9193,7 @@ class DeepAgentsApp(App):
         """
         # Echo the command to the chat history first
         await self._mount_message(UserMessage(command))
-        
+
         from deepagents_code.config import newline_shortcut, settings
 
         cmd = command.lower().strip()
@@ -9473,23 +9473,22 @@ class DeepAgentsApp(App):
                 await self._show_model_selector(extra_kwargs=extra_kwargs)
         elif cmd == "/add-provider" or cmd.startswith("/add-provider "):
             from deepagents_code.model_config import save_custom_provider
-            
-            
+
             if not cmd.startswith("/add-provider "):
                 # Show usage
                 await self._mount_message(
                     AppMessage(
-                        "Usage: /add-provider <provider-id> \"<display-name>\" <base-url> \"<model1,model2>\" [class-path] [api-key-env]\n"
+                        'Usage: /add-provider <provider-id> "<display-name>" <base-url> "<model1,model2>" [class-path] [api-key-env]\n'
                         "Example:\n"
-                        "/add-provider huoshan1 \"火山引擎\" https://ark.cn-beijing.volces.com/api/coding/v3 \"doubao-pro-32k,qianwen-72b\"",
+                        '/add-provider huoshan1 "火山引擎" https://ark.cn-beijing.volces.com/api/coding/v3 "doubao-pro-32k,qianwen-72b"',
                     )
                 )
                 return
-            
+
             # Parse arguments
             import shlex
             args = shlex.split(command.strip()[len("/add-provider ") :].strip())
-            
+
             if len(args) < 4:
                 await self._mount_message(
                     ErrorMessage(
@@ -9497,23 +9496,23 @@ class DeepAgentsApp(App):
                     )
                 )
                 return
-            
+
             provider_id = args[0]
             display_name = args[1]
             base_url = args[2]
             models_str = args[3]
-            class_path = args[4] if len(args) >=5 else "langchain_openai:ChatOpenAI"
-            api_key_env = args[5] if len(args) >=6 else None
-            
+            class_path = args[4] if len(args) >= 5 else "langchain_openai:ChatOpenAI"
+            api_key_env = args[5] if len(args) >= 6 else None
+
             # Parse models list
             models = [m.strip() for m in models_str.split(",") if m.strip()]
-            
+
             if not models:
                 await self._mount_message(
                     ErrorMessage("Models list cannot be empty.")
                 )
                 return
-            
+
             # Save provider
             success = await asyncio.to_thread(
                 save_custom_provider,
@@ -9524,7 +9523,7 @@ class DeepAgentsApp(App):
                 class_path=class_path,
                 api_key_env=api_key_env,
             )
-            
+
             if success:
                 await self._mount_message(
                     AppMessage(

@@ -1035,8 +1035,9 @@ def get_available_models() -> dict[str, list[str]]:
                     )
 
         if provider_name not in available:
-            if config_models:
-                available[provider_name] = config_models
+            # Always add enabled custom providers from config, even if they have no models
+            # This ensures they show up in the model selector even with empty models list
+            available[provider_name] = config_models or ["custom_model"]
         else:
             # Append any config models not already discovered
             existing = set(available[provider_name])
@@ -2932,7 +2933,7 @@ def save_custom_provider(
                 Path(tmp_path).unlink()
             raise
     except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
-        logger.exception(f"Could not save custom provider {provider_id}")
+        logger.exception("Could not save custom provider %s", provider_id)
         return False
     else:
         # Invalidate all config caches

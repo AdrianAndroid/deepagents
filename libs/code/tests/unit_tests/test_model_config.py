@@ -2324,8 +2324,8 @@ models = ["claude-sonnet-4-5"]
 
         assert models["anthropic"].count("claude-sonnet-4-5") == 1
 
-    def test_skips_config_provider_with_no_models_and_no_class_path(self, tmp_path):
-        """Config provider with no models and no class_path is not added."""
+    def test_adds_config_provider_with_no_models_and_no_class_path(self, tmp_path):
+        """Config provider with no models and no class_path is added with placeholder model."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.empty]
@@ -2340,7 +2340,8 @@ api_key_env = "SOME_KEY"
         ):
             models = get_available_models()
 
-        assert "empty" not in models
+        assert "empty" in models
+        assert models["empty"] == ["custom_model"]
 
 
 class TestOllamaModelDiscovery:
@@ -3467,7 +3468,7 @@ max_input_tokens = 9999
         assert "max_input_tokens" in entry["overridden_keys"]
 
     def test_class_path_import_failure_graceful(self, tmp_path):
-        """Gracefully handles class_path package not being installed."""
+        """Gracefully handles class_path package not being installed, adds provider with placeholder model."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.baseten]
@@ -3483,7 +3484,8 @@ api_key_env = "BASETEN_API_KEY"
         ):
             models = get_available_models()
 
-        assert "baseten" not in models
+        assert "baseten" in models
+        assert models["baseten"] == ["custom_model"]
 
     def test_class_path_non_import_error_logs_warning(self, tmp_path, caplog):
         """Non-ImportError from class_path package logs warning, not debug."""
@@ -3511,7 +3513,8 @@ api_key_env = "BASETEN_API_KEY"
         ):
             models = get_available_models()
 
-        assert "baseten" not in models
+        assert "baseten" in models
+        assert models["baseten"] == ["custom_model"]
         assert any(
             "Failed to load profiles" in record.message and "baseten" in record.message
             for record in caplog.records

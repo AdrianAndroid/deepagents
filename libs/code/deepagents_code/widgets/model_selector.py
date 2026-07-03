@@ -16,7 +16,7 @@ from textual.events import (
 from textual.fuzzy import Matcher
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.widgets import Input, Static, Button
+from textual.widgets import Button, Input, Static
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -1873,7 +1873,16 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 
 
 class CustomProviderModalScreen(ModalScreen[bool]):
-    """Modal screen for adding a custom OpenAI-compatible provider."""
+    """Modal screen for adding/editing a custom OpenAI-compatible provider."""
+
+    BINDINGS = [
+        Binding("enter", "submit", "Save provider", priority=True),
+        Binding("escape", "cancel", "Cancel", priority=True),
+    ]
+
+    def __init__(self, provider_id: str | None = None, **kwargs):
+        super().__init__(**kwargs)
+        self.provider_id = provider_id
 
     CSS = """
     CustomProviderModalScreen {
@@ -1932,7 +1941,8 @@ class CustomProviderModalScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static("Add Custom Provider", classes="form-title")
+            title = "Edit Custom Provider" if self.provider_id else "Add Custom Provider"
+            yield Static(title, classes="form-title")
             yield Static("Provider ID (lowercase, numbers, hyphens, underscores):", classes="form-label")
             yield Input(id="provider-id", placeholder="e.g. my-provider")
             yield Static("Display Name:", classes="form-label")
@@ -1947,8 +1957,51 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 yield Button("Save", id="save-btn", variant="primary")
 
     def on_mount(self) -> None:
-        """Focus the first input field on mount."""
-        self.query_one("#provider-id", Input).focus()
+        """Focus the first input field on mount, pre-fill if editing existing provider."""
+        import tomllib
+
+        from deepagents_code.model_config import DEFAULT_CONFIG_PATH
+
+        # Load all existing custom providers from config
+        self.existing_providers = {}
+        try:
+            if DEFAULT_CONFIG_PATH.exists():
+                with DEFAULT_CONFIG_PATH.open("rb") as f:
+                    data = tomllib.load(f)
+                self.existing_providers = data.get("models", {}).get("providers", {})
+        except Exception:
+            pass
+
+        if self.provider_id:
+            # Load existing provider config for editing
+            provider_config = self.existing_providers.get(self.provider_id, {})
+            if provider_config:
+                self.query_one("#provider-id", Input).value = self.provider_id
+                self.query_one("#provider-id", Input).disabled = True  # Can't edit ID for existing providers
+                self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
+                self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
+                # API key is not stored in config, it's in env var, so leave empty
+
+        self.query_one("#provider-id", Input).focus() if not self.provider_id else self.query_one("#display-name", Input).focus()
+
+    def on_input(self, event: Input.Changed) -> None:
+        """Handle input changes, auto-fill existing provider data when ID matches."""
+        if event.input.id == "provider-id" and not self.provider_id:
+            provider_id = event.value.strip()
+            if not provider_id:
+                # If input is cleared, re-enable and clear other fields
+                event.input.disabled = False
+                self.query_one("#display-name", Input).value = ""
+                self.query_one("#base-url", Input).value = ""
+            elif provider_id in self.existing_providers and not event.input.disabled:
+                # Auto-fill data for existing provider
+                provider_config = self.existing_providers[provider_id]
+                self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
+                self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
+                # Disable provider ID input to prevent modification
+                event.input.disabled = True
+                # Move focus to next field
+                self.query_one("#display-name", Input).focus()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -1992,7 +2045,10 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             api_key=api_key,
         )
 
-        self.dismiss(success)
+        if success:
+            self.dismiss(success)
+        else:
+            error_widget.update("Failed to save custom provider. Check permissions and try again.")
 
     def action_cancel(self) -> None:
         """Cancel the form."""
