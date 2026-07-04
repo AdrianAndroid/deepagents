@@ -6,7 +6,12 @@ LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)/"
 REMOTE="root@8.152.204.58:/opt/1panel/www/sites/8.152.204.58/index/"
 SSH_PORT="${SSH_PORT:-22}"
 
-RSYNC_OPTS=(-avz --delete --exclude 'deploy.sh' --exclude '.DS_Store' --exclude '.git')
+RSYNC_OPTS=(-avz --delete
+  --exclude 'deploy.sh'
+  --exclude 'serve.sh'
+  --exclude '.DS_Store'
+  --exclude '.git'
+)
 
 if [[ "${1:-}" == "--dry-run" ]]; then
   RSYNC_OPTS+=(--dry-run)

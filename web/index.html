@@ -1,38 +1,170 @@
 <!doctype html>
-<html>
-
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <meta name="robots" content="noindex,nofollow" />
-    <title>恭喜，站点创建成功！</title>
-    <style>
-        .container {
-            width: 60%;
-            margin: 10% auto 0;
-            background-color: #f0f0f0;
-            padding: 2% 5%;
-            border-radius: 10px
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-
-        ul li {
-            line-height: 2.3
-        }
-
-        a {
-            color: #20a53a
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>DeepAgents Code · 私有仓库安装指引</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2129;--border:#30363d;
+--text:#e6edf3;--muted:#9198a1;--accent:#20a53a;--accent-hover:#2ec14a;
+--danger:#f85149;--code-bg:#0b0f14;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+"Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.65;}
+.container{max-width:920px;margin:0 auto;padding:48px 24px 96px;}
+header{display:flex;align-items:center;justify-content:space-between;
+flex-wrap:wrap;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--border);
+margin-bottom:32px;}
+h1{margin:0;font-size:26px;}
+h1 .tag{display:inline-block;font-size:12px;padding:2px 8px;
+border:1px solid var(--accent);color:var(--accent);border-radius:999px;
+margin-left:10px;vertical-align:middle;}
+header .meta{color:var(--muted);font-size:13px;}
+header .meta code{color:var(--text);}
+h2{font-size:18px;margin:40px 0 12px;display:flex;align-items:center;gap:10px;}
+h2 .num{display:inline-flex;width:24px;height:24px;border-radius:50%;
+background:var(--accent);color:#fff;font-size:13px;
+align-items:center;justify-content:center;}
+p{margin:8px 0 12px;color:#cdd5df;}
+a{color:var(--accent);text-decoration:none;}
+a:hover{color:var(--accent-hover);text-decoration:underline;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:18px 20px;margin:12px 0 20px;}
+.code-block{position:relative;background:var(--code-bg);border:1px solid var(--border);
+border-radius:8px;padding:14px 60px 14px 16px;
+font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+font-size:13px;color:#d1d9e0;overflow-x:auto;white-space:pre;}
+.code-block .copy-btn{position:absolute;top:8px;right:8px;background:var(--panel-2);
+border:1px solid var(--border);color:var(--muted);border-radius:6px;
+padding:4px 10px;font-size:12px;cursor:pointer;transition:.15s;}
+.code-block .copy-btn:hover{color:var(--text);border-color:var(--accent);}
+.code-block .copy-btn.ok{color:var(--accent);border-color:var(--accent);}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);
+border:1px solid var(--border);border-radius:8px;padding:8px 14px;
+color:var(--text);font-size:13px;cursor:pointer;transition:.15s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none;}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn.primary:hover{background:var(--accent-hover);color:#fff;}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 4px;}
+table th,table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;}
+table th{color:var(--muted);font-weight:500;}
+table code{color:var(--accent);}
+code.inline{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;
+padding:1px 6px;font-family:"SF Mono",Menlo,Consolas,monospace;
+font-size:12.5px;color:#d1d9e0;}
+.callout{border-left:3px solid var(--accent);background:rgba(32,165,58,.08);
+padding:10px 14px;border-radius:4px;margin:12px 0;font-size:13.5px;color:#cdd5df;}
+.callout.warn{border-left-color:#d29922;background:rgba(210,153,34,.08);}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);
+color:var(--muted);font-size:12px;text-align:center;}
+</style>
 </head>
-
 <body>
-    <div class="container">
-        <h1>恭喜zhaojian, 站点创建成功！</h1>
-        <h3>这是默认index.html，本页面由系统自动生成</h3>
-    </div>
-</body>
+<div class="container">
 
+<header>
+<div>
+<h1>DeepAgents Code<span class="tag">Private PyPI</span></h1>
+<div class="meta" style="margin-top:6px">终端 AI 编码代理 · 命令行工具 <code>dcode</code></div>
+</div>
+<div class="meta">私有仓库: <code>http://8.152.204.58:48080</code></div>
+</header>
+
+<p>本页说明如何从内网私有 PyPI 仓库安装 <code class="inline">deepagents-code</code>(命令 <code class="inline">dcode</code>)。推荐使用 <code class="inline">uv tool</code> 隔离安装,不污染系统 Python。</p>
+
+<h2><span class="num">1</span>一键安装</h2>
+<div class="card">
+<p>复制下面这条命令到终端执行:</p>
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/install.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn primary" href="install.sh" download>下载 install.sh</a>
+<a class="btn" href="install.sh" target="_blank">查看源码</a>
+</div>
+<div class="callout">脚本会自动检测并安装 <code class="inline">uv</code>,然后通过 <code class="inline">uv tool install</code> 从私有仓库拉取 <code class="inline">deepagents-code</code>。</div>
+</div>
+
+<h2><span class="num">2</span>手动安装</h2>
+<div class="card">
+<p>若你已经装好 <code class="inline">uv</code>,可跳过脚本,直接执行:</p>
+<div class="code-block"><span class="cmd">uv tool install deepagents-code \
+  --index-url http://admin:admin@8.152.204.58:48080/simple/ \
+  --extra-index-url https://pypi.org/simple/ \
+  --index-strategy unsafe-best-match \
+  --force</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:14px">安装完成后,任何目录下运行:</p>
+<div class="code-block"><span class="cmd">dcode</span><button class="copy-btn">复制</button></div>
+</div>
+
+<h2><span class="num">3</span>卸载</h2>
+<div class="card">
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/uninstall.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn danger" href="uninstall.sh" download>下载 uninstall.sh</a>
+<a class="btn" href="uninstall.sh" target="_blank">查看源码</a>
+</div>
+<p style="margin-top:10px">或者直接:</p>
+<div class="code-block"><span class="cmd">uv tool uninstall deepagents-code</span><button class="copy-btn">复制</button></div>
+</div>
+
+<h2><span class="num">4</span>环境变量(可选)</h2>
+<div class="card">
+<p>安装脚本支持以下环境变量覆盖默认配置:</p>
+<table>
+<thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>PYPI_HOST</code></td><td>8.152.204.58:48080</td><td>私有仓库地址</td></tr>
+<tr><td><code>PYPI_USER</code></td><td>admin</td><td>用户名</td></tr>
+<tr><td><code>PYPI_PASSWORD</code></td><td>admin</td><td>密码</td></tr>
+<tr><td><code>PKG_VERSION</code></td><td><em>latest</em></td><td>指定版本,例 <code>0.0.2</code></td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px">示例:安装指定版本</p>
+<div class="code-block"><span class="cmd">PKG_VERSION=0.0.2 bash install.sh</span><button class="copy-btn">复制</button></div>
+</div>
+
+<h2><span class="num">5</span>常见问题</h2>
+<div class="card">
+<p><strong>提示 <code class="inline">dcode: command not found</code></strong></p>
+<p>把 <code class="inline">uv</code> 的 tool bin 目录加入 PATH:</p>
+<div class="code-block"><span class="cmd">echo 'export PATH="$(uv tool dir --bin):$PATH"' >> ~/.zshrc &amp;&amp; source ~/.zshrc</span><button class="copy-btn">复制</button></div>
+
+<p style="margin-top:14px"><strong>验证安装</strong></p>
+<div class="code-block"><span class="cmd">uv tool list
+dcode --version</span><button class="copy-btn">复制</button></div>
+
+<p style="margin-top:14px"><strong>升级到最新版本</strong></p>
+<div class="code-block"><span class="cmd">uv tool upgrade deepagents-code</span><button class="copy-btn">复制</button></div>
+
+<div class="callout warn" style="margin-top:14px">
+私有仓库当前使用 HTTP + 明文 Basic 认证(admin/admin),仅供内网使用。请勿在公网环境暴露。
+</div>
+</div>
+
+<footer>
+DeepAgents Code · 私有分发页 · <a href="install.sh">install.sh</a> · <a href="uninstall.sh">uninstall.sh</a>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.code-block').forEach(function(block){
+  var btn = block.querySelector('.copy-btn');
+  var cmd = block.querySelector('.cmd');
+  if(!btn || !cmd) return;
+  btn.addEventListener('click', function(){
+    var text = cmd.innerText.replace(/\u00a0/g,' ');
+    navigator.clipboard.writeText(text).then(function(){
+      var old = btn.textContent;
+      btn.textContent = '已复制';
+      btn.classList.add('ok');
+      setTimeout(function(){ btn.textContent = old; btn.classList.remove('ok'); }, 1500);
+    }).catch(function(){ btn.textContent = '复制失败'; });
+  });
+});
+</script>
+</body>
 </html>
