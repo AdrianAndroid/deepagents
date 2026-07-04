@@ -9,6 +9,8 @@ SSH_PORT="${SSH_PORT:-22}"
 RSYNC_OPTS=(-avz --delete
   --exclude 'deploy.sh'
   --exclude 'serve.sh'
+  --exclude 'run-deploy.sh'
+  --exclude 'run-serve.sh'
   --exclude '.DS_Store'
   --exclude '.git'
 )

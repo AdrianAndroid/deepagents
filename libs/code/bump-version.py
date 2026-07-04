@@ -52,7 +52,7 @@ SEMVER_RE = re.compile(
 )
 
 
-def read_pyproject_version(path: Path) -> str:
+def read_pyproject_version6(path: Path) -> str:
     text = path.read_text()
     match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
     if not match:
