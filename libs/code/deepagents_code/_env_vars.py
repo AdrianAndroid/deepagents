@@ -170,6 +170,13 @@ Set to a truthy value to bring the standalone integrations screen back into the
 flow. Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` as enabled.
 """
 
+PYPI_URL = "DEEPAGENTS_CODE_PYPI_URL"
+"""Override the JSON API URL used to check for `deepagents-code` updates.
+
+Defaults (in `_version.py`) to the private static mirror. Set to
+`https://pypi.org/pypi/deepagents-code/json` to check public PyPI instead.
+"""
+
 RESTARTED_AFTER_UPDATE = "DEEPAGENTS_CODE_RESTARTED_AFTER_UPDATE"
 """Internal sentinel recording the target version immediately before the
 startup auto-update re-execs the process.
@@ -189,6 +196,13 @@ rely on their distro package / existing toolchain instead; the install script's
 `system` mode keeps the brew/apt/cargo path. A system `rg` already on `PATH` is
 reused under either setting. Unrecognized values fall back to `managed`. See
 `managed_tools.ripgrep_installer`."""
+
+SDK_PYPI_URL = "DEEPAGENTS_CODE_SDK_PYPI_URL"
+"""Override the JSON API URL used to read `deepagents` SDK release metadata.
+
+Defaults (in `_version.py`) to the private static mirror. Set to
+`https://pypi.org/pypi/deepagents/json` to read from public PyPI instead.
+"""
 
 SERVER_ENV_PREFIX = "DEEPAGENTS_CODE_SERVER_"
 """Environment variable prefix used to pass CLI config to the server subprocess."""

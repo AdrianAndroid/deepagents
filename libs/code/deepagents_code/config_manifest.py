@@ -1185,6 +1185,10 @@ NON_OPTION_ENV_VARS: frozenset[str] = frozenset(
         # Set then popped during the self-update restart handshake (main.py);
         # never user-configured.
         _env_vars.RESTARTED_AFTER_UPDATE,
+        # Advanced overrides for the update-check JSON API mirror URLs. Resolved
+        # in `_version.py` at import time, not surfaced as user config options.
+        _env_vars.PYPI_URL,
+        _env_vars.SDK_PYPI_URL,
     }
 )
 """`_env_vars` constants intentionally excluded from the option catalog."""

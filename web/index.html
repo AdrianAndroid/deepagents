@@ -206,7 +206,23 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <div class="code-block"><span class="cmd">$env:PKG_VERSION="0.0.2"; irm http://8.152.204.58:40080/install.ps1 | iex</span><button class="copy-btn">复制</button></div>
 </div>
 
-<h2><span class="num">5</span>常见问题</h2>
+<h2><span class="num">5</span>版本检查镜像(JSON API)</h2>
+<div class="card">
+<p><code class="inline">dcode</code> 内置的版本检查会请求 Warehouse JSON API。私有 <code class="inline">pypiserver</code>(48080) 只提供 Simple Index,没有该接口,因此本站(40080)额外托管了兼容的静态 JSON:</p>
+<table>
+<thead><tr><th>用途</th><th>地址</th></tr></thead>
+<tbody>
+<tr><td>主程序版本检查</td><td><code>http://8.152.204.58:40080/pypi/deepagents-code/json</code></td></tr>
+<tr><td>SDK 发布时间</td><td><code>http://8.152.204.58:40080/pypi/deepagents/json</code></td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px">这两个 JSON 由 <code class="inline">libs/code/run-build-upload.sh</code> 在发布时自动生成(读取私有源当前版本列表)并部署到本站,<strong>免认证</strong>访问。删除旧版本后重新运行该脚本即可同步。</p>
+<div class="callout">客户端默认已指向以上地址。如需切回公网 PyPI,可设置环境变量:<br>
+<code class="inline">DEEPAGENTS_CODE_PYPI_URL=https://pypi.org/pypi/deepagents-code/json</code></div>
+<div class="callout warn" style="margin-top:12px">可编辑(<code class="inline">--editable</code>)安装下自动更新始终禁用,版本检查仅用于"有新版可用"提示,不会自动下载重启。</div>
+</div>
+
+<h2><span class="num">6</span>常见问题</h2>
 <div class="card">
 <p><strong>找不到 <code class="inline">dcode</code> 命令</strong></p>
 <p>Linux / macOS —— 把 <code class="inline">uv</code> 的 bin 目录加入 PATH:</p>

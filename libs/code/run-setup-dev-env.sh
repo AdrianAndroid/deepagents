@@ -18,7 +18,7 @@
 set -e
 
 # ========== 自定义配置区 ==========
-ENV_NAME="${ENV_NAME:-deepagents}"
+ENV_NAME="${ENV_NAME:-test}"
 PYTHON_VER="${PYTHON_VER:-3.12}"
 # ===================================
 
