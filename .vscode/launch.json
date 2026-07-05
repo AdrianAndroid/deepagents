@@ -1,0 +1,62 @@
+{
+  // VSCode 断点调试配置 - deepagents-code (dcode)
+  // 说明：本项目是 Textual TUI，直接在集成终端里跑；TUI 会接管终端渲染，
+  // 但断点、变量、调用栈依然可以在 VSCode 里正常使用。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // 场景 1：调试 dcode TUI 入口（最常用）
+      // 在任意 .py 文件里打断点 -> F5 选择此配置 -> 在弹出的集成终端里操作 TUI
+      "name": "dcode: TUI (module)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "deepagents_code",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/libs/code",
+      "python": "${workspaceFolder}/libs/code/.venv/bin/python",
+      "env": {
+        "PYTHONBREAKPOINT": "debugpy.breakpoint"
+      }
+    },
+    {
+      // 场景 2：调试当前打开的 Python 文件（脚本 / 示例）
+      "name": "Python: 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${fileDirname}",
+      "python": "${workspaceFolder}/libs/code/.venv/bin/python"
+    },
+    {
+      // 场景 3：调试当前打开的 pytest 测试文件（推荐用于逻辑调试）
+      "name": "Pytest: 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-vv", "-s"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/libs/code",
+      "python": "${workspaceFolder}/libs/code/.venv/bin/python"
+    },
+    {
+      // 场景 4：Attach 到已运行的 dcode 进程
+      // 先在代码里插入 `import debugpy; debugpy.listen(5678); debugpy.wait_for_client()`
+      // 然后运行 dcode，再用此配置附加
+      "name": "Attach: localhost:5678",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": { "host": "localhost", "port": 5678 },
+      "justMyCode": false,
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "${workspaceFolder}"
+        }
+      ]
+    }
+  ]
+}
