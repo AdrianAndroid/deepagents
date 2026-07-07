@@ -15,6 +15,13 @@
 # 可覆盖环境变量：
 #   ENV_NAME=myenv PYTHON_VER=3.11 ./setup-dev-env.sh
 # ============================================================
+
+# 禁止通过 source 执行：source 会污染当前 shell，且脚本中的 exit 会关闭 VS Code 等终端
+if [[ -n "${BASH_SOURCE[0]}" ]] && [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    echo "❌ 请直接运行本脚本，不要通过 source 执行: ./$(basename "${BASH_SOURCE[0]}")" >&2
+    return 1
+fi
+
 set -e
 
 # ========== 自定义配置区 ==========
@@ -38,6 +45,13 @@ if ! command -v conda &> /dev/null; then
     exit 1
 fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
+
+# 接受 Anaconda 默认频道的服务条款（ToS），否则新版 conda 创建环境会报 CondaToSNonInteractiveError
+if conda tos --help &> /dev/null; then
+    echo "==> 接受 conda 默认频道的服务条款（ToS）..."
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || true
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || true
+fi
 
 # 判断环境是否存在，不存在则创建
 if ! conda env list | awk '{print $1}' | grep -qx "${ENV_NAME}"; then
