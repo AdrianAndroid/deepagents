@@ -9,10 +9,12 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.store.memory import InMemoryStore
 
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from deepagents.backends.filesystem import FilesystemBackend
 from deepagents.middleware.filesystem import (
     EXECUTION_SYSTEM_PROMPT,
     WRITE_FILE_TOOL_DESCRIPTION,
     FilesystemMiddleware,
+    _accepts_native_absolute_paths,
 )
 from tests.unit_tests.chat_model import GenericFakeChatModel
 
@@ -120,3 +122,28 @@ class TestFilesystemMiddlewareInit:
         assert tools["write_file"].description == WRITE_FILE_TOOL_DESCRIPTION.rstrip()
         assert "edit_file" in tools
         assert tools["edit_file"].description == "Squirtle"
+
+
+class TestAcceptsNativeAbsolutePaths:
+    """`_accepts_native_absolute_paths` gates OS-native path pass-through."""
+
+    def test_non_virtual_filesystem_backend_accepts(self) -> None:
+        assert _accepts_native_absolute_paths(FilesystemBackend(virtual_mode=False)) is True
+
+    def test_virtual_filesystem_backend_rejects(self) -> None:
+        assert _accepts_native_absolute_paths(FilesystemBackend(virtual_mode=True)) is False
+
+    def test_state_backend_rejects(self) -> None:
+        assert _accepts_native_absolute_paths(StateBackend()) is False
+
+    def test_composite_follows_default_backend(self) -> None:
+        non_virtual = CompositeBackend(
+            default=FilesystemBackend(virtual_mode=False),
+            routes={"/memories/": StoreBackend()},
+        )
+        virtual = CompositeBackend(
+            default=FilesystemBackend(virtual_mode=True),
+            routes={"/memories/": StoreBackend()},
+        )
+        assert _accepts_native_absolute_paths(non_virtual) is True
+        assert _accepts_native_absolute_paths(virtual) is False
