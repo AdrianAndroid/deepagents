@@ -315,6 +315,15 @@ def _build_server_cmd(config_path: Path, *, host: str, port: int) -> list[str]:
         str(port),
         "--no-browser",
         "--no-reload",
+        # Allow synchronous filesystem I/O on the dev server event loop. The
+        # agent graph factory legitimately performs blocking reads during
+        # construction (dotenv discovery, project-root detection, and
+        # `Path.resolve()`, which calls `os.getcwd()` on Windows). `langgraph
+        # dev` unconditionally overwrites `LANGGRAPH_ALLOW_BLOCKING` from this
+        # flag's value (defaulting to "false"), so setting only the env var in
+        # `_build_server_env` is not enough — without this flag blockbuster is
+        # activated and the graph readiness check fails with `BlockingError`.
+        "--allow-blocking",
         "--config",
         str(config_path),
     ]
@@ -336,6 +345,16 @@ def _build_server_env() -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["LANGGRAPH_AUTH_TYPE"] = "noop"
+    # Allow synchronous filesystem I/O on the dev server event loop. The agent
+    # graph factory legitimately performs blocking reads during construction
+    # (dotenv discovery, project-root detection, and `Path.resolve()`, which
+    # calls `os.getcwd()` on Windows). Without this, langgraph dev's blockbuster
+    # integration raises `BlockingError` and the graph readiness check fails.
+    #
+    # This env var is set for completeness, but `langgraph dev` overwrites it
+    # from its own `--allow-blocking` flag on startup, so `_build_server_cmd`
+    # must also pass that flag for the setting to actually take effect.
+    env["LANGGRAPH_ALLOW_BLOCKING"] = "true"
 
     # Capture a launch-time PYTHONPATH before stripping it. Never trust an
     # inherited carrier var: pop it first, then set it only from the real value.
