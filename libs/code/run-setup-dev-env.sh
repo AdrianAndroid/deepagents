@@ -46,6 +46,13 @@ if ! command -v conda &> /dev/null; then
 fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
 
+# 接受 Anaconda 默认频道的服务条款（ToS），否则新版 conda 创建环境会报 CondaToSNonInteractiveError
+if conda tos --help &> /dev/null; then
+    echo "==> 接受 conda 默认频道的服务条款（ToS）..."
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || true
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || true
+fi
+
 # 判断环境是否存在，不存在则创建
 if ! conda env list | awk '{print $1}' | grep -qx "${ENV_NAME}"; then
     echo "==> 未检测到 conda 环境 ${ENV_NAME}，创建 Python ${PYTHON_VER} 环境..."
