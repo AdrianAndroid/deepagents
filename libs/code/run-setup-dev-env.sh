@@ -15,6 +15,13 @@
 # 可覆盖环境变量：
 #   ENV_NAME=myenv PYTHON_VER=3.11 ./setup-dev-env.sh
 # ============================================================
+
+# 禁止通过 source 执行：source 会污染当前 shell，且脚本中的 exit 会关闭 VS Code 等终端
+if [[ -n "${BASH_SOURCE[0]}" ]] && [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    echo "❌ 请直接运行本脚本，不要通过 source 执行: ./$(basename "${BASH_SOURCE[0]}")" >&2
+    return 1
+fi
+
 set -e
 
 # ========== 自定义配置区 ==========
