@@ -5,6 +5,7 @@ Covers clipboard detection, base64 encoding, and multimodal content.
 
 import base64
 import io
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -295,6 +296,32 @@ class TestGetClipboardImage:
         mock_run.return_value = MagicMock(returncode=1, stdout=b"")
         # osascript fallback also returns None
         mock_osascript.return_value = None
+
+        result = get_clipboard_image()
+        assert result is None
+
+    @patch("deepagents_code.media_utils.sys.platform", "win32")
+    @patch("deepagents_code.media_utils.subprocess.run")
+    @patch("deepagents_code.media_utils._get_executable")
+    def test_windows_timeout_returns_none(
+        self, mock_get_executable: MagicMock, mock_run: MagicMock
+    ) -> None:
+        """A slow PowerShell start must not crash the paste handler."""
+        mock_get_executable.return_value = "powershell.exe"
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="powershell", timeout=5)
+
+        result = get_clipboard_image()
+        assert result is None
+
+    @patch("deepagents_code.media_utils.sys.platform", "win32")
+    @patch("deepagents_code.media_utils.subprocess.run")
+    @patch("deepagents_code.media_utils._get_executable")
+    def test_windows_powershell_missing_returns_none(
+        self, mock_get_executable: MagicMock, mock_run: MagicMock
+    ) -> None:
+        """A missing PowerShell executable must not crash the paste handler."""
+        mock_get_executable.return_value = "powershell.exe"
+        mock_run.side_effect = FileNotFoundError
 
         result = get_clipboard_image()
         assert result is None

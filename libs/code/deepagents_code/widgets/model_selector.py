@@ -1916,10 +1916,22 @@ class CustomProviderModalScreen(ModalScreen[bool]):
     }
 
     CustomProviderModalScreen .form-buttons {
+        layout: horizontal;
         width: 100%;
         height: 3;
-        align: right middle;
         margin-top: 1;
+    }
+
+    CustomProviderModalScreen .form-buttons-left {
+        width: 1fr;
+        height: 100%;
+        align: left middle;
+    }
+
+    CustomProviderModalScreen .form-buttons-right {
+        width: 1fr;
+        height: 100%;
+        align: right middle;
     }
 
     CustomProviderModalScreen Button {
@@ -1952,8 +1964,10 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             yield Input(id="default-model", placeholder="e.g. gpt-4o")
             yield Static("", id="error-message", classes="error-message")
             with Container(classes="form-buttons"):
-                yield Button("Cancel", id="cancel-btn", variant="default")
-                yield Button("Save", id="save-btn", variant="primary")
+                with Container(classes="form-buttons-left"):
+                    yield Button("Confirm", id="save-btn", variant="primary")
+                with Container(classes="form-buttons-right"):
+                    yield Button("Cancel", id="cancel-btn", variant="default")
 
     def on_mount(self) -> None:
         """Focus the first input field on mount, pre-fill if editing existing provider."""

@@ -131,13 +131,20 @@ def _get_windows_clipboard_image() -> ImageData | None:
         }}
         """
 
-        result = subprocess.run(  # noqa: S603
-            [powershell_path, "-Command", script],
-            capture_output=True,
-            check=False,
-            timeout=3,
-            text=True,
-        )
+        try:
+            result = subprocess.run(  # noqa: S603
+                [powershell_path, "-Command", script],
+                capture_output=True,
+                check=False,
+                timeout=5,
+                text=True,
+            )
+        except FileNotFoundError:
+            logger.debug("powershell not found for clipboard image paste")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.debug("powershell clipboard read timed out")
+            return None
 
         if result.returncode != 0 or "success" not in result.stdout:
             return None

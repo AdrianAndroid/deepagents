@@ -1,17 +1,22 @@
 {
   "info": {
-    "version": "0.0.2",
+    "version": "0.0.3",
     "requires_dist": []
   },
   "releases": {
     "0.0.1": [
       {
-        "upload_time_iso_8601": "2026-07-05T02:53:41Z"
+        "upload_time_iso_8601": "2026-07-08T15:13:35Z"
       }
     ],
     "0.0.2": [
       {
-        "upload_time_iso_8601": "2026-07-05T02:53:41Z"
+        "upload_time_iso_8601": "2026-07-08T15:13:35Z"
+      }
+    ],
+    "0.0.3": [
+      {
+        "upload_time_iso_8601": "2026-07-08T15:13:35Z"
       }
     ]
   }

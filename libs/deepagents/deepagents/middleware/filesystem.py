@@ -920,6 +920,31 @@ def supports_execution(backend: BackendProtocol) -> bool:
     return isinstance(backend, SandboxBackendProtocol)
 
 
+def _accepts_native_absolute_paths(backend: BackendProtocol) -> bool:
+    r"""Check whether a backend resolves OS-native absolute paths on disk.
+
+    A non-virtual `FilesystemBackend` (including `LocalShellBackend`) resolves
+    real on-disk paths, so the agent legitimately supplies OS-native absolute
+    paths. On Windows these are drive paths (e.g. `D:\proj\file.py`) that the
+    virtual-path validator would otherwise reject. Virtual-mode backends and
+    non-filesystem backends (state/store/sandbox) keep the strict virtual-path
+    contract.
+
+    For [`CompositeBackend`][deepagents.backends.composite.CompositeBackend],
+    the default backend determines the answer, since unrouted paths (the ones
+    that can be OS-native absolute) go to the default.
+
+    Args:
+        backend: The backend to check.
+
+    Returns:
+        `True` if the backend accepts OS-native absolute paths.
+    """
+    if isinstance(backend, CompositeBackend):
+        backend = backend.default
+    return isinstance(backend, FilesystemBackend) and not backend.virtual_mode
+
+
 # Tools that should be excluded from the large result eviction logic.
 #
 # This tuple contains tools that should NOT have their results evicted to the filesystem
@@ -1215,7 +1240,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for ls tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(path)
+                validated_path = validate_path(
+                    path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1254,7 +1282,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for ls tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(path)
+                validated_path = validate_path(
+                    path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1422,7 +1453,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for read_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1449,7 +1483,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for read_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1488,7 +1525,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for write_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1527,7 +1567,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for write_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1582,7 +1625,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for edit_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1624,7 +1670,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for edit_file tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1675,7 +1724,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for delete tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1714,7 +1766,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for delete tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(
+                    file_path,
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1767,7 +1822,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for glob tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                permission_path = validate_path(path if path is not None else "/")
+                permission_path = validate_path(
+                    path if path is not None else "/",
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1863,7 +1921,10 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for glob tool."""
             resolved_backend = self._get_backend(runtime)
             try:
-                permission_path = validate_path(path if path is not None else "/")
+                permission_path = validate_path(
+                    path if path is not None else "/",
+                    allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                )
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1940,9 +2001,13 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             output_mode: Literal["files_with_matches", "content", "count"] = "files_with_matches",
         ) -> ToolMessage:
             """Synchronous wrapper for grep tool."""
+            resolved_backend = self._get_backend(runtime)
             if path is not None:
                 try:
-                    path = validate_path(path)
+                    path = validate_path(
+                        path,
+                        allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                    )
                 except ValueError as e:
                     return ToolMessage(
                         content=f"Error: {e}",
@@ -1957,7 +2022,6 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
                         tool_call_id=runtime.tool_call_id,
                         status="error",
                     )
-            resolved_backend = self._get_backend(runtime)
             grep_result = resolved_backend.grep(pattern, path=path, glob=glob)
             matches = grep_result.matches or []
             filtered_matches = _filter_grep_matches_by_permission(self._permissions, matches, operation="read")
@@ -1980,9 +2044,13 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             output_mode: Literal["files_with_matches", "content", "count"] = "files_with_matches",
         ) -> ToolMessage:
             """Asynchronous wrapper for grep tool."""
+            resolved_backend = self._get_backend(runtime)
             if path is not None:
                 try:
-                    path = validate_path(path)
+                    path = validate_path(
+                        path,
+                        allow_native_absolute=_accepts_native_absolute_paths(resolved_backend),
+                    )
                 except ValueError as e:
                     return ToolMessage(
                         content=f"Error: {e}",
@@ -1997,7 +2065,6 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
                         tool_call_id=runtime.tool_call_id,
                         status="error",
                     )
-            resolved_backend = self._get_backend(runtime)
             grep_result = await resolved_backend.agrep(pattern, path=path, glob=glob)
             matches = grep_result.matches or []
             filtered_matches = _filter_grep_matches_by_permission(self._permissions, matches, operation="read")

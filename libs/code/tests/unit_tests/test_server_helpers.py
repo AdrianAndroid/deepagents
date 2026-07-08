@@ -36,6 +36,15 @@ class TestBuildServerCmd:
         assert "--no-browser" in cmd
         assert "--no-reload" in cmd
 
+    def test_includes_allow_blocking(self) -> None:
+        """`langgraph dev` overwrites `LANGGRAPH_ALLOW_BLOCKING` from this flag.
+
+        Without it, blockbuster rejects the graph factory's sync filesystem I/O
+        (`Path.resolve()` -> `os.getcwd()` on Windows) and readiness fails.
+        """
+        cmd = _build_server_cmd(Path("/tmp/lg.json"), host="127.0.0.1", port=2024)
+        assert "--allow-blocking" in cmd
+
 
 class TestBuildServerEnv:
     def test_sets_auth_noop(self) -> None:
@@ -61,6 +70,15 @@ class TestBuildServerEnv:
     def test_sets_pythondontwritebytecode(self) -> None:
         env = _build_server_env()
         assert env["PYTHONDONTWRITEBYTECODE"] == "1"
+
+    def test_allows_blocking_io_on_dev_server(self) -> None:
+        """Blockbuster must not reject the dev server's sync filesystem I/O.
+
+        Graph construction reads dotenv files and calls `Path.resolve()`, which
+        invokes `os.getcwd()` on Windows.
+        """
+        env = _build_server_env()
+        assert env["LANGGRAPH_ALLOW_BLOCKING"] == "true"
 
     def test_strips_subprocess_hijack_variables(self) -> None:
         injected = {key: f"/tmp/evil-{key}" for key in _SERVER_ENV_DENYLIST}

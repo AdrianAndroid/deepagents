@@ -102,6 +102,33 @@ class TestValidatePath:
         """Test that root path normalizes correctly."""
         assert validate_path("/") == "/"
 
+    @pytest.mark.parametrize(
+        "input_path",
+        [
+            "C:\\Users\\file.txt",
+            "D:/data/file.txt",
+            "D:\\deepagents\\libs\\code\\file.py",
+        ],
+    )
+    def test_native_absolute_allowed_when_opted_in(self, input_path: str) -> None:
+        """Native absolute paths are preserved unchanged when opted in.
+
+        Non-virtual local backends resolve real on-disk paths, so Windows drive
+        paths must pass through instead of being rejected. The path is returned
+        verbatim (no posix rewriting) so the backend can resolve it natively.
+        """
+        assert validate_path(input_path, allow_native_absolute=True) == input_path
+
+    def test_native_absolute_still_rejects_traversal(self) -> None:
+        """`allow_native_absolute` must not bypass traversal protection."""
+        with pytest.raises(ValueError, match="Path traversal not allowed"):
+            validate_path("C:\\Users\\..\\..\\secret", allow_native_absolute=True)
+
+    def test_native_absolute_flag_does_not_affect_virtual_paths(self) -> None:
+        """The opt-in flag leaves normal virtual paths untouched."""
+        assert validate_path("foo/bar", allow_native_absolute=True) == "/foo/bar"
+        assert validate_path("/workspace/file.txt", allow_native_absolute=True) == "/workspace/file.txt"
+
     def test_double_dots_in_filename_allowed(self) -> None:
         """Test that filenames containing `'..'` as a substring are not rejected.
 
