@@ -147,4 +147,3 @@ class TestAcceptsNativeAbsolutePaths:
         )
         assert _accepts_native_absolute_paths(non_virtual) is True
         assert _accepts_native_absolute_paths(virtual) is False
-    -   奥本
