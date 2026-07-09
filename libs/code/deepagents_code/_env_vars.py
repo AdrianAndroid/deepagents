@@ -137,6 +137,17 @@ The value is comma-separated for forward-compatibility, not because multiple
 destinations are written today.
 """
 
+NO_MOUSE = "DEEPAGENTS_CODE_NO_MOUSE"
+"""Disable Textual mouse tracking when enabled.
+
+Useful for web-based terminals (e.g. 1Panel, ttyd, wetty) that forward mouse
+events but strip the ESC prefix from SGR mouse-report sequences, causing
+garbled input like `[<35;36;33M...` to leak into the input field.
+
+Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` as enabled.
+Equivalent to passing `--no-mouse` on the command line.
+"""
+
 NO_TERMINAL_ESCAPE = "DEEPAGENTS_CODE_NO_TERMINAL_ESCAPE"
 """Disable all terminal escape/control sequence output when enabled."""
 

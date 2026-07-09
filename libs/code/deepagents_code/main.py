@@ -1722,6 +1722,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run as an ACP server over stdio instead of launching the Textual UI",
     )
+    parser.add_argument(
+        "--no-mouse",
+        action="store_true",
+        help=(
+            "Disable Textual mouse tracking. Use for web terminals (1Panel, "
+            "ttyd, wetty) that leak garbled mouse-report sequences into input."
+        ),
+    )
 
     # `parse_args` runs on every invocation; keep the import-heavy metadata
     # scan off the hot path unless the user explicitly asked for --version.
@@ -1857,6 +1865,7 @@ async def run_textual_cli_async(
     interpreter_arg: bool | None = None,
     interpreter_ptc: str | list[str] | None = None,
     interpreter_ptc_acknowledge_unsafe: bool = False,
+    mouse: bool = True,
 ) -> "AppResult":
     """Run the Textual TUI interface (async version).
 
@@ -1914,6 +1923,9 @@ async def run_textual_cli_async(
             for `js_eval`).
         interpreter_ptc_acknowledge_unsafe: Explicit acknowledgement for
             `interpreter_ptc="all"` outside of `auto_approve`.
+        mouse: Whether to enable Textual mouse tracking. Set to `False` for web
+            terminals (1Panel, ttyd, wetty) that leak garbled mouse-report
+            sequences into input.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
@@ -2022,6 +2034,7 @@ async def run_textual_cli_async(
             model_explicitly_set=model_name is not None,
             interpreter_arg=interpreter_arg,
             defer_server_start=defer_server_start,
+            mouse=mouse,
         )
     except Exception as e:
         logger.debug("App error", exc_info=True)
@@ -2340,6 +2353,28 @@ def _debug_mcp_project_trust_enabled() -> bool:
     from deepagents_code._env_vars import DEBUG_MCP_PROJECT_TRUST, is_env_truthy
 
     return is_env_truthy(DEBUG_MCP_PROJECT_TRUST)
+
+
+def _resolve_no_mouse(args: argparse.Namespace) -> bool:
+    """Return whether Textual mouse tracking should be disabled.
+
+    True when the user passed `--no-mouse` on the command line, or set
+    `DEEPAGENTS_CODE_NO_MOUSE` to a truthy value. Web-based terminals
+    (1Panel, ttyd, wetty) commonly need this because they forward mouse
+    events but strip the ESC prefix from SGR mouse-report sequences,
+    causing garbled input like `[<35;36;33M...` to leak into the input.
+
+    Args:
+        args: Parsed argparse namespace.
+
+    Returns:
+        `True` when mouse tracking should be disabled.
+    """
+    from deepagents_code._env_vars import NO_MOUSE, is_env_truthy
+
+    if getattr(args, "no_mouse", False):
+        return True
+    return is_env_truthy(NO_MOUSE)
 
 
 def _check_mcp_project_trust(*, trust_flag: bool = False) -> bool | None:
@@ -3575,6 +3610,7 @@ def cli_main() -> None:
                         enable_interpreter=enable_interpreter,
                         interpreter_arg=args.interpreter,
                         interpreter_ptc=interpreter_ptc,
+                        mouse=not _resolve_no_mouse(args),
                     )
                 )
                 return_code = result.return_code

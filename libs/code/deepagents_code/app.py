@@ -16287,6 +16287,7 @@ async def run_textual_app(
     defer_server_start: bool = False,
     title: str | None = None,
     sub_title: str | None = None,
+    mouse: bool = True,
 ) -> AppResult:
     """Run the Textual application.
 
@@ -16347,6 +16348,10 @@ async def run_textual_app(
             default `"Deep Agents"` is used.
         sub_title: Override the Textual `App.sub_title` shown in the optional
             header bar.
+        mouse: Whether to enable Textual mouse tracking. Set to `False` for web
+            terminals (e.g. 1Panel, ttyd, wetty) that forward mouse events but
+            strip the ESC prefix from SGR mouse-report sequences, causing
+            garbled input like `[<35;36;33M...` to leak into the input field.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
@@ -16377,7 +16382,7 @@ async def run_textual_app(
         sub_title=sub_title,
     )
     try:
-        await app.run_async()
+        await app.run_async(mouse=mouse)
     finally:
         # Guarantee server cleanup regardless of how the app exits.
         # Covers both the pre-started server_proc path and the deferred
