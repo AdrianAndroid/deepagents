@@ -294,6 +294,35 @@ class TestAssistantMessageMarkdownRendering:
         assert msg._content == "```python\nnew content\n```"
 
 
+class TestCopyTurnButton:
+    """Tests for the copy-turn button on AssistantMessage."""
+
+    async def test_button_hidden_during_streaming(self) -> None:
+        """Copy button should not be visible while streaming is active."""
+        msg = AssistantMessage()
+        assert not msg._stream_finalized
+
+    async def test_button_visible_after_stop_stream(self) -> None:
+        """Copy button should be marked visible after stop_stream finalizes."""
+        msg = AssistantMessage()
+        msg._content_parts = ["Final answer"]
+        await msg.stop_stream()
+        assert msg._stream_finalized
+
+    async def test_button_visible_for_preloaded_content(self) -> None:
+        """Copy button should be visible for messages created with content."""
+        msg = AssistantMessage("Preloaded answer")
+        assert msg._stream_finalized
+
+    async def test_button_visible_after_set_content(self) -> None:
+        """Copy button should be visible after set_content."""
+        msg = AssistantMessage()
+        msg._markdown = MagicMock()
+        msg._markdown.update = AsyncMock()
+        await msg.set_content("New content")
+        assert msg._stream_finalized
+
+
 class _AssistantMessageApp(App[None]):
     """Minimal app that mounts an AssistantMessage for runtime tests."""
 
