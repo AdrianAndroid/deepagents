@@ -13,6 +13,7 @@ from PIL import Image
 
 from deepagents_code.input import MediaTracker
 from deepagents_code.media_utils import (
+    MAX_MEDIA_BYTES,
     ImageData,
     VideoData,
     _detect_video_format,
@@ -219,14 +220,14 @@ class TestCreateMultimodalContent:
 class TestGetClipboardImage:
     """Tests for clipboard image detection."""
 
-    @patch("deepagents_code.media_utils.sys.platform", "linux")
+    @patch("deepagents_code.media_utils.sys.platform", "freebsd")
     def test_unsupported_platform_returns_none_and_warns(self) -> None:
-        """Test that non-macOS platforms return None and log a warning."""
+        """Test that non-macOS/Windows/Linux platforms return None and log a warning."""
         with patch("deepagents_code.media_utils.logger") as mock_logger:
             result = get_clipboard_image()
             assert result is None
             mock_logger.warning.assert_called_once()
-            assert "linux" in mock_logger.warning.call_args[0][1]
+            assert "freebsd" in mock_logger.warning.call_args[0][1]
 
     @patch("deepagents_code.media_utils.sys.platform", "darwin")
     @patch("deepagents_code.media_utils._get_macos_clipboard_image")
@@ -262,6 +263,26 @@ class TestGetClipboardImage:
         assert result is not None
         assert result.format == "png"
         assert len(result.base64_data) > 0
+
+    @patch("deepagents_code.media_utils.sys.platform", "darwin")
+    @patch("deepagents_code.media_utils.subprocess.run")
+    @patch("deepagents_code.media_utils._get_executable")
+    def test_pngpaste_oversized_image_returns_none(
+        self, mock_get_executable: MagicMock, mock_run: MagicMock
+    ) -> None:
+        """Images exceeding MAX_MEDIA_BYTES are rejected before encoding."""
+        mock_get_executable.return_value = "/usr/local/bin/pngpaste"
+
+        # Create a fake PNG payload larger than MAX_MEDIA_BYTES
+        oversized_bytes = b"\x00" * (MAX_MEDIA_BYTES + 1)
+
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=oversized_bytes,
+        )
+
+        result = get_clipboard_image()
+        assert result is None
 
     @patch("deepagents_code.media_utils.sys.platform", "darwin")
     @patch("deepagents_code.media_utils.subprocess.run")

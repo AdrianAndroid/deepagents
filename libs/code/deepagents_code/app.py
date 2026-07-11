@@ -1564,7 +1564,18 @@ def _build_agent_error_body(
     """
     from deepagents_code.remote_client import agent_error_type
 
-    if agent_error_type(exc) != "PermissionDeniedError":
+    err_type = agent_error_type(exc)
+
+    if err_type == "BadRequestError":
+        return (
+            f"{text}\n\n"
+            "The request was rejected by the model provider. If you pasted an "
+            "image, it may be too large or in an unsupported format. The "
+            "failed message has been removed from the conversation so you can "
+            "continue. Try a smaller image or use `/clear` to start fresh."
+        )
+
+    if err_type != "PermissionDeniedError":
         return text
     if key_env:
         detail = (
@@ -10388,6 +10399,15 @@ class DeepAgentsApp(App):
             # when streaming aborts before tool results arrive.
             if self._ui_adapter:
                 self._ui_adapter.finalize_pending_tools_with_error(error_text)
+
+            # Rollback the poisoned user message from the checkpoint so the
+            # thread is not permanently bricked. durability="exit" persists
+            # the user message before the model call, so a BadRequestError
+            # (e.g. from an oversized image) leaves a message that will fail
+            # on every subsequent turn. RemoveMessage deletes it so the user
+            # can continue the conversation without /clear.
+            await self._rollback_last_user_message()
+
             # Enrich the error body in its own guard so a bug here can never
             # swallow the underlying error — the user must always see
             # `error_text`. Gateway/key detection reads config + the credential
@@ -10614,6 +10634,66 @@ class DeepAgentsApp(App):
             result[idx].tool_status = ToolStatus.REJECTED
 
         return result
+
+    async def _rollback_last_user_message(self) -> bool:
+        """Remove the last user message from the thread checkpoint.
+
+        When `agent.astream()` fails (e.g. `BadRequestError` from an oversized
+        image), the user message is already persisted in the checkpoint via
+        `durability="exit"`. Without rollback, every subsequent turn re-sends
+        the same poisoned message to the provider and fails identically,
+        effectively bricking the session. This method uses `RemoveMessage` to
+        delete the last `HumanMessage` from the thread state so the user can
+        continue the conversation.
+
+        Returns:
+            `True` if a message was removed, `False` otherwise.
+        """
+        if not self._agent or not self._lc_thread_id:
+            return False
+
+        try:
+            from langchain_core.messages import HumanMessage, RemoveMessage
+
+            config: RunnableConfig = {
+                "configurable": {"thread_id": self._lc_thread_id}
+            }
+            state = await self._agent.aget_state(config)
+            if not state or not state.values:
+                return False
+
+            messages = state.values.get("messages", [])
+            if not messages:
+                return False
+
+            # Find the last HumanMessage - that's the one that triggered the
+            # error and is poisoning the thread.
+            last_user_msg_id: str | None = None
+            for msg in reversed(messages):
+                if isinstance(msg, HumanMessage):
+                    last_user_msg_id = getattr(msg, "id", None)
+                    break
+
+            if not last_user_msg_id:
+                return False
+
+            await self._agent.aupdate_state(
+                config,
+                {"messages": [RemoveMessage(id=last_user_msg_id)]},
+            )
+            logger.info(
+                "Removed poisoned user message %s from thread %s after "
+                "agent error",
+                last_user_msg_id,
+                self._lc_thread_id,
+            )
+            return True
+        except Exception:
+            logger.warning(
+                "Failed to rollback last user message from checkpoint",
+                exc_info=True,
+            )
+            return False
 
     async def _get_thread_state_values(self, thread_id: str) -> dict[str, Any]:
         """Fetch thread state values for a thread.

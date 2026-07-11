@@ -153,6 +153,16 @@ def _get_windows_clipboard_image() -> ImageData | None:
         temp_file = pathlib.Path(temp_path)
         if temp_file.exists() and temp_file.stat().st_size > 0:
             image_bytes = temp_file.read_bytes()
+            # Reject oversized images before encoding to avoid provider
+            # BadRequestError and subsequent thread checkpoint poisoning.
+            if len(image_bytes) > MAX_MEDIA_BYTES:
+                logger.warning(
+                    "Clipboard image from Windows is too large "
+                    "(%d MB, max %d MB)",
+                    len(image_bytes) // (1024 * 1024),
+                    MAX_MEDIA_BYTES // (1024 * 1024),
+                )
+                return None
             try:
                 Image.open(io.BytesIO(image_bytes))
                 base64_data = base64.b64encode(image_bytes).decode("utf-8")
@@ -203,6 +213,16 @@ def _get_linux_clipboard_image() -> ImageData | None:
                     timeout=3,
                 )
                 if result.returncode == 0 and result.stdout:
+                    # Reject oversized images before encoding to avoid provider
+                    # BadRequestError and subsequent thread checkpoint poisoning.
+                    if len(result.stdout) > MAX_MEDIA_BYTES:
+                        logger.warning(
+                            "Clipboard image from wl-paste is too large "
+                            "(%d MB, max %d MB)",
+                            len(result.stdout) // (1024 * 1024),
+                            MAX_MEDIA_BYTES // (1024 * 1024),
+                        )
+                        return None
                     try:
                         Image.open(io.BytesIO(result.stdout))
                         base64_data = base64.b64encode(result.stdout).decode("utf-8")
@@ -241,6 +261,16 @@ def _get_linux_clipboard_image() -> ImageData | None:
                     timeout=3,
                 )
                 if result.returncode == 0 and result.stdout:
+                    # Reject oversized images before encoding to avoid provider
+                    # BadRequestError and subsequent thread checkpoint poisoning.
+                    if len(result.stdout) > MAX_MEDIA_BYTES:
+                        logger.warning(
+                            "Clipboard image from xclip is too large "
+                            "(%d MB, max %d MB)",
+                            len(result.stdout) // (1024 * 1024),
+                            MAX_MEDIA_BYTES // (1024 * 1024),
+                        )
+                        return None
                     try:
                         Image.open(io.BytesIO(result.stdout))
                         base64_data = base64.b64encode(result.stdout).decode("utf-8")
@@ -276,13 +306,6 @@ def get_clipboard_image() -> ImageData | None:
         return _get_macos_clipboard_image()
     if sys.platform == "win32":
         return _get_windows_clipboard_image()
-    if sys.platform == "linux":
-        logger.warning(
-            "Clipboard image paste is not supported on %s. "
-            "You can still attach images by dragging and dropping file paths.",
-            sys.platform,
-        )
-        return None
     if sys.platform.startswith("linux"):
         return _get_linux_clipboard_image()
     logger.warning(
@@ -464,6 +487,16 @@ def _get_macos_clipboard_image() -> ImageData | None:
                 timeout=2,
             )
             if result.returncode == 0 and result.stdout:
+                # Reject oversized images before encoding to avoid provider
+                # BadRequestError and subsequent thread checkpoint poisoning.
+                if len(result.stdout) > MAX_MEDIA_BYTES:
+                    logger.warning(
+                        "Clipboard image from pngpaste is too large "
+                        "(%d MB, max %d MB)",
+                        len(result.stdout) // (1024 * 1024),
+                        MAX_MEDIA_BYTES // (1024 * 1024),
+                    )
+                    return None
                 # Successfully got PNG data - validate it's a real image
                 try:
                     Image.open(io.BytesIO(result.stdout))
@@ -569,6 +602,17 @@ def _get_clipboard_via_osascript() -> ImageData | None:
 
         # Read and validate the image
         image_data = pathlib.Path(temp_path).read_bytes()
+
+        # Reject oversized images before encoding to avoid provider
+        # BadRequestError and subsequent thread checkpoint poisoning.
+        if len(image_data) > MAX_MEDIA_BYTES:
+            logger.warning(
+                "Clipboard image from osascript is too large "
+                "(%d MB, max %d MB)",
+                len(image_data) // (1024 * 1024),
+                MAX_MEDIA_BYTES // (1024 * 1024),
+            )
+            return None
 
         try:
             image = Image.open(io.BytesIO(image_data))
