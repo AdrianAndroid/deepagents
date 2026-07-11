@@ -212,6 +212,67 @@ def _is_summarization_chunk(metadata: dict | None) -> bool:
     return metadata.get("lc_source") == "summarization"
 
 
+def _format_model_call_info(
+    *,
+    usage: dict | None,
+    response_metadata: dict | None,
+    elapsed: float | None,
+) -> str | None:
+    """Build a compact one-line summary of a completed model call.
+
+    The line is rendered as an `AppMessage` (muted italic) right after the
+    assistant reply so the user can see model id, usage_metadata,
+    finish_reason, and turn latency inline. Returns `None` when there is
+    nothing to show — callers should skip mounting in that case.
+
+    Args:
+        usage: Latest `usage_metadata` observed for the call.
+        response_metadata: Latest `response_metadata` observed for the call.
+        elapsed: Wall time (seconds) from the first streamed chunk to the
+            terminal chunk. `None` when unavailable.
+
+    Returns:
+        Formatted single-line string, or `None` if no data is available.
+    """
+    parts: list[str] = []
+
+    if isinstance(response_metadata, dict):
+        model_name = (
+            response_metadata.get("model_name")
+            or response_metadata.get("model")
+            or response_metadata.get("model_id")
+        )
+        if isinstance(model_name, str) and model_name:
+            parts.append(f"model={model_name}")
+
+        finish_reason = response_metadata.get("finish_reason") or response_metadata.get(
+            "stop_reason"
+        )
+        if isinstance(finish_reason, str) and finish_reason:
+            parts.append(f"finish={finish_reason}")
+
+    if isinstance(usage, dict) and usage:
+        input_toks = usage.get("input_tokens") or 0
+        output_toks = usage.get("output_tokens") or 0
+        total_toks = usage.get("total_tokens") or (input_toks + output_toks)
+        if input_toks or output_toks or total_toks:
+            parts.append(
+                f"tokens in/out/total={input_toks}/{output_toks}/{total_toks}"
+            )
+        details = usage.get("input_token_details")
+        if isinstance(details, dict):
+            cached = details.get("cache_read") or details.get("cache_read_input_tokens")
+            if cached:
+                parts.append(f"cache_read={cached}")
+
+    if isinstance(elapsed, (int, float)) and elapsed >= 0:
+        parts.append(f"elapsed={format_duration(elapsed)}")
+
+    if not parts:
+        return None
+    return "· " + "  ".join(parts)
+
+
 def _format_rubric_event(data: dict[str, Any]) -> str | None:
     """Format a rubric custom-stream event for the chat transcript.
 
@@ -627,6 +688,14 @@ async def execute_task_textual(
     pending_text_by_namespace: dict[tuple, str] = {}
     assistant_message_by_namespace: dict[tuple, Any] = {}
 
+    # Track per-model-call metadata (start time, latest usage_metadata,
+    # latest response_metadata) so we can print a short info line at the end
+    # of each model call (chunk_position == "last"). Keyed by namespace so
+    # main agent and any subagent runs stay independent.
+    call_start_by_namespace: dict[tuple, float] = {}
+    call_usage_by_namespace: dict[tuple, dict] = {}
+    call_metadata_by_namespace: dict[tuple, dict] = {}
+
     # Clear media from tracker after creating the message
     if image_tracker:
         image_tracker.clear()
@@ -851,6 +920,17 @@ async def execute_task_textual(
                         hasattr(message, "content_blocks"),
                     )
 
+                    # Record model-call start time on the first chunk we see
+                    # for this namespace. `chunk_position == "last"` clears
+                    # the entry below so the next call starts a fresh timer.
+                    if ns_key not in call_start_by_namespace:
+                        call_start_by_namespace[ns_key] = time.monotonic()
+                    # Remember the latest non-empty response_metadata so we
+                    # can surface it once the call finishes.
+                    resp_meta = getattr(message, "response_metadata", None)
+                    if isinstance(resp_meta, dict) and resp_meta:
+                        call_metadata_by_namespace[ns_key] = resp_meta
+
                     # Filter out summarization model output, but keep UI feedback.
                     # The summarization model streams AIMessage chunks tagged
                     # with lc_source="summarization" in the callback metadata.
@@ -968,6 +1048,10 @@ async def execute_task_textual(
                     if hasattr(message, "usage_metadata"):
                         usage = message.usage_metadata
                         if usage:
+                            # Remember the latest non-empty usage for this
+                            # model call so we can print it on chunk_position
+                            # == "last".
+                            call_usage_by_namespace[ns_key] = usage
                             input_toks = usage.get("input_tokens", 0)
                             output_toks = usage.get("output_tokens", 0)
                             total_toks = usage.get("total_tokens", 0)
@@ -1205,6 +1289,38 @@ async def execute_task_textual(
                             )
                             pending_text_by_namespace[ns_key] = ""
                             assistant_message_by_namespace.pop(ns_key, None)
+
+                        # Show a compact per-call info line so the user can
+                        # see the model response metadata (usage, finish
+                        # reason, model id, latency) inline after the AI
+                        # reply. Only the main agent surfaces here; subagent
+                        # calls stay quiet to avoid clutter.
+                        if is_main_agent:
+                            info_line = _format_model_call_info(
+                                usage=call_usage_by_namespace.get(ns_key),
+                                response_metadata=call_metadata_by_namespace.get(
+                                    ns_key
+                                ),
+                                elapsed=(
+                                    time.monotonic()
+                                    - call_start_by_namespace[ns_key]
+                                    if ns_key in call_start_by_namespace
+                                    else None
+                                ),
+                            )
+                            if info_line:
+                                try:
+                                    await adapter._mount_message(AppMessage(info_line))
+                                except Exception:
+                                    logger.debug(
+                                        "Failed to mount model-call info line",
+                                        exc_info=True,
+                                    )
+                        # Reset per-call trackers so the next model call in
+                        # the same turn starts fresh.
+                        call_start_by_namespace.pop(ns_key, None)
+                        call_usage_by_namespace.pop(ns_key, None)
+                        call_metadata_by_namespace.pop(ns_key, None)
 
             # Reset summarization state if stream ended mid-summarization
             # (e.g. middleware error, stream exhausted before regular chunks).
