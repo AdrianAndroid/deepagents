@@ -224,19 +224,16 @@ def _format_model_call_info(
     The line is rendered as an `AppMessage` (muted italic) right after the
     assistant reply so the user can see model id, usage_metadata,
     finish_reason, and turn latency inline. Returns `None` when there is
-    nothing to show — callers should skip mounting in that case.
+    nothing to show - callers should skip mounting in that case.
 
     Args:
         usage: Latest `usage_metadata` observed for the call.
         response_metadata: Latest `response_metadata` observed for the call.
         elapsed: Wall time (seconds) from the first streamed chunk to the
             terminal chunk. `None` when unavailable.
-        requested_model: The model alias the user asked for (from LangGraph
-            stream metadata `ls_model_name`). Used to distinguish routing
-            aliases (gateway hides underlying model, response echoes back
-            `"auto"` or the alias itself) from compatibility aliases
-            (gateway rewrites the response's `model` field to the real
-            underlying model).
+        requested_model: The model name the user asked for (from LangGraph
+            stream metadata `ls_model_name`). Compared against the served
+            model name echoed by the provider to surface aliasing.
 
     Returns:
         Formatted single-line string, or `None` if no data is available.
@@ -253,10 +250,9 @@ def _format_model_call_info(
         if isinstance(served_raw, str) and served_raw:
             served = served_raw
 
-    if requested_model or served:
-        model_label = _render_model_label(requested_model, served)
-        if model_label:
-            parts.append(f"model={model_label}")
+    model_label = _render_model_label(requested_model, served)
+    if model_label:
+        parts.append(f"model={model_label}")
 
     if isinstance(response_metadata, dict):
         finish_reason = response_metadata.get("finish_reason") or response_metadata.get(
@@ -287,12 +283,11 @@ def _format_model_call_info(
     return "· " + "  ".join(parts)
 
 
-# Sentinel values returned by gateways that intentionally hide the real
-# underlying model behind a routing alias (e.g. Volcengine `ark-*-latest`
-# aliases echo back `"auto"` instead of the actually-served `doubao-*`).
-# When we see one of these in `response_metadata.model_name`, we treat the
-# served model as "hidden by gateway" rather than as ground truth.
-_ROUTED_MODEL_SENTINELS = frozenset({"auto"})
+# Sentinel values that some gateways echo back in place of the real model
+# name (e.g. Volcengine routing aliases return ``"auto"``).  When we see
+# one of these we treat the served model as unknown rather than as ground
+# truth.
+_SERVED_MODEL_SENTINELS = frozenset({"auto", "none", "null", ""})
 
 
 def _render_model_label(
@@ -300,26 +295,22 @@ def _render_model_label(
 ) -> str | None:
     """Render the model portion of the info line.
 
-    Three cases:
+    Pure data-driven display - no vendor-specific heuristics.
 
-    - `requested` matches `served` (or only one is known): render as-is.
-    - `requested` differs from `served` and `served` is a real name:
-      render as `requested→served` (compatibility alias — gateway
-      rewrites the response `model` to the real underlying model,
-      e.g. `gpt-5.5→doubao-seed-2.0-pro`).
-    - `served` is a routing sentinel like `"auto"` or matches
-      `requested`, and `requested` looks like a routing alias:
-      render as `requested(routed)` so the user knows the gateway
-      intentionally hides the underlying model.
+    - Only one of the two is known: show it.
+    - Both known and equal: show one name.
+    - Both known, served is a sentinel (``"auto"``, ``"none"`` ...): show
+      just *requested* - the gateway hid the underlying model.
+    - Both known and different: show ``requested -> served`` so the user
+      can see the aliasing (e.g. ``gpt-5.5 -> doubao-seed-2.0-pro``).
 
     Args:
-        requested: Alias the caller asked for (from `ls_model_name`).
+        requested: Model name the caller asked for (from ``ls_model_name``).
         served: Model name echoed back by the provider (from
-            `response_metadata.model_name`). May be `"auto"` or the
-            same string as `requested` when the gateway hides routing.
+            ``response_metadata.model_name``).
 
     Returns:
-        A short label suitable for the `model=…` field, or `None` if
+        A short label suitable for the ``model=...`` field, or `None` if
         neither input carried useful data.
     """
     req = requested.strip() if isinstance(requested, str) else ""
@@ -328,49 +319,12 @@ def _render_model_label(
     if not req and not srv:
         return None
     if not req:
-        return srv or None
-    if not srv:
+        return srv
+    if not srv or srv.lower() in _SERVED_MODEL_SENTINELS:
         return req
-
-    # Gateway hid the underlying model (sentinel like "auto"), or echoed
-    # the alias unchanged — both are the "routed alias" case.
-    if srv.lower() in _ROUTED_MODEL_SENTINELS or srv == req:
-        if _looks_like_routing_alias(req):
-            return f"{req}(routed)"
+    if srv == req:
         return req
-
-    # Different names → gateway rewrote to a real underlying model.
-    return f"{req}→{srv}"
-
-
-# Segments that, when appearing as a hyphen-delimited part of a model name,
-# indicate a routing alias (e.g. `ark-code-latest` → `latest`, `*-auto` →
-# `auto`, `doubao-smart-router-*` → `router`). Checked per-segment rather
-# than by substring to avoid false positives on names like `my-routing-tool`
-# or `autorouter-pro` that coincidentally contain these substrings.
-_ROUTED_SEGMENTS = frozenset({"latest", "auto", "router"})
-
-
-def _looks_like_routing_alias(name: str) -> bool:
-    """Heuristic: whether a model name is a gateway routing alias.
-
-    Routing aliases are stable strings that map to an evolving set of
-    underlying models chosen by the provider. They are identified by
-    containing a known routing segment as a hyphen-delimited part of the
-    name (e.g. `latest`, `auto`, `router`). Compatibility aliases
-    (`gpt-5.5`, `doubao-seed-2.0-pro`) resolve to a single fixed model
-    and are not treated as routed.
-
-    Args:
-        name: The alias string to inspect.
-
-    Returns:
-        `True` if the alias appears to be a routing/编排 alias.
-    """
-    lowered = name.lower()
-    if lowered in _ROUTED_MODEL_SENTINELS:
-        return True
-    return any(seg in _ROUTED_SEGMENTS for seg in lowered.split("-"))
+    return f"{req}->{srv}"
 
 
 def _format_rubric_event(data: dict[str, Any]) -> str | None:
