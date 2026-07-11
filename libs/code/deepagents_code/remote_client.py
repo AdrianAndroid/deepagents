@@ -650,12 +650,18 @@ def _convert_ai_message(data: dict[str, Any]) -> Any:  # noqa: ANN401
     tool_calls = data.get("tool_calls", [])
     usage_metadata = data.get("usage_metadata")
     response_metadata = data.get("response_metadata", {})
+    chunk_position = data.get("chunk_position")
 
     kwargs: dict[str, Any] = {
         "content": content,
         "id": data.get("id"),
         "response_metadata": response_metadata,
     }
+    # `chunk_position="last"` marks the terminal chunk of a model call.
+    # The Textual adapter uses it to flush per-call model info; drop the
+    # signal here and the info line would never render in remote mode.
+    if chunk_position:
+        kwargs["chunk_position"] = chunk_position
 
     if tool_call_chunks:
         kwargs["tool_call_chunks"] = [
