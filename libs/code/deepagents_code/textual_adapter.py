@@ -343,14 +343,23 @@ def _render_model_label(
     return f"{req}→{srv}"
 
 
+# Segments that, when appearing as a hyphen-delimited part of a model name,
+# indicate a routing alias (e.g. `ark-code-latest` → `latest`, `*-auto` →
+# `auto`, `doubao-smart-router-*` → `router`). Checked per-segment rather
+# than by substring to avoid false positives on names like `my-routing-tool`
+# or `autorouter-pro` that coincidentally contain these substrings.
+_ROUTED_SEGMENTS = frozenset({"latest", "auto", "router"})
+
+
 def _looks_like_routing_alias(name: str) -> bool:
     """Heuristic: whether a model name is a gateway routing alias.
 
     Routing aliases are stable strings that map to an evolving set of
-    underlying models chosen by the provider (Volcengine `ark-code-latest`,
-    `doubao-smart-router-*`, generic `*-auto` / `auto`). Compatibility
-    aliases (`gpt-5.5`, `doubao-seed-2.0-pro`) resolve to a single fixed
-    model and are not treated as routed.
+    underlying models chosen by the provider. They are identified by
+    containing a known routing segment as a hyphen-delimited part of the
+    name (e.g. `latest`, `auto`, `router`). Compatibility aliases
+    (`gpt-5.5`, `doubao-seed-2.0-pro`) resolve to a single fixed model
+    and are not treated as routed.
 
     Args:
         name: The alias string to inspect.
@@ -361,8 +370,7 @@ def _looks_like_routing_alias(name: str) -> bool:
     lowered = name.lower()
     if lowered in _ROUTED_MODEL_SENTINELS:
         return True
-    routed_markers = ("-latest", "-auto", "smart-router", "router-", "-router")
-    return any(marker in lowered for marker in routed_markers)
+    return any(seg in _ROUTED_SEGMENTS for seg in lowered.split("-"))
 
 
 def _format_rubric_event(data: dict[str, Any]) -> str | None:
