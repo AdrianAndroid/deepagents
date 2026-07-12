@@ -315,7 +315,7 @@ def _render_model_label(requested: str | None, served: str | None) -> str | None
     - Both known, served is a sentinel (``"auto"``, ``"none"`` ...): show
       just *requested* - the gateway hid the underlying model.
     - Both known and different: show ``requested -> served`` so the user
-      can see the aliasing (e.g. ``gpt-5.5 -> doubao-seed-2.0-pro``).
+      can see the aliasing (e.g. ``my-alias -> actual-model-name``).
 
     Args:
         requested: Model name the caller asked for (from ``ls_model_name``).

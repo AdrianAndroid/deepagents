@@ -3666,6 +3666,7 @@ def save_custom_provider(
     api_key_env: str | None = None,
     api_key: str | None = None,
     default_model: str | None = None,
+    max_input_tokens: int | None = None,
     config_path: Path | None = None,
 ) -> bool:
     """Save a custom OpenAI-compatible provider to the config file.
@@ -3679,6 +3680,10 @@ def save_custom_provider(
         api_key_env: Environment variable name for the provider API key.
         api_key: API key to store for the provider.
         default_model: Default model ID for this provider.
+        max_input_tokens: Optional context-window size (tokens) written to the
+            provider `profile` table. The API does not return this — declaring
+            it here is what lets the per-call info line render `ctx=used/limit~
+            (pct%)` for this provider's models.
         config_path: Path to config file.
 
     Returns:
@@ -3717,6 +3722,8 @@ def save_custom_provider(
             provider_config["api_key_env"] = api_key_env
         if default_model:
             provider_config["default_model"] = default_model
+        if isinstance(max_input_tokens, int) and max_input_tokens > 0:
+            provider_config["profile"] = {"max_input_tokens": max_input_tokens}
         providers_section[provider_id] = provider_config
 
         fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, suffix=".tmp")

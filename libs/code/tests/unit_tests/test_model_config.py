@@ -4982,6 +4982,40 @@ default_model = "huoshan:ark-code-latest"
         config = ModelConfig.load(config_path)
         assert config.providers["huoshan"]["api_key_env"] == "OPENAI_API_KEY"
 
+    def test_save_custom_provider_persists_max_input_tokens(self, tmp_path):
+        """`max_input_tokens` is written to `[profile]` so `ctx=used/limit` renders."""
+        config_path = tmp_path / "config.toml"
+
+        assert model_config.save_custom_provider(
+            "huoshan",
+            "huoshan",
+            "https://ark.cn-beijing.volces.com/api/v3",
+            models=["ark-code-latest"],
+            default_model="ark-code-latest",
+            max_input_tokens=262144,
+            config_path=config_path,
+        )
+
+        config = ModelConfig.load(config_path)
+        profile = config.providers["huoshan"].get("profile", {})
+        assert profile == {"max_input_tokens": 262144}
+
+    def test_save_custom_provider_ignores_invalid_max_input_tokens(self, tmp_path):
+        """Non-positive `max_input_tokens` values are silently ignored."""
+        config_path = tmp_path / "config.toml"
+
+        assert model_config.save_custom_provider(
+            "huoshan",
+            "huoshan",
+            "https://ark.example.com/v1",
+            models=["ark-code-latest"],
+            max_input_tokens=0,
+            config_path=config_path,
+        )
+
+        config = ModelConfig.load(config_path)
+        assert "profile" not in config.providers["huoshan"]
+
     def test_recent_takes_priority_over_env(self, tmp_path):
         """[models].recent takes priority over env var auto-detection."""
         from deepagents_code.config import _get_default_model_spec

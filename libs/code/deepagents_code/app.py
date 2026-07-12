@@ -9489,9 +9489,13 @@ class DeepAgentsApp(App):
                 # Show usage
                 await self._mount_message(
                     AppMessage(
-                        'Usage: /add-provider <provider-id> "<display-name>" <base-url> "<model1,model2>" [class-path] [api-key-env]\n'
+                        'Usage: /add-provider <provider-id> "<display-name>"'
+                        ' <base-url> "<model1,model2>"'
+                        ' [class-path] [api-key-env] [max-input-tokens]\n'
                         "Example:\n"
-                        '/add-provider huoshan1 "火山引擎" https://ark.cn-beijing.volces.com/api/coding/v3 "doubao-pro-32k,qianwen-72b"',
+                        '  /add-provider mygateway "My Gateway"'
+                        ' https://api.example.com/v1 "model-a,model-b"'
+                        ' langchain_openai:ChatOpenAI OPENAI_API_KEY 131072',
                     )
                 )
                 return
@@ -9514,6 +9518,25 @@ class DeepAgentsApp(App):
             models_str = args[3]
             class_path = args[4] if len(args) >= 5 else "langchain_openai:ChatOpenAI"
             api_key_env = args[5] if len(args) >= 6 else None
+            max_input_tokens: int | None = None
+            if len(args) >= 7:  # noqa: PLR2004  # positional arg index for max-input-tokens
+                try:
+                    max_input_tokens = int(args[6])
+                except ValueError:
+                    await self._mount_message(
+                        ErrorMessage(
+                            f"Invalid max-input-tokens '{args[6]}': "
+                            "expected a positive integer."
+                        )
+                    )
+                    return
+                if max_input_tokens <= 0:
+                    await self._mount_message(
+                        ErrorMessage(
+                            "max-input-tokens must be a positive integer."
+                        )
+                    )
+                    return
 
             # Parse models list
             models = [m.strip() for m in models_str.split(",") if m.strip()]
@@ -9533,6 +9556,7 @@ class DeepAgentsApp(App):
                 models=models,
                 class_path=class_path,
                 api_key_env=api_key_env,
+                max_input_tokens=max_input_tokens,
             )
 
             if success:

@@ -3602,6 +3602,86 @@ base_url = "https://wrong-url.com"
         # Explicit base_url field should win over kwargs.base_url
         assert kwargs["base_url"] == "https://correct-url.com"
 
+    def test_defaults_stream_usage_for_openai_provider(self, tmp_path: Path) -> None:
+        """Built-in `openai` provider gets `stream_usage=True` by default.
+
+        Third-party OpenAI-compatible gateways only emit `usage_metadata` in
+        the final stream chunk when `stream_options.include_usage` is sent,
+        which `langchain_openai.ChatOpenAI` maps to the `stream_usage` kwarg.
+        Injecting it by default makes the per-call info line render
+        `tokens in/out/total=...` and `ctx=used/limit~ (pct%)` for gateways
+        that would otherwise drop the usage payload (Volcengine ark,
+        DeepSeek, SiliconFlow, …).
+        """
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("")
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
+        ):
+            kwargs = _get_provider_kwargs("openai")
+
+        assert kwargs["stream_usage"] is True
+
+    def test_defaults_stream_usage_for_openai_compatible_class_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Custom providers that target `ChatOpenAI` also get `stream_usage=True`."""
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("""
+[models.providers.huoshan]
+models = ["ark-code-latest"]
+base_url = "https://ark.cn-beijing.volces.com/api/coding/v3"
+class_path = "langchain_openai:ChatOpenAI"
+api_key_env = "OPENAI_API_KEY"
+""")
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
+        ):
+            kwargs = _get_provider_kwargs("huoshan")
+
+        assert kwargs["stream_usage"] is True
+
+    def test_user_params_override_stream_usage_default(self, tmp_path: Path) -> None:
+        """A user-supplied `stream_usage` in `params` is not clobbered."""
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("""
+[models.providers.huoshan]
+models = ["ark-code-latest"]
+base_url = "https://ark.example.com/v1"
+class_path = "langchain_openai:ChatOpenAI"
+api_key_env = "OPENAI_API_KEY"
+
+[models.providers.huoshan.params]
+stream_usage = false
+""")
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
+        ):
+            kwargs = _get_provider_kwargs("huoshan")
+
+        assert kwargs["stream_usage"] is False
+
+    def test_stream_usage_not_injected_for_non_openai_providers(
+        self, tmp_path: Path
+    ) -> None:
+        """Non-OpenAI-compatible providers do not receive `stream_usage`.
+
+        `ChatAnthropic` does not accept a `stream_usage` kwarg — injecting it
+        would raise at construction time.
+        """
+        config_path = tmp_path / "config.toml"
+        config_path.write_text("")
+        with (
+            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
+            patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=True),
+        ):
+            kwargs = _get_provider_kwargs("anthropic")
+
+        assert "stream_usage" not in kwargs
+
 
 def _make_init_chat_model_mock() -> Mock:
     """Return a `Mock` shaped like `init_chat_model`'s return value.

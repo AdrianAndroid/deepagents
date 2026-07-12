@@ -3808,6 +3808,20 @@ def _get_provider_kwargs(
     for key, value in retry_kwargs.items():
         result.setdefault(key, value)
 
+    # For OpenAI-compatible providers (built-in `openai` or any custom provider
+    # whose `class_path` targets `langchain_openai:ChatOpenAI` / a subclass),
+    # default `stream_usage=True` so the final stream chunk carries
+    # `usage_metadata`. Without this the `stream_options.include_usage` flag is
+    # not sent and third-party gateways (Volcengine ark, DeepSeek, SiliconFlow,
+    # …) drop token counts, which makes the per-call info line show only
+    # `model / finish / elapsed`. `setdefault` lets users override via
+    # `params.stream_usage = false` in `config.toml` or `--model-params`.
+    class_path = config.get_class_path(provider) if provider else None
+    if provider == "openai" or (
+        isinstance(class_path, str) and class_path.endswith(":ChatOpenAI")
+    ):
+        result.setdefault("stream_usage", True)
+
     return result
 
 
