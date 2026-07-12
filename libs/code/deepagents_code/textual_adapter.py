@@ -218,6 +218,7 @@ def _format_model_call_info(
     response_metadata: dict | None,
     elapsed: float | None,
     requested_model: str | None = None,
+    context_limit: int | None = None,
 ) -> str | None:
     """Build a compact one-line summary of a completed model call.
 
@@ -234,6 +235,11 @@ def _format_model_call_info(
         requested_model: The model name the user asked for (from LangGraph
             stream metadata `ls_model_name`). Compared against the served
             model name echoed by the provider to surface aliasing.
+        context_limit: Maximum context window (tokens) from the model
+            profile (`max_input_tokens`). Not returned by the API - it's
+            a declared capability value. When set alongside a non-zero
+            `input_tokens`, rendered as ``ctx=used/limit~ (pct%)`` with
+            a trailing ``~`` marking the limit as a profile estimate.
 
     Returns:
         Formatted single-line string, or `None` if no data is available.
@@ -266,14 +272,23 @@ def _format_model_call_info(
         output_toks = usage.get("output_tokens") or 0
         total_toks = usage.get("total_tokens") or (input_toks + output_toks)
         if input_toks or output_toks or total_toks:
-            parts.append(
-                f"tokens in/out/total={input_toks}/{output_toks}/{total_toks}"
-            )
+            parts.append(f"tokens in/out/total={input_toks}/{output_toks}/{total_toks}")
         details = usage.get("input_token_details")
         if isinstance(details, dict):
             cached = details.get("cache_read") or details.get("cache_read_input_tokens")
             if cached:
                 parts.append(f"cache_read={cached}")
+
+    # Context usage/limit. `input_tokens` is the ground-truth per-call
+    # value returned by the API; `context_limit` is a profile-declared
+    # capability (marked with a trailing `~`) since the API does not
+    # return the model's context window size.
+    ctx_used = usage.get("input_tokens") or 0 if isinstance(usage, dict) else 0
+    if isinstance(context_limit, int) and context_limit > 0:
+        pct = ctx_used * 100 // context_limit
+        parts.append(f"ctx={ctx_used}/{context_limit}~ ({pct}%)")
+    elif ctx_used:
+        parts.append(f"ctx={ctx_used}")
 
     if isinstance(elapsed, (int, float)) and elapsed >= 0:
         parts.append(f"elapsed={format_duration(elapsed)}")
@@ -290,9 +305,7 @@ def _format_model_call_info(
 _SERVED_MODEL_SENTINELS = frozenset({"auto", "none", "null", ""})
 
 
-def _render_model_label(
-    requested: str | None, served: str | None
-) -> str | None:
+def _render_model_label(requested: str | None, served: str | None) -> str | None:
     """Render the model portion of the info line.
 
     Pure data-driven display - no vendor-specific heuristics.
@@ -1365,20 +1378,22 @@ async def execute_task_textual(
                         # reply. Only the main agent surfaces here; subagent
                         # calls stay quiet to avoid clutter.
                         if is_main_agent:
+                            from deepagents_code.config import settings
+
                             info_line = _format_model_call_info(
                                 usage=call_usage_by_namespace.get(ns_key),
                                 response_metadata=call_metadata_by_namespace.get(
                                     ns_key
                                 ),
                                 elapsed=(
-                                    time.monotonic()
-                                    - call_start_by_namespace[ns_key]
+                                    time.monotonic() - call_start_by_namespace[ns_key]
                                     if ns_key in call_start_by_namespace
                                     else None
                                 ),
                                 requested_model=call_requested_model_by_namespace.get(
                                     ns_key
                                 ),
+                                context_limit=settings.model_context_limit,
                             )
                             if info_line:
                                 try:
