@@ -42,6 +42,7 @@ echo "======================================================"
 # 加载 conda 初始化脚本
 if ! command -v conda &> /dev/null; then
     echo "❌ 未检测到 conda，请先安装 Miniconda/Anaconda 后重试"
+    echo "wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     exit 1
 fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
