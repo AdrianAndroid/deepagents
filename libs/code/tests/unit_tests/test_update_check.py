@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import shlex
+import signal
 import sys
 import time
 import tomllib
@@ -20,6 +22,7 @@ from deepagents_code._version import __version__
 from deepagents_code.extras_info import ExtrasIntrospectionError, installed_extra_names
 from deepagents_code.update_check import (
     CACHE_TTL,
+    INSTALLED_STALE_NOTICE_DAYS,
     DependencyChange,
     InstallMethod,
     ShadowedDcode,
@@ -30,8 +33,12 @@ from deepagents_code.update_check import (
     _note_install_baseline,
     _parse_version,
     _requires_prerelease_dependency,
+    _run_install_subprocess,
+    _terminate_install_process,
     _uv_tool_bin_dir,
     cleanup_update_logs,
+    clear_resume_auto_update_deferral,
+    clear_startup_auto_update_failure,
     clear_update_notified,
     create_update_log_path,
     dependency_refresh_command,
@@ -61,13 +68,16 @@ from deepagents_code.update_check import (
     install_extra_recovery_command,
     install_extras_command,
     install_package_command,
+    installed_days_old,
     is_auto_update_enabled,
     is_auto_update_explicitly_set,
+    is_installation_stale,
     is_installed_version_at_least,
     is_update_available,
     is_valid_extra_name,
     is_valid_package_name,
     mark_auto_update_default_acknowledged,
+    mark_startup_auto_update_failed,
     mark_update_notified,
     mark_version_seen,
     parse_dependency_changes,
@@ -80,7 +90,9 @@ from deepagents_code.update_check import (
     release_requires_prereleases,
     set_auto_update,
     should_announce_auto_update_default,
+    should_defer_startup_auto_update_for_resume,
     should_notify_update,
+    should_skip_startup_auto_update_after_failure,
     upgrade_command,
     upgrade_install_command,
 )
@@ -1171,6 +1183,155 @@ class TestFormatInstalledAgeSuffix:
 
     def test_unknown_age_returns_empty(self, cache_file) -> None:  # noqa: ARG002
         assert format_installed_age_suffix("1.0.0") == ""
+
+
+def _write_installed_release_time(
+    cache_file: Path, *, days_ago: int, latest_version: str | None = None
+) -> None:
+    """Seed the cache with a release time for the running version."""
+    from datetime import UTC, datetime, timedelta
+
+    iso = (datetime.now(tz=UTC) - timedelta(days=days_ago)).isoformat()
+    data: dict[str, object] = {
+        "release_times": {__version__: iso},
+        "checked_at": time.time(),
+    }
+    if latest_version is not None:
+        data["version"] = latest_version
+    cache_file.write_text(
+        json.dumps(data),
+        encoding="utf-8",
+    )
+
+
+class TestInstalledDaysOld:
+    def test_returns_days_for_known_release(self, cache_file) -> None:
+        _write_installed_release_time(cache_file, days_ago=21)
+        assert installed_days_old() == 21
+
+    def test_unknown_release_returns_none(self, cache_file) -> None:  # noqa: ARG002
+        assert installed_days_old() is None
+
+    def test_malformed_timestamp_returns_none(self, cache_file: Path) -> None:
+        cache_file.write_text(
+            json.dumps(
+                {
+                    "release_times": {__version__: "not-a-timestamp"},
+                    "checked_at": time.time(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert installed_days_old() is None
+
+    def test_none_when_release_lookup_raises(self, cache_file) -> None:  # noqa: ARG002
+        """An unexpected error degrades to `None` instead of propagating."""
+        with patch(
+            "deepagents_code.update_check.get_release_time",
+            side_effect=OSError("boom"),
+        ):
+            assert installed_days_old() is None
+
+
+class TestIsInstallationStale:
+    def test_true_when_older_than_threshold(self, cache_file) -> None:
+        _write_installed_release_time(
+            cache_file,
+            days_ago=INSTALLED_STALE_NOTICE_DAYS + 1,
+            latest_version="99.0.0",
+        )
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=True,
+            ),
+        ):
+            assert is_installation_stale() is True
+
+    def test_false_when_current_version_is_old(self, cache_file) -> None:
+        _write_installed_release_time(
+            cache_file,
+            days_ago=INSTALLED_STALE_NOTICE_DAYS + 30,
+            latest_version=__version__,
+        )
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=True,
+            ),
+        ):
+            assert is_installation_stale() is False
+
+    def test_true_at_exact_threshold(self, cache_file) -> None:
+        """Exactly `INSTALLED_STALE_NOTICE_DAYS` old is stale (inclusive `>=`)."""
+        _write_installed_release_time(
+            cache_file,
+            days_ago=INSTALLED_STALE_NOTICE_DAYS,
+            latest_version="99.0.0",
+        )
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=True,
+            ),
+        ):
+            assert is_installation_stale() is True
+
+    def test_false_when_newer_than_threshold(self, cache_file) -> None:
+        _write_installed_release_time(
+            cache_file,
+            days_ago=INSTALLED_STALE_NOTICE_DAYS - 1,
+            latest_version="99.0.0",
+        )
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=True,
+            ),
+        ):
+            assert is_installation_stale() is False
+
+    def test_false_when_editable_check_raises(self, cache_file) -> None:  # noqa: ARG002
+        """A raising editable check degrades to `False`, never aborting startup."""
+        with patch(
+            "deepagents_code.config._is_editable_install",
+            side_effect=PermissionError("direct_url.json unreadable"),
+        ):
+            assert is_installation_stale() is False
+
+    def test_false_for_editable_install(self, cache_file) -> None:
+        _write_installed_release_time(
+            cache_file, days_ago=INSTALLED_STALE_NOTICE_DAYS + 30
+        )
+        with patch("deepagents_code.config._is_editable_install", return_value=True):
+            assert is_installation_stale() is False
+
+    def test_false_when_update_checks_disabled(self, cache_file) -> None:
+        _write_installed_release_time(
+            cache_file, days_ago=INSTALLED_STALE_NOTICE_DAYS + 30
+        )
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=False,
+            ),
+        ):
+            assert is_installation_stale() is False
+
+    def test_false_on_cold_cache(self, cache_file) -> None:  # noqa: ARG002
+        with (
+            patch("deepagents_code.config._is_editable_install", return_value=False),
+            patch(
+                "deepagents_code.update_check.is_update_check_enabled",
+                return_value=True,
+            ),
+        ):
+            assert is_installation_stale() is False
 
 
 class TestDetectInstallMethod:
@@ -3695,6 +3856,86 @@ class TestRunInstallSubprocessFailureModes:
         assert success is False
         assert "timed out" in output
 
+    async def test_timeout_kills_process_group_after_shell_exits(
+        self, tmp_path
+    ) -> None:
+        """Timeout cleanup kills descendants after the POSIX shell exits."""
+        if os.name != "posix":
+            pytest.skip("process groups are POSIX-specific")
+        log_path = tmp_path / "install.log"
+        with (
+            patch("deepagents_code.update_check._UPGRADE_TIMEOUT", 0.05),
+            patch(
+                "deepagents_code.update_check.detect_install_method",
+                return_value="uv",
+            ),
+            patch(
+                "deepagents_code.update_check.shutil.which",
+                return_value="/usr/bin/uv",
+            ),
+            patch(
+                "deepagents_code.update_check._install_extra_uv_tool_command",
+                return_value="sleep 5 & exit 0",
+            ),
+            patch("deepagents_code.update_check.os.killpg", wraps=os.killpg) as killpg,
+        ):
+            success, output = await perform_install_extra("quickjs", log_path=log_path)
+        assert success is False
+        assert "timed out" in output
+        killpg.assert_called_once()
+        assert killpg.call_args.args[1] == signal.SIGKILL
+
+    async def test_cancellation_terminates_process_and_propagates(
+        self, tmp_path
+    ) -> None:
+        """Cancelling mid-install kills the process group and re-raises."""
+        if os.name != "posix":
+            pytest.skip("process groups are POSIX-specific")
+        log_path = tmp_path / "install.log"
+        started = asyncio.Event()
+
+        def progress(line: str) -> None:
+            if "ready" in line:
+                started.set()
+
+        with patch("deepagents_code.update_check.os.killpg", wraps=os.killpg) as killpg:
+            task = asyncio.ensure_future(
+                _run_install_subprocess(
+                    "echo ready; sleep 30", progress=progress, log_path=log_path
+                )
+            )
+            # Cancel only once the subprocess is actually running (it emitted a
+            # line), so cancellation lands inside the install, not before it.
+            await asyncio.wait_for(started.wait(), timeout=5)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        # Cancellation must not be swallowed, and the descendant `sleep` must be
+        # killed via the process group rather than orphaned.
+        killpg.assert_called_once()
+        assert killpg.call_args.args[1] == signal.SIGKILL
+
+    async def test_terminate_falls_back_to_direct_kill_on_permission_error(
+        self,
+    ) -> None:
+        """When `killpg` is denied, the direct child is still reaped."""
+        if os.name != "posix":
+            pytest.skip("process groups are POSIX-specific")
+        proc = await asyncio.create_subprocess_shell(
+            "sleep 30",
+            stdin=asyncio.subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        with patch(
+            "deepagents_code.update_check.os.killpg",
+            side_effect=PermissionError,
+        ):
+            await _terminate_install_process(proc)
+
+        # The EPERM fallback (`proc.kill()`) must have reaped the child.
+        assert proc.returncode is not None
+
     async def test_oserror_includes_exception_detail(self, tmp_path) -> None:
         """An OSError during exec must surface the exception class + message."""
         log_path = tmp_path / "install.log"
@@ -4300,6 +4541,133 @@ class TestAutoUpdateDefaultMigration:
             "deepagents_code.update_check.UPDATE_STATE_FILE", blocker / "state.json"
         ):
             assert mark_auto_update_default_acknowledged() is False
+
+
+class TestStartupAutoUpdateFailureCooldown:
+    @pytest.fixture
+    def state_file(self, tmp_path):
+        """Override UPDATE_STATE_FILE to use a temporary file."""
+        path = tmp_path / "update_state.json"
+        with patch("deepagents_code.update_check.UPDATE_STATE_FILE", path):
+            yield path
+
+    def test_recent_same_version_skips(self, state_file) -> None:  # noqa: ARG002
+        """A recent startup auto-update failure suppresses the same version."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            assert mark_startup_auto_update_failed("2.0.0") is True
+        with patch("deepagents_code.update_check.time.time", return_value=101.0):
+            assert should_skip_startup_auto_update_after_failure("2.0.0") is True
+
+    def test_different_version_does_not_skip(self, state_file) -> None:  # noqa: ARG002
+        """A failure marker is scoped to the failed target version."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            mark_startup_auto_update_failed("2.0.0")
+        with patch("deepagents_code.update_check.time.time", return_value=101.0):
+            assert should_skip_startup_auto_update_after_failure("2.0.1") is False
+
+    def test_expired_failure_does_not_skip(self, state_file) -> None:  # noqa: ARG002
+        """The startup failure cooldown expires after the configured window."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            mark_startup_auto_update_failed("2.0.0")
+        with patch(
+            "deepagents_code.update_check.time.time",
+            return_value=100.0 + CACHE_TTL + 1,
+        ):
+            assert should_skip_startup_auto_update_after_failure("2.0.0") is False
+
+    def test_clear_removes_matching_failure_marker(self, state_file) -> None:
+        """Clearing a matching marker preserves unrelated update state."""
+        mark_version_seen("1.0.0")
+        mark_startup_auto_update_failed("2.0.0")
+
+        clear_startup_auto_update_failure("2.0.0")
+
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        assert data["seen_version"] == "1.0.0"
+        assert "startup_auto_update_failed_version" not in data
+        assert "startup_auto_update_failed_at" not in data
+
+    def test_clear_ignores_different_version(self, state_file) -> None:
+        """Clearing a different version leaves the failure marker intact."""
+        mark_startup_auto_update_failed("2.0.0")
+
+        clear_startup_auto_update_failure("2.0.1")
+
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        assert data["startup_auto_update_failed_version"] == "2.0.0"
+
+    def test_corrupted_timestamp_does_not_skip(self, state_file) -> None:
+        """A hand-edited non-numeric timestamp must not crash or skip."""
+        state_file.write_text(
+            json.dumps(
+                {
+                    "startup_auto_update_failed_version": "2.0.0",
+                    "startup_auto_update_failed_at": "not-a-number",
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert should_skip_startup_auto_update_after_failure("2.0.0") is False
+
+
+class TestResumeAutoUpdateGracePeriod:
+    @pytest.fixture
+    def state_file(self, tmp_path):
+        """Override UPDATE_STATE_FILE to use a temporary file."""
+        path = tmp_path / "update_state.json"
+        with patch("deepagents_code.update_check.UPDATE_STATE_FILE", path):
+            yield path
+
+    def test_first_resume_starts_grace_period(self, state_file) -> None:
+        """The first resumed launch records and uses the grace period."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            assert should_defer_startup_auto_update_for_resume() is True
+
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        assert data["resume_auto_update_deferred_at"] == pytest.approx(100.0)
+
+    def test_repeated_resume_does_not_extend_grace_period(self, state_file) -> None:
+        """Repeated resumes preserve the first deferral timestamp."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            should_defer_startup_auto_update_for_resume()
+        with patch("deepagents_code.update_check.time.time", return_value=200.0):
+            assert should_defer_startup_auto_update_for_resume() is True
+
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        assert data["resume_auto_update_deferred_at"] == pytest.approx(100.0)
+
+    def test_expired_grace_period_runs_update_path(self, state_file) -> None:  # noqa: ARG002
+        """Resume-only use stops bypassing startup updates after seven days."""
+        from deepagents_code.update_check import RESUME_AUTO_UPDATE_GRACE_PERIOD
+
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            should_defer_startup_auto_update_for_resume()
+        with patch(
+            "deepagents_code.update_check.time.time",
+            return_value=100.0 + RESUME_AUTO_UPDATE_GRACE_PERIOD,
+        ):
+            assert should_defer_startup_auto_update_for_resume() is False
+
+    def test_normal_launch_resets_grace_period(self, state_file) -> None:
+        """A normal launch lets a later resume begin a fresh grace period."""
+        with patch("deepagents_code.update_check.time.time", return_value=100.0):
+            should_defer_startup_auto_update_for_resume()
+
+        clear_resume_auto_update_deferral()
+
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        assert "resume_auto_update_deferred_at" not in data
+        with patch("deepagents_code.update_check.time.time", return_value=200.0):
+            assert should_defer_startup_auto_update_for_resume() is True
+
+    def test_unwritable_marker_does_not_bypass_update(self, tmp_path) -> None:
+        """A persistence failure cannot create an unbounded resume bypass."""
+        state_file = tmp_path / "missing" / "update_state.json"
+        with (
+            patch("deepagents_code.update_check.UPDATE_STATE_FILE", state_file),
+            patch("pathlib.Path.mkdir", side_effect=OSError("read-only")),
+        ):
+            assert should_defer_startup_auto_update_for_resume() is False
 
 
 class TestShouldNotifyUpdate:

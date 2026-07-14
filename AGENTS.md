@@ -2,6 +2,8 @@
 
 This document provides context to understand the Deep Agents Python project and assist with development.
 
+For environment setup, pre-commit installation, and the standard edit-test-lint loop, see [`libs/DEVELOPMENT.md`](libs/DEVELOPMENT.md). The rest of this document covers conventions and architecture reference.
+
 ## Project architecture and context
 
 ### Monorepo structure
@@ -472,6 +474,8 @@ Avoid searching these unless explicitly needed:
 For dependency internals, first locate the dependency file from the package environment, then read that exact file instead of grepping all `site-packages`.
 
 ### Deep Agents Code (`libs/code/`)
+
+The `deepagents-code` package ships the interactive terminal coding agent, launched via the `dcode` console command (`dcode` is the short alias for `deepagents-code`).
 
 See `libs/code/AGENTS.md` for package-specific guidance — Textual, startup performance, slash commands, model providers, SDK pin, help-screen drift.
 
