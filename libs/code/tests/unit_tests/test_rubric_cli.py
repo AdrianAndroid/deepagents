@@ -18,12 +18,12 @@ if TYPE_CHECKING:
 
 from deepagents_code._env_vars import SERVER_ENV_PREFIX
 from deepagents_code._server_config import ServerConfig
-from deepagents_code.main import _resolve_rubric_text
-from deepagents_code.non_interactive import (
+from deepagents_code.client.non_interactive import (
     StreamState,
     _build_non_interactive_header,
     _process_rubric_event,
 )
+from deepagents_code.main import _resolve_rubric_text
 
 
 class TestResolveRubricText:
@@ -299,7 +299,7 @@ class TestProcessRubricEvent:
                 ],
             }
         )
-        assert "Changes need revision" in out
+        assert "Acceptance criteria not yet satisfied" in out
         assert "tests missing" in out
         assert "no coverage" in out
         assert "style" not in out
@@ -308,7 +308,7 @@ class TestProcessRubricEvent:
         out = _render_event(
             {"type": "rubric_evaluation_end", "result": "max_iterations_reached"}
         )
-        assert "iteration limit reached" in out
+        assert "Acceptance criteria not yet satisfied (iteration limit reached)" in out
 
     def test_failed(self) -> None:
         out = _render_event(
@@ -318,7 +318,7 @@ class TestProcessRubricEvent:
                 "explanation": "bad rubric",
             }
         )
-        assert "grader failed" in out
+        assert "Rubric is invalid or cannot be evaluated" in out
         assert "bad rubric" in out
 
     def test_grader_error(self) -> None:
@@ -331,7 +331,7 @@ class TestProcessRubricEvent:
                 "explanation": "provider 500",
             }
         )
-        assert "grader error" in out
+        assert "Acceptance criteria check failed" in out
         assert "provider 500" in out
 
     def test_unrecognized_terminal_result_surfaced(self) -> None:
@@ -344,7 +344,7 @@ class TestProcessRubricEvent:
                 "explanation": "details",
             }
         )
-        assert "Rubric grading ended" in out
+        assert "Acceptance criteria check ended" in out
         assert "details" in out
 
     def test_missing_result_prints_nothing(self) -> None:

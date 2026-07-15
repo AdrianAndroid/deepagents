@@ -12,7 +12,7 @@ import argparse
 import pytest
 
 from deepagents_code import _env_vars
-from deepagents_code.config_commands import (
+from deepagents_code.client.commands.config import (
     _display_value,
     _missing_extra_hint,
     _resolve,
@@ -21,6 +21,7 @@ from deepagents_code.config_commands import (
     run_config_command,
 )
 from deepagents_code.config_manifest import (
+    CURSOR_STYLE_DEFAULT,
     NON_OPTION_ENV_VARS,
     ConfigOption,
     OptionKind,
@@ -32,7 +33,7 @@ from deepagents_code.config_manifest import (
     resolve_interpreter_kwargs,
     resolve_scalar,
 )
-from deepagents_code.model_config import PROVIDER_API_KEY_ENV
+from deepagents_code.model_config import DEFAULT_STARTUP_MODE, PROVIDER_API_KEY_ENV
 
 # Most unit tests set `DEEPAGENTS_CODE_NO_UPDATE_CHECK=1` to avoid accidental
 # PyPI/DNS work. This module checks whether update settings came from the env,
@@ -79,6 +80,128 @@ def test_option_keys_unique() -> None:
     """Manifest keys must be unique so `config get` lookups are unambiguous."""
     keys = option_keys()
     assert len(keys) == len(set(keys))
+
+
+def test_memory_auto_save_defaults_enabled(monkeypatch) -> None:
+    """`memory.auto_save` resolves to enabled when nothing overrides it."""
+    option = get_option("memory.auto_save")
+    assert option is not None
+    monkeypatch.delenv(_env_vars.MEMORY_AUTO_SAVE, raising=False)
+    assert resolve_scalar(option, toml_data={}) == (True, "default")
+
+
+def test_memory_auto_save_env_disables(monkeypatch) -> None:
+    """A falsy `DEEPAGENTS_CODE_MEMORY_AUTO_SAVE` disables auto-save."""
+    option = get_option("memory.auto_save")
+    assert option is not None
+    monkeypatch.setenv(_env_vars.MEMORY_AUTO_SAVE, "0")
+    value, _ = resolve_scalar(option, toml_data={})
+    assert value is False
+
+
+def test_memory_auto_save_empty_env_disables(monkeypatch) -> None:
+    """An explicitly empty env override disables automatic memory saving."""
+    option = get_option("memory.auto_save")
+    assert option is not None
+    monkeypatch.setenv(_env_vars.MEMORY_AUTO_SAVE, "")
+    assert resolve_scalar(option, toml_data={}) == (
+        False,
+        f"env ({_env_vars.MEMORY_AUTO_SAVE})",
+    )
+
+
+def test_memory_auto_save_toml_disables(monkeypatch) -> None:
+    """`[memory].auto_save = false` in config.toml disables auto-save."""
+    option = get_option("memory.auto_save")
+    assert option is not None
+    monkeypatch.delenv(_env_vars.MEMORY_AUTO_SAVE, raising=False)
+    value, _ = resolve_scalar(option, toml_data={"memory": {"auto_save": False}})
+    assert value is False
+
+
+def test_is_memory_auto_save_enabled_reads_env(monkeypatch) -> None:
+    """The `config.is_memory_auto_save_enabled` helper honors the env override."""
+    from deepagents_code.config import is_memory_auto_save_enabled
+
+    monkeypatch.delenv(_env_vars.MEMORY_AUTO_SAVE, raising=False)
+    assert is_memory_auto_save_enabled() is True
+
+    monkeypatch.setenv(_env_vars.MEMORY_AUTO_SAVE, "false")
+    assert is_memory_auto_save_enabled() is False
+
+
+def test_is_memory_auto_save_enabled_reads_toml(monkeypatch) -> None:
+    """The helper honors `[memory].auto_save` from `config.toml` when env is unset."""
+    from deepagents_code import config_manifest
+    from deepagents_code.config import is_memory_auto_save_enabled
+
+    monkeypatch.delenv(_env_vars.MEMORY_AUTO_SAVE, raising=False)
+    monkeypatch.setattr(
+        config_manifest,
+        "load_config_toml",
+        lambda: {"memory": {"auto_save": False}},
+    )
+    assert is_memory_auto_save_enabled() is False
+
+
+def test_debug_log_level_resolves_dynamic_default(monkeypatch) -> None:
+    """The effective log level follows debug mode when no level is explicit."""
+    option = get_option("debug.log_level")
+    assert option is not None
+    monkeypatch.delenv(_env_vars.LOG_LEVEL, raising=False)
+
+    monkeypatch.delenv(_env_vars.DEBUG, raising=False)
+    assert resolve_scalar(option, toml_data={}) == ("INFO", "default")
+
+    monkeypatch.setenv(_env_vars.DEBUG, "true")
+    assert resolve_scalar(option, toml_data={}) == ("DEBUG", "default")
+
+
+def test_debug_log_level_validates_explicit_value(monkeypatch) -> None:
+    """Explicit log levels are normalized and invalid values use the runtime default."""
+    option = get_option("debug.log_level")
+    assert option is not None
+    monkeypatch.setenv(_env_vars.DEBUG, "true")
+
+    monkeypatch.setenv(_env_vars.LOG_LEVEL, " warning ")
+    assert resolve_scalar(option, toml_data={}) == (
+        "WARNING",
+        f"env ({_env_vars.LOG_LEVEL})",
+    )
+
+    monkeypatch.setenv(_env_vars.LOG_LEVEL, "TRACE")
+    assert resolve_scalar(option, toml_data={}) == ("DEBUG", "default")
+
+
+@pytest.mark.parametrize(("debug", "expected"), [(None, "INFO"), ("1", "DEBUG")])
+def test_config_get_and_show_report_dynamic_log_level(
+    monkeypatch, capsys, debug: str | None, expected: str
+) -> None:
+    """Both config command paths report the runtime's effective default."""
+    import json
+
+    monkeypatch.delenv(_env_vars.LOG_LEVEL, raising=False)
+    if debug is None:
+        monkeypatch.delenv(_env_vars.DEBUG, raising=False)
+    else:
+        monkeypatch.setenv(_env_vars.DEBUG, debug)
+
+    get_args = argparse.Namespace(
+        config_command="get",
+        key="debug.log_level",
+        output_format="json",
+    )
+    assert run_config_command(get_args) == 0
+    get_payload = json.loads(capsys.readouterr().out)
+    assert get_payload["data"]["value"] == expected
+
+    show_args = argparse.Namespace(config_command="show", output_format="json")
+    assert run_config_command(show_args) == 0
+    show_payload = json.loads(capsys.readouterr().out)
+    row = next(
+        item for item in show_payload["data"] if item["key"] == "debug.log_level"
+    )
+    assert row["value"] == expected
 
 
 # --- Provider install helpers ----------------------------------------------
@@ -183,7 +306,7 @@ def test_missing_extra_hint_checks_provider_dependency(monkeypatch) -> None:
         install_extra="missing-provider",
     )
     monkeypatch.setattr(
-        "deepagents_code.config_commands.importlib.util.find_spec",
+        "deepagents_code.client.commands.config.importlib.util.find_spec",
         lambda name: None if name == "langchain_missing_provider" else object(),
     )
     assert _missing_extra_hint(option) is True
@@ -518,6 +641,25 @@ def test_run_show_json_flags_unreadable_store(stored_auth_dir, capsys):
     assert all("store_error" not in r for r in rows if r["group"] != "Credentials")
 
 
+def test_run_show_text_warns_on_unreadable_store(stored_auth_dir, capsys):
+    """`config show` text output warns when the credential store is unreadable.
+
+    Guards the `_print_store_warning` call in both text renderers: without it a
+    corrupt store would look identical to an empty one in the interactive view —
+    the silent failure this warning exists to prevent.
+    """
+    stored_auth_dir.mkdir(parents=True, exist_ok=True)
+    (stored_auth_dir / "auth.json").write_text("{ not json", encoding="utf-8")
+    for verbose in (False, True):
+        args = argparse.Namespace(
+            config_command="show", output_format="text", verbose=verbose
+        )
+        assert run_config_command(args) == 0
+        out = capsys.readouterr().out
+        assert "Warning" in out
+        assert "unreadable" in out
+
+
 def test_run_get_text_warns_on_unreadable_store(stored_auth_dir, capsys):
     """`config get` text output shows a warning banner for an unreadable store."""
     stored_auth_dir.mkdir(parents=True, exist_ok=True)
@@ -832,6 +974,90 @@ def test_resolve_bool_env_uses_truthy_semantics(monkeypatch) -> None:
     assert resolve_scalar(opt, toml_data={})[0] is True
     monkeypatch.setenv(opt.env_var, "0")
     assert resolve_scalar(opt, toml_data={})[0] is False
+
+
+def test_cursor_style_option_definition() -> None:
+    """Cursor style supports env and config.toml and defaults to a block."""
+    opt = get_option("display.cursor_style")
+    assert opt is not None
+    assert opt.kind is OptionKind.CURSOR_STYLE_DELEGATE
+    assert opt.default == CURSOR_STYLE_DEFAULT
+    assert opt.toml_keys == ("ui", "cursor_style")
+    assert opt.env_var == _env_vars.CURSOR_STYLE
+
+
+def test_resolve_cursor_style_from_env(monkeypatch, caplog) -> None:
+    """A valid env value wins; an invalid value falls through to config.toml."""
+    import logging
+
+    opt = get_option("display.cursor_style")
+    assert opt is not None
+    toml_data = {"ui": {"cursor_style": "underline"}}
+
+    monkeypatch.setenv(_env_vars.CURSOR_STYLE, "block")
+    assert resolve_scalar(opt, toml_data=toml_data) == (
+        "block",
+        f"env ({_env_vars.CURSOR_STYLE})",
+    )
+
+    monkeypatch.setenv(_env_vars.CURSOR_STYLE, "bar")
+    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+        assert resolve_scalar(opt, toml_data=toml_data) == (
+            "underline",
+            "config.toml",
+        )
+    assert any(
+        _env_vars.CURSOR_STYLE in record.getMessage() for record in caplog.records
+    )
+
+
+def test_resolve_cursor_style_from_toml(caplog) -> None:
+    """Only supported cursor styles are accepted from config.toml."""
+    import logging
+
+    opt = get_option("display.cursor_style")
+    assert opt is not None
+    assert resolve_scalar(opt, toml_data={"ui": {"cursor_style": "underline"}}) == (
+        "underline",
+        "config.toml",
+    )
+
+    for raw in ("bar", 1):
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+            value, source = resolve_scalar(opt, toml_data={"ui": {"cursor_style": raw}})
+        assert (value, source) == (CURSOR_STYLE_DEFAULT, "default")
+        assert any(
+            "[ui].cursor_style" in record.getMessage() for record in caplog.records
+        )
+
+    assert resolve_scalar(opt, toml_data={}) == (CURSOR_STYLE_DEFAULT, "default")
+
+
+def test_collapse_pastes_default_enabled() -> None:
+    """Paste collapsing is enabled by default when unset."""
+    opt = get_option("display.collapse_pastes")
+    assert opt is not None
+    assert opt.kind is OptionKind.BOOL
+    assert resolve_scalar(opt, toml_data={}) == (True, "default")
+
+
+def test_collapse_pastes_env_disables(monkeypatch) -> None:
+    """A falsy env var disables paste collapsing."""
+    opt = get_option("display.collapse_pastes")
+    assert opt is not None
+    monkeypatch.setenv(opt.env_var, "0")
+    assert resolve_scalar(opt, toml_data={})[0] is False
+
+
+def test_collapse_pastes_toml_disables() -> None:
+    """A `[ui].collapse_pastes = false` entry disables paste collapsing."""
+    opt = get_option("display.collapse_pastes")
+    assert opt is not None
+    assert resolve_scalar(opt, toml_data={"ui": {"collapse_pastes": False}}) == (
+        False,
+        "config.toml",
+    )
 
 
 def test_thread_relative_time_default_matches_runtime_loader() -> None:
@@ -1209,6 +1435,21 @@ def test_config_show_text_survives_markup_in_value(monkeypatch) -> None:
     assert run_config_command(args) == 0
 
 
+def test_config_show_verbose_text_survives_markup_in_value(monkeypatch) -> None:
+    """The verbose text path escapes markup in values so rendering can't break.
+
+    `_print_show_verbose` renders with markup enabled and relies on manual
+    `escape()`; the compact table path uses `Text` cells, so it needs its own
+    guard.
+    """
+    monkeypatch.setenv(
+        _env_vars.EXTERNAL_EVENT_SOCKET_PATH,
+        "/tmp/sock[/]oops",
+    )
+    args = argparse.Namespace(config_command="show", output_format="text", verbose=True)
+    assert run_config_command(args) == 0
+
+
 # --- Command smoke (text paths) ---------------------------------------------
 
 
@@ -1219,9 +1460,45 @@ def test_run_show_text_returns_zero() -> None:
 
 
 def test_run_list_text_returns_zero() -> None:
-    """The default (text) `config list` rendering path runs without error."""
+    """`config list` aliases the effective-value view and renders without error."""
     args = argparse.Namespace(config_command="list", output_format="text")
     assert run_config_command(args) == 0
+
+
+def test_run_show_verbose_text_shows_descriptions(capsys) -> None:
+    """`config show --verbose` folds in each option's description and how-to-set.
+
+    A plain exit-code check would still pass if the verbose path silently
+    regressed to the compact table, so assert the distinguishing content — an
+    option's summary and its `set via` line — is actually rendered.
+    """
+    opt = get_option("interpreter.memory_limit_mb")
+    assert opt is not None
+    args = argparse.Namespace(config_command="show", output_format="text", verbose=True)
+    assert run_config_command(args) == 0
+    # Normalize whitespace so Rich soft-wrapping at the test console width can't
+    # break the substring match.
+    rendered = " ".join(capsys.readouterr().out.split())
+    assert " ".join(opt.summary.split()) in rendered
+    assert "set via" in rendered
+
+
+def test_config_parser_wires_aliases_and_verbose_flag(monkeypatch) -> None:
+    """Real argparse wiring: `config list --all --json` parses as verbose list JSON.
+
+    Every other command test builds a `Namespace` directly, so this is the only
+    guard that the `list`/`ls` aliases and the `-v`/`--verbose`/`--all` flag are
+    actually registered on the parser.
+    """
+    import sys
+
+    from deepagents_code.main import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["dcode", "config", "list", "--all", "--json"])
+    ns = parse_args()
+    assert ns.config_command == "list"
+    assert ns.verbose is True
+    assert ns.output_format == "json"
 
 
 def test_run_get_text_returns_zero() -> None:
@@ -1352,6 +1629,42 @@ def test_resolve_toml_str_success_and_type_mismatch(caplog) -> None:
     assert any("sort_order" in r.getMessage() for r in caplog.records)
 
 
+def test_startup_mode_option_definition() -> None:
+    """`startup.mode` is config.toml-only and uses runtime mode validation."""
+    opt = get_option("startup.mode")
+    assert opt is not None
+    assert opt.group == "Startup"
+    assert opt.kind is OptionKind.STARTUP_MODE_DELEGATE
+    assert opt.default == DEFAULT_STARTUP_MODE
+    assert opt.toml_keys == ("startup", "mode")
+    assert opt.env_var is None
+
+
+def test_resolve_startup_mode_from_toml(caplog) -> None:
+    """`startup.mode` resolves only valid runtime modes from config.toml."""
+    import logging
+
+    opt = get_option("startup.mode")
+    assert opt is not None
+    assert resolve_scalar(opt, toml_data={"startup": {"mode": "dangerously-auto"}}) == (
+        "dangerously-auto",
+        "config.toml",
+    )
+    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+        value, source = resolve_scalar(opt, toml_data={"startup": {"mode": "yolo"}})
+    assert (value, source) == (DEFAULT_STARTUP_MODE, "default")
+    assert any("[startup].mode='yolo'" in r.getMessage() for r in caplog.records)
+
+    for raw in (["manual"], {"name": "manual"}):
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+            value, source = resolve_scalar(opt, toml_data={"startup": {"mode": raw}})
+        assert (value, source) == (DEFAULT_STARTUP_MODE, "default")
+        assert any("[startup].mode" in r.getMessage() for r in caplog.records)
+
+    assert resolve_scalar(opt, toml_data={}) == (DEFAULT_STARTUP_MODE, "default")
+
+
 def test_resolve_toml_float_success_non_bool() -> None:
     """A FLOAT option reads a real number from TOML and coerces an int to float."""
     opt = get_option("interpreter.timeout_seconds")
@@ -1427,7 +1740,7 @@ def test_config_paths_logs_and_reports_missing_on_oserror(monkeypatch, caplog) -
     from pathlib import Path
 
     from deepagents_code import model_config
-    from deepagents_code.config_commands import _config_paths
+    from deepagents_code.client.commands.config import _config_paths
 
     target = model_config.DEFAULT_CONFIG_PATH
     real_stat = Path.stat
@@ -1465,8 +1778,47 @@ def test_run_path_json_reports_existence(monkeypatch, tmp_path, capsys) -> None:
     assert row["path"] == str(cfg)
 
 
-def test_run_list_json_serializes_catalog(capsys) -> None:
-    """`config list --json` serializes the catalog without error."""
+def test_run_show_json_reports_effective_values(capsys) -> None:
+    """`config show --json` reports effective values without catalog fields."""
+    import json
+
+    args = argparse.Namespace(config_command="show", output_format="json")
+    assert run_config_command(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "config show"
+    rows = payload["data"]
+    assert all(
+        {"key", "group", "source", "set", "redacted", "value"} <= set(r) for r in rows
+    )
+    assert all("type" not in r for r in rows)
+
+
+def test_run_show_verbose_json_serializes_catalog(capsys) -> None:
+    """`config show --verbose --json` folds the catalog into each row."""
+    import json
+
+    args = argparse.Namespace(config_command="show", output_format="json", verbose=True)
+    assert run_config_command(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "config show"
+    rows = payload["data"]
+    assert any(
+        r["key"] == "interpreter.memory_limit_mb" and r["default"] == 64 for r in rows
+    )
+    assert all(
+        {"key", "type", "default", "redacted", "env_var", "toml_path", "cli_flag"}
+        <= set(r)
+        for r in rows
+    )
+
+
+def test_run_list_json_preserves_catalog(capsys) -> None:
+    """`config list --json` keeps catalog fields for backward compatibility.
+
+    `list` was the machine-readable catalog endpoint, so its JSON must stay
+    additive: effective value/source plus the original catalog fields, even
+    without `--verbose`.
+    """
     import json
 
     args = argparse.Namespace(config_command="list", output_format="json")
@@ -1482,6 +1834,39 @@ def test_run_list_json_serializes_catalog(capsys) -> None:
         <= set(r)
         for r in rows
     )
+
+
+def test_run_ls_json_uses_list_label(capsys) -> None:
+    """The `ls` alias shares the `config list` JSON envelope label and catalog."""
+    import json
+
+    args = argparse.Namespace(config_command="ls", output_format="json")
+    assert run_config_command(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["command"] == "config list"
+    assert all("type" in r for r in payload["data"])
+
+
+@pytest.mark.usefixtures("stored_auth_dir")
+def test_run_list_json_redacts_stored_secret_value(capsys) -> None:
+    """`config list --json` redacts a stored secret like `config show --json`.
+
+    `list` newly resolves effective values (it was a static catalog before), so
+    the redaction invariant must be proven on this path too.
+    """
+    import json
+
+    from deepagents_code import auth_store
+
+    auth_store.set_stored_key("anthropic", "from-store")
+    args = argparse.Namespace(config_command="list", output_format="json")
+    assert run_config_command(args) == 0
+    raw = capsys.readouterr().out
+    rows = json.loads(raw)["data"]
+    row = next(r for r in rows if r["key"] == "credentials.anthropic")
+    assert row["set"] is True
+    assert row["value"] is None
+    assert "from-store" not in raw
 
 
 # --- Provider/credential drift ----------------------------------------------

@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import logging
+import shutil
+import subprocess
+import sys
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock, patch
 
@@ -24,6 +28,7 @@ from deepagents.graph import (
     DeepAgentState,
     _apply_custom_middleware,
     _create_bedrock_prompt_caching_middleware,
+    _create_fireworks_prompt_caching_middleware,
     create_deep_agent,
     get_default_model,
 )
@@ -410,6 +415,7 @@ class TestPromptCachingWiring:
         fake_agent.with_config.return_value = "compiled-agent"
 
         with (
+            patch("deepagents.graph._create_fireworks_prompt_caching_middleware", return_value=None),
             patch(
                 "deepagents.graph.import_module",
                 side_effect=ModuleNotFoundError(name="langchain_aws.middleware.prompt_caching"),
@@ -431,6 +437,96 @@ class TestPromptCachingWiring:
             pytest.raises(ImportError),
         ):
             _create_bedrock_prompt_caching_middleware()
+
+    def test_main_and_general_purpose_agents_get_fireworks_prompt_caching(self) -> None:
+        model = GenericFakeChatModel(messages=iter([AIMessage(content="ok")]))
+        gp_cache = MagicMock()
+        main_cache = MagicMock()
+        fake_agent = MagicMock()
+        fake_agent.with_config.return_value = "compiled-agent"
+
+        with (
+            patch("deepagents.graph._create_bedrock_prompt_caching_middleware", return_value=None),
+            patch("deepagents.graph._create_fireworks_prompt_caching_middleware", side_effect=[gp_cache, main_cache]),
+            patch("deepagents.graph.SubAgentMiddleware", return_value=MagicMock()) as mock_subagents,
+            patch("deepagents.graph.create_agent", return_value=fake_agent) as mock_create,
+        ):
+            result = create_deep_agent(model=model)
+
+        assert result == "compiled-agent"
+        subagents = mock_subagents.call_args.kwargs["subagents"]
+        general_purpose = next(spec for spec in subagents if spec["name"] == "general-purpose")
+        assert gp_cache in general_purpose["middleware"]
+        assert main_cache in mock_create.call_args.kwargs["middleware"]
+
+    def test_explicit_subagent_gets_fireworks_prompt_caching(self) -> None:
+        main_model = GenericFakeChatModel(messages=iter([AIMessage(content="main")]))
+        worker_model = GenericFakeChatModel(messages=iter([AIMessage(content="sub")]))
+        subagent_cache = MagicMock()
+        fake_agent = MagicMock()
+        fake_agent.with_config.return_value = "compiled-agent"
+
+        with (
+            patch("deepagents.graph._create_bedrock_prompt_caching_middleware", return_value=None),
+            patch("deepagents.graph._create_fireworks_prompt_caching_middleware", return_value=subagent_cache),
+            patch("deepagents.graph.SubAgentMiddleware", return_value=MagicMock()) as mock_subagents,
+            patch("deepagents.graph.create_agent", return_value=fake_agent),
+        ):
+            create_deep_agent(
+                model=main_model,
+                subagents=[
+                    {
+                        "name": "worker",
+                        "description": "Does work.",
+                        "system_prompt": "Help with tasks.",
+                        "model": worker_model,
+                    }
+                ],
+            )
+
+        subagents = mock_subagents.call_args.kwargs["subagents"]
+        worker = next(spec for spec in subagents if spec["name"] == "worker")
+        assert subagent_cache in worker["middleware"]
+
+    def test_fireworks_prompt_caching_is_optional_when_middleware_unavailable(self) -> None:
+        model = GenericFakeChatModel(messages=iter([AIMessage(content="ok")]))
+        fake_agent = MagicMock()
+        fake_agent.with_config.return_value = "compiled-agent"
+
+        with (
+            patch("deepagents.graph._create_bedrock_prompt_caching_middleware", return_value=None),
+            patch(
+                "deepagents.graph.import_module",
+                side_effect=ModuleNotFoundError(name="langchain_fireworks.middleware.prompt_caching"),
+            ),
+            patch("deepagents.graph.SubAgentMiddleware", return_value=MagicMock()) as mock_subagents,
+            patch("deepagents.graph.create_agent", return_value=fake_agent) as mock_create,
+        ):
+            result = create_deep_agent(model=model)
+
+        assert result == "compiled-agent"
+        subagents = mock_subagents.call_args.kwargs["subagents"]
+        general_purpose = next(spec for spec in subagents if spec["name"] == "general-purpose")
+        assert None not in general_purpose["middleware"]
+        assert None not in mock_create.call_args.kwargs["middleware"]
+
+    def test_fireworks_prompt_caching_preserves_unrelated_import_errors(self) -> None:
+        with (
+            patch("deepagents.graph.import_module", side_effect=ImportError(name="missing_transitive")),
+            pytest.raises(ImportError),
+        ):
+            _create_fireworks_prompt_caching_middleware()
+
+    def test_fireworks_prompt_caching_ignores_unsupported_models(self) -> None:
+        middleware = MagicMock()
+        middleware_cls = MagicMock(return_value=middleware)
+        module = MagicMock(FireworksPromptCachingMiddleware=middleware_cls)
+
+        with patch("deepagents.graph.import_module", return_value=module):
+            result = _create_fireworks_prompt_caching_middleware()
+
+        assert result is middleware
+        middleware_cls.assert_called_once_with(unsupported_model_behavior="ignore")
 
 
 class TestSystemPromptAssembly:
@@ -2229,6 +2325,32 @@ class TestBuildDefaultModelContract:
         msg = str(deprecations[0].message)
         assert "deprecated" in msg
         assert "https://docs.langchain.com/oss/python/deepagents/models" in msg
+
+
+class TestMiddlewareTyping:
+    """Type-level coverage for `create_deep_agent`'s `middleware` parameter."""
+
+    def test_context_aware_middleware_type_checks(self) -> None:
+        """Context-aware middleware must type-check under `context_schema` (#4051).
+
+        Runs `ty` over a fixture that passes an
+        `AgentMiddleware[AgentState, Context]` alongside `context_schema=Context`.
+        Before the fix the `middleware` parameter pinned `ContextT=None`, so the
+        type checker rejected the call.
+        """
+        if shutil.which("ty") is None:
+            pytest.skip("ty is not installed in this environment")
+
+        package_root = Path(__file__).parents[2]
+        fixture = Path(__file__).parent / "_typing_fixtures" / "context_aware_middleware.py"
+        result = subprocess.run(  # noqa: S603  # fixed args, no user input
+            [sys.executable, "-m", "ty", "check", str(fixture)],
+            cwd=package_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, f"ty reported diagnostics:\n{result.stdout}\n{result.stderr}"
 
 
 def _named_mw(name: str) -> AgentMiddleware[Any, Any, Any]:
