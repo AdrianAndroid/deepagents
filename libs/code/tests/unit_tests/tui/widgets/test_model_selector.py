@@ -3432,21 +3432,21 @@ class TestCustomProviderModalScreen:
             modal.query_one("#default-model", Input).value = "invalid model id"
             await modal.action_submit()
             await pilot.pause()
-            assert "Model ID can only contain letters, numbers, hyphens, underscores, dots, colons, and slashes" in str(error_widget)
+            assert "Model ID can only contain letters, numbers, hyphens, underscores, dots, colons, and slashes" in str(error_widget.content)
             assert app.modal_result is None  # Modal not dismissed
             
             # Test invalid model (too long)
             modal.query_one("#default-model", Input).value = "a" * 300
             await modal.action_submit()
             await pilot.pause()
-            assert "Model ID cannot exceed 255 characters" in error_widget.renderable.plain
+            assert "Model ID cannot exceed 255 characters" in str(error_widget.content)
             assert app.modal_result is None
             
             # Test valid model
             modal.query_one("#default-model", Input).value = "valid-model_id.v1:chat"
             await modal.action_submit()
             await pilot.pause()
-            assert error_widget.renderable.plain == ""  # No error
+            assert str(error_widget.content) == ""  # No error
             assert app.modal_result is True  # Modal dismissed successfully
 
     async def test_default_model_prefill_on_edit(self) -> None:
@@ -3583,7 +3583,7 @@ class TestCustomProviderModalScreen:
             assert app.modal_result is None  # Modal not dismissed when required fields are empty
             
             # Test cancel button works
-            await modal.action_cancel()
+            modal.action_cancel()
             await pilot.pause()
             assert app.modal_result is False
             

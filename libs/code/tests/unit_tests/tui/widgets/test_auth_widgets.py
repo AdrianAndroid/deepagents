@@ -2360,6 +2360,15 @@ api_key_env = "MY_GATEWAY_API_KEY"
             "deepagents_code.config_manifest.is_provider_package_installed",
             lambda _provider: True,
         )
+        # Isolate from a developer's on-disk `config.toml` that may declare
+        # custom providers (e.g. `hs`, `siliconflow`) — those would otherwise
+        # be appended to the manager and break the exact-set assertion below.
+        from deepagents_code.model_config import ModelConfig
+
+        monkeypatch.setattr(
+            "deepagents_code.tui.widgets.auth.ModelConfig.load",
+            classmethod(lambda _cls, **_kwargs: ModelConfig()),
+        )
         app = _AuthHostApp()
         async with app.run_test() as pilot:
             app.show_manager()

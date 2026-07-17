@@ -8,10 +8,11 @@ Regenerate this file with `make commands-catalog` after changing command names,
 aliases, descriptions, visibility, or hidden-command metadata.
 
 
-## Public (33)
+## Public (34)
 
 | Command | Aliases | Description |
 | --- | --- | --- |
+| `/add-provider` |  | Register a custom model provider in config.toml |
 | `/agents` |  | Browse and switch between available agents |
 | `/auth` | `/connect` | Connect and manage provider and service credentials |
 | `/auto-update` |  | Turn automatic updates on or off |

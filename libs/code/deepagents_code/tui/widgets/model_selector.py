@@ -55,6 +55,9 @@ CSS cannot reference Python constants, so the static cap and the runtime
 _MODEL_LIST_MIN_HEIGHT = 1
 """Floor (in cells) so the model selector list never collapses to zero."""
 
+_MAX_MODEL_ID_LEN = 255
+"""Maximum length allowed for a custom provider's default model ID."""
+
 _RECENT_SECTION_LABEL = "Recent"
 """Header label for the MRU pseudo-provider section pinned at the top of `/model`.
 
@@ -441,6 +444,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         # installed, mapped to the extra that installs them. Selecting one
         # routes through the install-confirm modal instead of an auth prompt.
         self._install_extras: dict[str, str] = {}
+        self._reload_task: asyncio.Task[None] | None = None
         # Set when the user confirms installing a provider's extra; the app
         # reads this off the screen after dismissal to install then switch.
         self.pending_install_extra: str | None = None
@@ -580,7 +584,11 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 
             # Add custom provider button (only in non-curated mode)
             if not self._curated:
-                yield Button("Add Custom Provider (Ctrl+A)", id="add-custom-provider-btn", variant="primary")
+                yield Button(
+                    "Add Custom Provider (Ctrl+A)",
+                    id="add-custom-provider-btn",
+                    variant="primary",
+                )
 
             yield Static(self._help_text(), classes="model-selector-help")
 
@@ -847,6 +855,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         if not self._loaded:
             return  # on_mount will re-apply filter after data loads
         self._update_filtered_list()
+        self.call_after_refresh(self._update_display)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -2016,15 +2025,20 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
     async def action_add_custom_provider(self) -> None:
         """Open the custom provider add modal."""
         def _on_provider_saved(success: bool) -> None:
+            help_widget = self.query_one(".model-selector-help", Static)
             if success:
                 # Reload model list to show new provider
-                asyncio.create_task(self._reload_model_list())
-                help_widget = self.query_one(".model-selector-help", Static)
-                help_widget.update(Content.styled("Custom provider added successfully!", "bold green"))
+                self._reload_task = asyncio.create_task(self._reload_model_list())
+                help_widget.update(
+                    Content.styled(
+                        "Custom provider added successfully!", "bold green"
+                    )
+                )
                 self.set_timer(3.0, self._restore_help_text)
             else:
-                help_widget = self.query_one(".model-selector-help", Static)
-                help_widget.update(Content.styled("Failed to add custom provider", "bold red"))
+                help_widget.update(
+                    Content.styled("Failed to add custom provider", "bold red")
+                )
                 self.set_timer(3.0, self._restore_help_text)
 
         self.app.push_screen(CustomProviderModalScreen(), _on_provider_saved)
@@ -2073,14 +2087,23 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 class CustomProviderModalScreen(ModalScreen[bool]):
     """Modal screen for adding/editing a custom OpenAI-compatible provider."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("enter", "submit", "Save provider", priority=True),
         Binding("escape", "cancel", "Cancel", priority=True),
     ]
 
-    def __init__(self, provider_id: str | None = None, **kwargs):
+    def __init__(
+        self, provider_id: str | None = None, **kwargs: Any,
+    ) -> None:
+        """Initialize the custom provider modal.
+
+        Args:
+            provider_id: The provider ID to edit, or ``None`` to add a new one.
+            **kwargs: Extra keyword arguments forwarded to `ModalScreen`.
+        """
         super().__init__(**kwargs)
         self.provider_id = provider_id
+        self.existing_providers: dict[str, dict[str, Any]] = {}
 
     CSS = """
     CustomProviderModalScreen {
@@ -2144,18 +2167,28 @@ class CustomProviderModalScreen(ModalScreen[bool]):
     }
     """
 
-
-
     def compose(self) -> ComposeResult:
+        """Compose the modal's form widgets.
+
+        Yields:
+            Textual widgets that render the form.
+        """
         with Vertical():
-            title = "Edit Custom Provider" if self.provider_id else "Add Custom Provider"
+            title = (
+                "Edit Custom Provider" if self.provider_id else "Add Custom Provider"
+            )
             yield Static(title, classes="form-title")
-            yield Static("Provider ID (lowercase, numbers, hyphens, underscores):", classes="form-label")
+            yield Static(
+                "Provider ID (lowercase, numbers, hyphens, underscores):",
+                classes="form-label",
+            )
             yield Input(id="provider-id", placeholder="e.g. my-provider")
             yield Static("Display Name:", classes="form-label")
             yield Input(id="display-name", placeholder="e.g. My Custom Provider")
             yield Static("Base URL:", classes="form-label")
-            yield Input(id="base-url", placeholder="e.g. https://api.example.com/v1")
+            yield Input(
+                id="base-url", placeholder="e.g. https://api.example.com/v1"
+            )
             yield Static("API Key (optional):", classes="form-label")
             yield Input(id="api-key", placeholder="sk-...", password=True)
             yield Static("Default Model (optional):", classes="form-label")
@@ -2163,12 +2196,12 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             yield Static("", id="error-message", classes="error-message")
             with Container(classes="form-buttons"):
                 with Container(classes="form-buttons-left"):
-                    yield Button("Confirm", id="save-btn", variant="primary")
-                with Container(classes="form-buttons-right"):
                     yield Button("Cancel", id="cancel-btn", variant="default")
+                with Container(classes="form-buttons-right"):
+                    yield Button("Confirm", id="save-btn", variant="primary")
 
     def on_mount(self) -> None:
-        """Focus the first input field on mount, pre-fill if editing existing provider."""
+        """Focus first input on mount; pre-fill if editing an existing provider."""
         import tomllib
 
         from deepagents_code.model_config import DEFAULT_CONFIG_PATH
@@ -2181,20 +2214,30 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                     data = tomllib.load(f)
                 self.existing_providers = data.get("models", {}).get("providers", {})
         except Exception:
-            pass
+            logger.exception("Failed to load existing custom providers from config")
 
         if self.provider_id:
             # Load existing provider config for editing
             provider_config = self.existing_providers.get(self.provider_id, {})
             if provider_config:
                 self.query_one("#provider-id", Input).value = self.provider_id
-                self.query_one("#provider-id", Input).disabled = True  # Can't edit ID for existing providers
-                self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
-                self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
-                self.query_one("#default-model", Input).value = provider_config.get("default_model", "")
+                # Can't edit ID for existing providers
+                self.query_one("#provider-id", Input).disabled = True
+                self.query_one("#display-name", Input).value = provider_config.get(
+                    "display_name", ""
+                )
+                self.query_one("#base-url", Input).value = provider_config.get(
+                    "base_url", ""
+                )
+                self.query_one("#default-model", Input).value = provider_config.get(
+                    "default_model", ""
+                )
                 # API key is not stored in config, it's in env var, so leave empty
 
-        self.query_one("#provider-id", Input).focus() if not self.provider_id else self.query_one("#display-name", Input).focus()
+        if not self.provider_id:
+            self.query_one("#provider-id", Input).focus()
+        else:
+            self.query_one("#display-name", Input).focus()
 
     def on_input(self, event: Input.Changed) -> None:
         """Handle input changes, auto-fill existing provider data when ID matches."""
@@ -2205,12 +2248,21 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 event.input.disabled = False
                 self.query_one("#display-name", Input).value = ""
                 self.query_one("#base-url", Input).value = ""
-            elif provider_id in self.existing_providers and not event.input.disabled:
+            elif (
+                provider_id in self.existing_providers
+                and not event.input.disabled
+            ):
                 # Auto-fill data for existing provider
                 provider_config = self.existing_providers[provider_id]
-                self.query_one("#display-name", Input).value = provider_config.get("display_name", "")
-                self.query_one("#base-url", Input).value = provider_config.get("base_url", "")
-                self.query_one("#default-model", Input).value = provider_config.get("default_model", "")
+                self.query_one("#display-name", Input).value = provider_config.get(
+                    "display_name", ""
+                )
+                self.query_one("#base-url", Input).value = provider_config.get(
+                    "base_url", ""
+                )
+                self.query_one("#default-model", Input).value = provider_config.get(
+                    "default_model", ""
+                )
                 # Disable provider ID input to prevent modification
                 event.input.disabled = True
                 # Move focus to next field
@@ -2231,13 +2283,17 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         api_key = self.query_one("#api-key", Input).value.strip() or None
         default_model = self.query_one("#default-model", Input).value.strip() or None
         error_widget = self.query_one("#error-message", Static)
+        error_widget.update("")
 
         # Validate inputs
         if not provider_id:
             error_widget.update("Provider ID is required")
             return
         if not all(c.islower() or c.isdigit() or c in "-_" for c in provider_id):
-            error_widget.update("Provider ID can only contain lowercase letters, numbers, hyphens, and underscores")
+            error_widget.update(
+                "Provider ID can only contain lowercase letters, numbers, "
+                "hyphens, and underscores"
+            )
             return
         if not display_name:
             error_widget.update("Display name is required")
@@ -2250,12 +2306,16 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             return
         # Validate model ID if provided
         if default_model:
-            if len(default_model) > 255:
+            if len(default_model) > _MAX_MODEL_ID_LEN:
                 error_widget.update("Model ID cannot exceed 255 characters")
                 return
-            # Allow alphanumeric, hyphens, underscores, dots, colons, slashes (common model ID characters)
+            # Allow alphanumeric, hyphens, underscores, dots, colons, slashes
+            # (common model ID characters)
             if not all(c.isalnum() or c in "-_.:/" for c in default_model):
-                error_widget.update("Model ID can only contain letters, numbers, hyphens, underscores, dots, colons, and slashes")
+                error_widget.update(
+                    "Model ID can only contain letters, numbers, hyphens, "
+                    "underscores, dots, colons, and slashes"
+                )
                 return
 
         # Save the provider
@@ -2272,7 +2332,9 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         if success:
             self.dismiss(success)
         else:
-            error_widget.update("Failed to save custom provider. Check permissions and try again.")
+            error_widget.update(
+                "Failed to save custom provider. Check permissions and try again."
+            )
 
     def action_cancel(self) -> None:
         """Cancel the form."""

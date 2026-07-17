@@ -2479,21 +2479,6 @@ class ModelConfig:
         # Validate config consistency
         config._validate()
 
-        logger.debug("Loaded config from %s", config_path)
-        logger.debug("Default model: %s", config.default_model)
-        logger.debug("Recent model: %s", config.recent_model)
-        for provider_name, provider_config in config.providers.items():
-            logger.debug(
-                "Provider %r config: display_name=%s, base_url=%s, "
-                "class_path=%s, models=%s, enabled=%s",
-                provider_name,
-                provider_config.get("display_name"),
-                provider_config.get("base_url"),
-                provider_config.get("class_path"),
-                provider_config.get("models"),
-                provider_config.get("enabled", True),
-            )
-
         if is_default:
             _default_config_cache = config
 

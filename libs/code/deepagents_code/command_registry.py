@@ -79,6 +79,12 @@ COMMANDS: tuple[SlashCommand, ...] = (
         hidden_keywords="switch profile persona",
     ),
     SlashCommand(
+        name="/add-provider",
+        description="Register a custom model provider in config.toml",
+        bypass_tier=BypassTier.QUEUED,
+        hidden_keywords="custom provider gateway endpoint openai-compat",
+    ),
+    SlashCommand(
         name="/auth",
         description="Connect and manage provider and service credentials",
         bypass_tier=BypassTier.IMMEDIATE_UI,
@@ -140,7 +146,9 @@ COMMANDS: tuple[SlashCommand, ...] = (
         name="/model",
         description="Switch models or edit model settings",
         bypass_tier=BypassTier.IMMEDIATE_UI,
-        argument_hint="[<provider>:<model>|--model-params JSON|--default <model>|--clear]",
+        argument_hint=(
+            "[<provider>:<model>|--model-params JSON|--default <model>|--clear]"
+        ),
     ),
     SlashCommand(
         name="/notifications",

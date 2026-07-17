@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from deepagents_code.formatting import format_duration
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from pathlib import Path

@@ -10611,9 +10611,6 @@ class DeepAgentsApp(App):
         Args:
             command: The slash command (including /)
         """
-        # Echo the command to the chat history first
-        await self._mount_message(UserMessage(command))
-
         from deepagents_code.config import newline_shortcut, settings
 
         cmd = command.lower().strip()
@@ -10621,6 +10618,7 @@ class DeepAgentsApp(App):
         if cmd in {"/quit", "/q"}:
             self.exit()
         elif cmd == "/help":
+            await self._mount_message(UserMessage(command))
             help_body = (
                 "Commands: /quit, /agents, /auth, /clear, /force-clear, "
                 "/copy, /goal, /offload, /editor, /effort, "
@@ -10654,6 +10652,7 @@ class DeepAgentsApp(App):
         elif cmd in {"/changelog", "/docs", "/feedback"}:
             await self._open_url_command(command, cmd)
         elif cmd in {"/version", "/about"}:
+            await self._mount_message(UserMessage(command))
             await self._handle_version_command()
         elif cmd == "/agents":
             await self._show_agent_selector()
@@ -10744,6 +10743,7 @@ class DeepAgentsApp(App):
                     )
                     await self._mount_message(AppMessage("Resume it with /threads -r"))
         elif cmd == "/copy":
+            await self._mount_message(UserMessage(command))
             # Reverse-scan for the newest assistant message that has finished
             # streaming and contains visible text. Track whether we passed over
             # an in-flight stream so we can explain the skip rather than say
@@ -10788,6 +10788,7 @@ class DeepAgentsApp(App):
         elif cmd == "/editor":
             await self.action_open_editor()
         elif cmd in {"/offload", "/compact"}:
+            await self._mount_message(UserMessage(command))
             await self._handle_offload()
         elif cmd == "/threads" or cmd.startswith("/threads "):
             await self._handle_threads_command(command)
@@ -10818,6 +10819,7 @@ class DeepAgentsApp(App):
                 markup=False,
             )
         elif cmd == "/tokens":
+            await self._mount_message(UserMessage(command))
             if self._context_tokens > 0:
                 count = self._context_tokens
                 formatted = format_token_count(count)
@@ -10868,6 +10870,7 @@ class DeepAgentsApp(App):
             # before skill loading completes.
             args = command.strip()[len("/remember") :].strip()
             if not args and not await self._has_conversation_messages():
+                await self._mount_message(UserMessage(command))
                 await self._mount_message(
                     AppMessage(
                         "Nothing to remember yet. Start a conversation first,"
@@ -10889,6 +10892,7 @@ class DeepAgentsApp(App):
             await self._show_mcp_viewer()
         elif cmd.startswith("/mcp "):
             args = command.strip()[len("/mcp ") :].strip()
+            await self._mount_message(UserMessage(command))
             await self._handle_mcp_subcommand(args)
         elif cmd in {"/auth", "/connect"}:
             await self._show_auth_manager()
@@ -10907,6 +10911,7 @@ class DeepAgentsApp(App):
                 try:
                     raw_arg, extra_kwargs = _extract_model_params_flag(raw_arg)
                 except (ValueError, TypeError) as exc:
+                    await self._mount_message(UserMessage(command))
                     await self._mount_message(ErrorMessage(str(exc)))
                     return
                 if raw_arg.startswith("--default"):
@@ -10916,6 +10921,7 @@ class DeepAgentsApp(App):
                     model_arg = raw_arg or None
 
             if set_default:
+                await self._mount_message(UserMessage(command))
                 if extra_kwargs:
                     await self._mount_message(
                         ErrorMessage(
@@ -10937,10 +10943,12 @@ class DeepAgentsApp(App):
                     )
             elif model_arg:
                 # Direct switch: /model claude-sonnet-4-5
+                await self._mount_message(UserMessage(command))
                 await self._switch_model(model_arg, extra_kwargs=extra_kwargs)
             else:
                 await self._show_model_selector(extra_kwargs=extra_kwargs)
         elif cmd == "/add-provider" or cmd.startswith("/add-provider "):
+            await self._mount_message(UserMessage(command))
             from deepagents_code.model_config import save_custom_provider
 
             if not cmd.startswith("/add-provider "):
@@ -10962,10 +10970,11 @@ class DeepAgentsApp(App):
             import shlex
             args = shlex.split(command.strip()[len("/add-provider ") :].strip())
 
-            if len(args) < 4:
+            if len(args) < 4:  # noqa: PLR2004  # minimum positional args
                 await self._mount_message(
                     ErrorMessage(
-                        "Missing required arguments. Run /add-provider without arguments to see usage."
+                        "Missing required arguments. Run /add-provider without "
+                        "arguments to see usage."
                     )
                 )
                 return
@@ -10974,8 +10983,10 @@ class DeepAgentsApp(App):
             display_name = args[1]
             base_url = args[2]
             models_str = args[3]
-            class_path = args[4] if len(args) >= 5 else "langchain_openai:ChatOpenAI"
-            api_key_env = args[5] if len(args) >= 6 else None
+            class_path = (
+                args[4] if len(args) >= 5 else "langchain_openai:ChatOpenAI"  # noqa: PLR2004
+            )
+            api_key_env = args[5] if len(args) >= 6 else None  # noqa: PLR2004
             max_input_tokens: int | None = None
             if len(args) >= 7:  # noqa: PLR2004  # positional arg index for max-input-tokens
                 try:
@@ -11021,16 +11032,21 @@ class DeepAgentsApp(App):
                 await self._mount_message(
                     AppMessage(
                         f"✅ Provider '{provider_id}' saved successfully!\n"
-                        f"Run /model to see your new provider in the list, or /auth to set its API key.\n"
+                        f"Run /model to see your new provider in the list, "
+                        f"or /auth to set its API key.\n"
                         f"To use immediately: /model {provider_id}:{models[0]}"
                     )
                 )
             else:
                 await self._mount_message(
-                    ErrorMessage(f"Failed to save provider '{provider_id}'. Check logs for details.")
+                    ErrorMessage(
+                        f"Failed to save provider '{provider_id}'. "
+                        f"Check logs for details."
+                    )
                 )
             return
         elif cmd == "/reload":
+            await self._mount_message(UserMessage(command))
 
             # Snapshot pre-reload skill names so the report can show diff.
             old_skill_names = {s["name"] for s in self._discovered_skills}
@@ -11148,6 +11164,7 @@ class DeepAgentsApp(App):
         elif cmd == "/restart":
             await self._handle_restart_command(command)
         else:
+            await self._mount_message(UserMessage(command))
             await self._mount_message(AppMessage(f"Unknown command: {cmd}"))
 
         # Anchor to bottom so command output stays visible
@@ -11179,10 +11196,13 @@ class DeepAgentsApp(App):
         normalized_name = skill_name.strip().lower()
 
         async def _mount_error(message: str) -> None:
+            if command is not None:
+                await self._mount_message(UserMessage(command))
             await self._mount_message(AppMessage(message))
 
         if not normalized_name:
             if command is not None:
+                await self._mount_message(UserMessage(command))
                 await self._mount_message(AppMessage("Usage: /skill:<name> [args]"))
             else:
                 await self._mount_message(AppMessage("Skill name is required."))
@@ -12422,7 +12442,7 @@ class DeepAgentsApp(App):
                 last_user_msg_id,
                 self._lc_thread_id,
             )
-            return True
+            return True  # noqa: TRY300  # single follow-up statement, else block hurts readability
         except Exception:
             logger.warning(
                 "Failed to rollback last user message from checkpoint",
