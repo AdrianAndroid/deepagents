@@ -8632,8 +8632,6 @@ class DeepAgentsApp(App):
             collect_tools_from_agent,
         )
 
-        await self._mount_message(UserMessage(command))
-
         server_info = self._mcp_server_info_for_tools()
 
         built_in = []

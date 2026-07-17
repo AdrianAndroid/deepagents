@@ -3560,13 +3560,13 @@ class TestCustomProviderModalScreen:
             await pilot.pause()
             assert modal.query_one("#default-model", Input).value == "test-model-keyboard"
             
-            # Tab to save button
-            await pilot.press("tab")
-            assert modal.query_one("#save-btn").has_focus
-            
             # Tab to cancel button
             await pilot.press("tab")
             assert modal.query_one("#cancel-btn").has_focus
+            
+            # Tab to save button
+            await pilot.press("tab")
+            assert modal.query_one("#save-btn").has_focus
 
     async def test_existing_functionality_regression(self) -> None:
         """Test that existing modal functionality still works correctly without regression."""

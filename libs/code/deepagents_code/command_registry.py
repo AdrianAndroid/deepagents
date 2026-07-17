@@ -83,6 +83,8 @@ COMMANDS: tuple[SlashCommand, ...] = (
         description="Register a custom model provider in config.toml",
         bypass_tier=BypassTier.QUEUED,
         hidden_keywords="custom provider gateway endpoint openai-compat",
+        argument_hint='<provider-id> "<display-name>" <base-url> "<models>" '
+        "[class-path] [api-key-env] [max-input-tokens]",
     ),
     SlashCommand(
         name="/auth",
@@ -149,14 +151,6 @@ COMMANDS: tuple[SlashCommand, ...] = (
         argument_hint=(
             "[<provider>:<model>|--model-params JSON|--default <model>|--clear]"
         ),
-    ),
-    SlashCommand(
-        name="/add-provider",
-        description="Register a custom OpenAI-compatible model provider",
-        bypass_tier=BypassTier.QUEUED,
-        hidden_keywords="custom provider gateway openai-compatible",
-        argument_hint='<provider-id> "<display-name>" <base-url> "<models>" '
-        "[class-path] [api-key-env] [max-input-tokens]",
     ),
     SlashCommand(
         name="/notifications",
