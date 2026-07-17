@@ -8,11 +8,11 @@ Regenerate this file with `make commands-catalog` after changing command names,
 aliases, descriptions, visibility, or hidden-command metadata.
 
 
-## Public (33)
+## Public (34)
 
 | Command | Aliases | Description |
 | --- | --- | --- |
-| `/add-provider` |  | Register a custom OpenAI-compatible model provider |
+| `/add-provider` |  | Register a custom model provider in config.toml |
 | `/agents` |  | Browse and switch between available agents |
 | `/auth` | `/connect` | Connect and manage provider and service credentials |
 | `/auto-update` |  | Turn automatic updates on or off |
@@ -24,13 +24,13 @@ aliases, descriptions, visibility, or hidden-command metadata.
 | `/effort` |  | Set reasoning effort for the current model |
 | `/feedback` |  | Send feedback or report an issue |
 | `/force-clear` |  | Stop active work, clear the chat, and start a new thread |
-| `/goal` |  | Set a persistent objective by drafting acceptance criteria |
+| `/goal` |  | Set and manage a persistent objective with acceptance criteria |
 | `/help` |  | Show help and available commands |
 | `/install` |  | Install an optional integration |
 | `/mcp` |  | Manage MCP servers and authentication |
 | `/model` |  | Switch models or edit model settings |
 | `/notifications` |  | Configure startup warnings |
-| `/offload` | `/compact` | Offload older messages to free context |
+| `/offload` | `/compact` | Summarize and offload older messages to free context |
 | `/quit` | `/q` | Exit app |
 | `/reload` |  | Reload environment and config |
 | `/remember` |  | Save useful context to memory or skills |
@@ -42,12 +42,14 @@ aliases, descriptions, visibility, or hidden-command metadata.
 | `/threads` |  | Browse and resume past threads |
 | `/timestamps` |  | Show or hide message timestamps |
 | `/tokens` |  | Show token usage |
+| `/tools` |  | List the tools available to the agent |
 | `/trace` |  | Open this thread in LangSmith |
 | `/update` |  | Check for and install updates |
 | `/version` | `/about` | Show version information |
 
-## Hidden (1)
+## Hidden (2)
 
 These commands are intentionally omitted from autocomplete and help. See the `HIDDEN_COMMANDS` docstring in the registry for context.
 
+- `/debug`
 - `/debug-error`
