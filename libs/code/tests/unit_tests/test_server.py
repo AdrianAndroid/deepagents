@@ -384,9 +384,12 @@ class TestServerProcess:
             await server.wait_for_graph_ready("agent")
 
     async def test_start_cleans_up_partial_state_on_health_failure(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Failed startup should stop the process and remove owned resources."""
+        # `DEEPAGENTS_CODE_DEBUG` preserves the log file on stop; the test
+        # asserts the file is deleted, so unset it for this call.
+        monkeypatch.delenv("DEEPAGENTS_CODE_DEBUG", raising=False)
         config_dir = tmp_path / "runtime"
         config_dir.mkdir()
         (config_dir / "langgraph.json").write_text("{}")

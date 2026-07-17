@@ -730,13 +730,23 @@ class TestSplitCredentialSource:
     """`warn_on_split_credential_source` flags key/endpoint env-tier mismatches."""
 
     @pytest.fixture(autouse=True)
-    def _isolate_openai_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _isolate_openai_env(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """Clear every OpenAI key/endpoint env var so each test sets its own.
 
         `dotenv.load_dotenv()` runs during config bootstrap (first `Settings`
         access) and may inject prefixed variants from a developer's
         `~/.deepagents/.env` that would otherwise leak into these assertions.
+
+        Also isolate `ModelConfig.load()` from the developer's real
+        `~/.deepagents/config.toml`: without this, the first call in each
+        xdist worker parses that file and emits DEBUG log lines that
+        `caplog.at_level(DEBUG, ...)` captures, breaking the "no warning"
+        assertions in this class.
         """
+        import deepagents_code.model_config as _mc
+
         for var in (
             "OPENAI_API_KEY",
             "DEEPAGENTS_CODE_OPENAI_API_KEY",
@@ -746,6 +756,8 @@ class TestSplitCredentialSource:
             "DEEPAGENTS_CODE_OPENAI_API_BASE",
         ):
             monkeypatch.delenv(var, raising=False)
+        monkeypatch.setattr(_mc, "DEFAULT_CONFIG_PATH", tmp_path / "config.toml")
+        _mc.clear_caches()
 
     def test_warns_when_key_prefixed_but_base_url_plain(
         self,
@@ -956,7 +968,14 @@ base_url = "https://configured.example/v1"
             clear_caches()
             warn_on_split_credential_source("openai")
 
-        assert not caplog.records
+        # `ModelConfig.load()` emits its own DEBUG lines when it reads a
+        # non-empty config.toml; those are noise for this assertion. Only the
+        # split-source warning (mentions "API key resolved from") is what
+        # we're asserting *does not* fire.
+        split_warnings = [
+            r for r in caplog.records if "API key resolved from" in r.getMessage()
+        ]
+        assert not split_warnings
 
 
 class TestThreadColumnPersistence:

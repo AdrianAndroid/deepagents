@@ -809,6 +809,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         if not self._loaded:
             return  # on_mount will re-apply filter after data loads
         self._update_filtered_list()
+        self.call_after_refresh(self._update_display)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -2033,6 +2034,9 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         api_key = self.query_one("#api-key", Input).value.strip() or None
         default_model = self.query_one("#default-model", Input).value.strip() or None
         error_widget = self.query_one("#error-message", Static)
+        # Clear any prior validation message so a successful submit doesn't
+        # leave a stale error visible in the modal (or reported by tests).
+        error_widget.update("")
 
         # Validate inputs
         if not provider_id:

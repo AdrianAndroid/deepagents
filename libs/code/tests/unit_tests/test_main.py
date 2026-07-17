@@ -1431,7 +1431,7 @@ class TestServerCleanupLifecycle:
         """server_proc set by the background worker must still be cleaned up."""
         server_proc = SimpleNamespace(stop=MagicMock())
 
-        async def _fake_run_async(self: DeepAgentsApp) -> None:  # noqa: RUF029
+        async def _fake_run_async(self: DeepAgentsApp, **_: object) -> None:  # noqa: RUF029
             # Simulate the background worker having set _server_proc
             self._server_proc = server_proc
 

@@ -861,6 +861,17 @@ _STATIC_OPTIONS: tuple[ConfigOption, ...] = (
         env_var=_env_vars.NO_TERMINAL_ESCAPE,
     ),
     ConfigOption(
+        key="display.no_mouse",
+        group="Display",
+        summary=(
+            "Disable Textual mouse tracking (helps web terminals that strip "
+            "the ESC prefix from SGR mouse-report sequences)."
+        ),
+        kind=OptionKind.BOOL,
+        default=False,
+        env_var=_env_vars.NO_MOUSE,
+    ),
+    ConfigOption(
         key="display.show_url_open_toast",
         group="Display",
         summary="Show a confirmation toast after clicking a URL.",

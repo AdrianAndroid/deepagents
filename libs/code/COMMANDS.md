@@ -8,10 +8,11 @@ Regenerate this file with `make commands-catalog` after changing command names,
 aliases, descriptions, visibility, or hidden-command metadata.
 
 
-## Public (32)
+## Public (33)
 
 | Command | Aliases | Description |
 | --- | --- | --- |
+| `/add-provider` |  | Register a custom OpenAI-compatible model provider |
 | `/agents` |  | Browse and switch between available agents |
 | `/auth` | `/connect` | Connect and manage provider and service credentials |
 | `/auto-update` |  | Turn automatic updates on or off |

@@ -9202,12 +9202,17 @@ class DeepAgentsApp(App):
         Args:
             command: The slash command (including /)
         """
-        # Echo the command to the chat history first
-        await self._mount_message(UserMessage(command))
-
         from deepagents_code.config import newline_shortcut, settings
 
         cmd = command.lower().strip()
+
+        # Commands that report state via toast/notification rather than a
+        # chat message; skip the top-level UserMessage echo so the toggle
+        # feedback doesn't scroll the chat.
+        _no_echo_cmds = {"/scrollbar", "/timestamps", "/editor"}
+        if cmd not in _no_echo_cmds:
+            # Echo the command to the chat history first
+            await self._mount_message(UserMessage(command))
 
         if cmd in {"/quit", "/q"}:
             self.exit()
