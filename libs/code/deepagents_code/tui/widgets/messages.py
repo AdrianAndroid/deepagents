@@ -986,7 +986,7 @@ class AssistantMessage(Vertical):
     def _content(self, value: str) -> None:
         self._content_parts = [value] if value else []
 
-    def compose(self) -> ComposeResult:  # noqa: PLR6301  # Textual widget method convention
+    def compose(self) -> ComposeResult:  # ruff:ignore[no-self-use]  # Textual widget method convention
         """Compose the assistant message layout.
 
         Yields:
@@ -1977,7 +1977,7 @@ class ToolCallMessage(Vertical):
             return str(item.get("content", str(item)))
         return str(item)
 
-    def _parse_todo_items(self, output: str) -> list | None:  # noqa: PLR6301  # Grouped as method for widget cohesion
+    def _parse_todo_items(self, output: str) -> list | None:  # ruff:ignore[no-self-use]  # Grouped as method for widget cohesion
         """Parse todo items from output.
 
         Returns:
@@ -2128,7 +2128,7 @@ class ToolCallMessage(Vertical):
             is_preview=is_preview,
         )
 
-    def _format_ls_output(  # noqa: PLR6301  # Grouped as method for widget cohesion
+    def _format_ls_output(  # ruff:ignore[no-self-use]  # Grouped as method for widget cohesion
         self, output: str, *, is_preview: bool = False
     ) -> FormattedOutput:
         """Format ls output as a clean directory listing.
@@ -2655,7 +2655,7 @@ class ToolCallMessage(Vertical):
             truncation=truncation,
         )
 
-    def _format_web_search_results(  # noqa: PLR6301  # Grouped as method for widget cohesion
+    def _format_web_search_results(  # ruff:ignore[no-self-use]  # Grouped as method for widget cohesion
         self, results: list, *, is_preview: bool
     ) -> FormattedOutput:
         """Format web search results.
@@ -2681,7 +2681,7 @@ class ToolCallMessage(Vertical):
             truncation = f"{len(results) - max_results} more results"
         return FormattedOutput(content=Content("\n").join(parts), truncation=truncation)
 
-    def _format_lines_output(  # noqa: PLR6301  # Grouped as method for widget cohesion
+    def _format_lines_output(  # ruff:ignore[no-self-use]  # Grouped as method for widget cohesion
         self, lines: list[str], *, is_preview: bool
     ) -> FormattedOutput:
         """Format a list of lines with optional preview truncation.
@@ -2697,7 +2697,7 @@ class ToolCallMessage(Vertical):
             truncation = f"{len(lines) - max_lines} more lines"
         return FormattedOutput(content=content, truncation=truncation)
 
-    def _format_task_output(  # noqa: PLR6301  # Grouped as method for widget cohesion
+    def _format_task_output(  # ruff:ignore[no-self-use]  # Grouped as method for widget cohesion
         self, output: str, *, is_preview: bool = False
     ) -> FormattedOutput:
         """Format task (subagent) output.
@@ -3163,7 +3163,10 @@ class ToolGroupSummary(Static):
 
     _SPINNER_INTERVAL: ClassVar[float] = 0.1
 
-    _collapsed: var[bool] = var(True)
+    # Default to expanded so each tool call (e.g. `grep(...)`) is visible
+    # inline instead of hiding behind a one-line "Searched for N patterns"
+    # summary. Users can still click / Ctrl+O to collapse.
+    _collapsed: var[bool] = var(False)
 
     def __init__(
         self,
@@ -3514,7 +3517,7 @@ class ErrorMessage(Static):
             colors = theme.get_theme_colors(self)
             self.styles.border_left = ("ascii", colors.error)
 
-    def on_click(self, event: Click) -> None:  # noqa: PLR6301  # Textual event handler
+    def on_click(self, event: Click) -> None:  # ruff:ignore[no-self-use]  # Textual event handler
         """Open clicked URLs."""
         if event.style.link:
             open_style_link(event)
@@ -3702,7 +3705,7 @@ class _MutedRichMarkdown:
         self._markdown = RichMarkdown(markup)
         self._markup = markup
 
-    def __rich_console__(  # noqa: PLW3201  # Rich renderable protocol
+    def __rich_console__(  # ruff:ignore[bad-dunder-method-name]  # Rich renderable protocol
         self, console: RichConsole, options: ConsoleOptions
     ) -> RenderResult:
         from rich.styled import Styled
@@ -3781,7 +3784,7 @@ class AppMessage(Static):
             rendered = Content.styled(message, "dim italic")
         super().__init__(rendered, **kwargs)
 
-    def on_click(self, event: Click) -> None:  # noqa: PLR6301  # Textual event handler
+    def on_click(self, event: Click) -> None:  # ruff:ignore[no-self-use]  # Textual event handler
         """Open style-embedded hyperlinks on single click."""
         open_style_link(event)
 
