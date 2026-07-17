@@ -1566,6 +1566,19 @@ class ToolCallMessage(Vertical):
         )
         # Strip redundant success trailer — the UI already conveys success
         self._output = _strip_success_exit_line(result)
+        # Tools whose body is collapsed by default (`read_file`, `grep`, `glob`,
+        # and successful `edit_file`) show only a "click to expand" hint — see
+        # the `_COLLAPSE_OUTPUT_BY_DEFAULT` branch in `_update_output_display`.
+        # For visibility into each step's actual effect (which lines were read,
+        # what matched, which replacement succeeded), default them to expanded.
+        # Users can still Ctrl+O to collapse. Search "no-result" sentinels
+        # ("No matches found" / "No files found") are excluded so they keep
+        # their inline preview rendering rather than jumping to the full row.
+        if (
+            self._tool_name in _COLLAPSE_OUTPUT_BY_DEFAULT
+            or self._tool_name == "edit_file"
+        ) and not self._is_search_no_result_output(self._output):
+            self._expanded = True
         if self._duration is not None:
             self._show_timed_success_status(self._duration)
         else:

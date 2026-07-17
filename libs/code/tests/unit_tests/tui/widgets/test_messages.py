@@ -1328,7 +1328,12 @@ class TestToolCallMessageEditFileOutput:
         assert "String not found in file" in result.content.plain
 
     async def test_edit_file_success_expands_to_original_output(self) -> None:
-        """End to end: a successful edit_file hides preview but expands to output."""
+        """End to end: a successful edit_file expands to the original output by default.
+
+        Since the "orange" file/edit/search tools now auto-expand on success
+        (so users see exactly what each step did), the full row is visible
+        immediately and toggling collapses it back to the hint.
+        """
         output = "Successfully replaced 2 instance(s) of the string in '/tmp/f.py'"
         app = _tool_msg_app("edit_file", {"file_path": "/tmp/f.py"})
         async with app.run_test() as pilot:
@@ -1339,19 +1344,22 @@ class TestToolCallMessageEditFileOutput:
             assert app.msg._preview_row is not None
             assert app.msg._full_row is not None
             assert app.msg._hint_widget is not None
-            assert app.msg._preview_row.display is False
-            assert app.msg._full_row.display is False
-            assert app.msg._hint_widget.display is True
-            assert app.msg._has_expandable_output() is True
-
-            app.msg.toggle_output()
-            await pilot.pause()
-
+            # Auto-expanded: full row visible, preview hidden, collapse hint shown.
             assert app.msg._expanded is True
             assert app.msg._preview_row.display is False
             assert app.msg._full_row.display is True
+            assert app.msg._hint_widget.display is True
+            assert app.msg._has_expandable_output() is True
             full = app.msg._full_widget._Static__content  # ty: ignore[unresolved-attribute]
             assert full.plain == output
+
+            # Toggling collapses back to the hint (preview still hidden).
+            app.msg.toggle_output()
+            await pilot.pause()
+
+            assert app.msg._expanded is False
+            assert app.msg._preview_row.display is False
+            assert app.msg._full_row.display is False
 
 
 class TestToolCallMessageSuccessStatus:
@@ -1393,11 +1401,10 @@ class TestToolCallMessageExpandHint:
     """Tests for the preview/expand hint on collapsed tool output."""
 
     async def test_long_single_line_search_output_collapses_and_expands(self) -> None:
-        """Long single-line grep/glob output collapses by default and expands.
+        """Long single-line grep/glob output auto-expands then collapses on toggle.
 
-        grep/glob collapse their body entirely (the header names the pattern),
-        so even long output shows a count-free expand hint instead of a
-        truncated preview; expanding reveals the full untruncated content.
+        grep/glob now auto-expand their body on success so users see what
+        matched; toggling collapses to a count-free hint.
         """
         from textual.app import App, ComposeResult
 
@@ -1422,20 +1429,23 @@ class TestToolCallMessageExpandHint:
             assert app.msg._hint_widget is not None
             assert app.msg._hint_widget.display is True
             assert app.msg._has_expandable_output() is True
-            # Preview is collapsed away; a count-free expand affordance is shown.
-            assert app.msg._preview_row is not None
-            assert app.msg._preview_row.display is False
+            # Auto-expanded: full row shows the untruncated content immediately.
+            assert app.msg._expanded is True
+            assert app.msg._full_widget is not None
+            full = app.msg._full_widget._Static__content  # ty: ignore[unresolved-attribute]
+            assert full.plain == output
             hint = app.msg._hint_widget._Static__content  # ty: ignore[unresolved-attribute]
-            assert "expand" in hint.plain
-            assert "more" not in hint.plain
+            assert "collapse" in hint.plain
 
             app.msg.toggle_output()
             await pilot.pause()
 
-            assert app.msg._expanded is True
-            assert app.msg._hint_widget.display is True
-            full = app.msg._full_widget._Static__content  # ty: ignore[unresolved-attribute]
-            assert full.plain == output
+            assert app.msg._expanded is False
+            assert app.msg._preview_row is not None
+            assert app.msg._preview_row.display is False
+            collapsed = app.msg._hint_widget._Static__content  # ty: ignore[unresolved-attribute]
+            assert "expand" in collapsed.plain
+            assert "more" not in collapsed.plain
 
     @pytest.mark.parametrize(
         ("tool", "error"),
@@ -1507,7 +1517,7 @@ class TestToolCallMessageExpandHint:
             assert "expand" in collapsed.plain
 
     async def test_long_grep_output_collapses_and_expands(self) -> None:
-        """A multi-line grep result collapses its preview then expands on toggle."""
+        """A multi-line grep result auto-expands then collapses on toggle."""
         output = "\n".join(f"file.py:{index}:hit {index}" for index in range(8))
         assert output.count("\n") + 1 > ToolCallMessage._PREVIEW_LINES
 
@@ -1517,25 +1527,26 @@ class TestToolCallMessageExpandHint:
             app.msg.set_success(output)
             await pilot.pause()
 
-            assert app.msg._expanded is False
+            # Auto-expanded on success.
+            assert app.msg._expanded is True
             assert app.msg._has_expandable_output() is True
-            assert app.msg._preview_row is not None
             assert app.msg._full_widget is not None
+            full = app.msg._full_widget._Static__content
+            assert "hit 7" in full.plain
             assert app.msg._hint_widget is not None
             assert app.msg._hint_widget.display is True
             hint = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in hint.plain
-            # The preview is collapsed away entirely rather than truncated.
-            assert app.msg._preview_row.display is False
+            assert "collapse" in hint.plain
 
             app.msg.toggle_output()
             await pilot.pause()
 
-            assert app.msg._expanded is True
-            full = app.msg._full_widget._Static__content
-            assert "hit 7" in full.plain
+            assert app.msg._expanded is False
+            assert app.msg._preview_row is not None
+            # The preview stays collapsed away entirely (grep/glob body is not shown inline).
+            assert app.msg._preview_row.display is False
             collapsed = app.msg._hint_widget._Static__content
-            assert "collapse" in collapsed.plain
+            assert "expand" in collapsed.plain
 
     async def test_short_non_todo_output_renders_full_without_hint(self) -> None:
         """Short non-todo output uses non-preview formatting and shows no hint.
@@ -1565,11 +1576,10 @@ class TestToolCallMessageExpandHint:
             assert "line 4" in preview.plain
 
     async def test_read_file_collapses_preview_by_default(self) -> None:
-        """`read_file` hides its content preview by default but stays expandable.
+        """`read_file` auto-expands its full content on success.
 
-        The file path is already shown in the header, so echoing the contents
-        inline is noise. The collapsed view shows an expand hint instead of the
-        preview, and expanding reveals the full content.
+        The default expanded view shows the file contents so users see exactly
+        what each step read. Toggling collapses to a count-free hint.
         """
         # Short output that any other tool would render fully inline.
         output = "\n".join(f"line {index}" for index in range(3))
@@ -1580,19 +1590,7 @@ class TestToolCallMessageExpandHint:
             app.msg.set_success(output)
             await pilot.pause()
 
-            assert app.msg._expanded is False
-            assert app.msg._preview_row is not None
-            assert app.msg._hint_widget is not None
-            # Preview is collapsed away; an expand affordance is shown instead.
-            assert app.msg._preview_row.display is False
-            assert app.msg._has_expandable_output() is True
-            assert app.msg._hint_widget.display is True
-            hint = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in hint.plain
-
-            # Expanding reveals the full content.
-            app.msg.toggle_output()
-            await pilot.pause()
+            # Auto-expanded: full content visible immediately.
             assert app.msg._expanded is True
             assert app.msg._full_row is not None
             assert app.msg._full_row.display is True
@@ -1600,18 +1598,31 @@ class TestToolCallMessageExpandHint:
             full = app.msg._full_widget._Static__content  # ty: ignore
             assert "line 0" in full.plain
             assert "line 2" in full.plain
+            assert app.msg._has_expandable_output() is True
+            assert app.msg._hint_widget is not None
+            assert app.msg._hint_widget.display is True
+            hint = app.msg._hint_widget._Static__content  # ty: ignore
+            assert "collapse" in hint.plain
+
+            # Collapsing hides the body and returns the expand hint.
+            app.msg.toggle_output()
+            await pilot.pause()
+            assert app.msg._expanded is False
+            assert app.msg._full_row.display is False
+            assert app.msg._preview_row is not None
+            assert app.msg._preview_row.display is False
+            collapsed = app.msg._hint_widget._Static__content  # ty: ignore
+            assert "expand" in collapsed.plain
 
     async def test_large_read_file_collapses_preview_regardless_of_size(
         self,
     ) -> None:
-        """Large `read_file` output collapses with a count-free hint and round-trips.
+        """Large `read_file` output auto-expands to full and round-trips through collapse.
 
-        The short-output case can't prove the "collapse regardless of size"
-        invariant — short output wouldn't preview-truncate for any tool. This
-        uses output well over `_PREVIEW_LINES`, so a normal tool would render a
-        truncated preview with an "N more lines" hint. `read_file` instead hides
-        the preview entirely and shows a count-free expand affordance, then
-        toggles cleanly back to collapsed.
+        Auto-expand-on-success means large output starts fully visible (no
+        preview truncation with an "N more lines" hint). Collapsing hides the
+        body entirely and shows a count-free expand hint; re-expanding restores
+        the full content.
         """
         line_count = ToolCallMessage._PREVIEW_LINES * 5
         output = "\n".join(f"line {index}" for index in range(line_count))
@@ -1622,48 +1633,44 @@ class TestToolCallMessageExpandHint:
             app.msg.set_success(output)
             await pilot.pause()
 
-            assert app.msg._expanded is False
-            assert app.msg._preview_row is not None
-            assert app.msg._full_row is not None
-            assert app.msg._hint_widget is not None
-            # Preview stays hidden even though the size would normally truncate.
-            assert app.msg._preview_row.display is False
-            assert app.msg._has_expandable_output() is True
-            assert app.msg._hint_widget.display is True
-            # The hint is count-free — no "N more lines" prefix other tools show.
-            hint = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in hint.plain
-            assert "more" not in hint.plain
-
-            # Expanding reveals the full content — including the last line — and
-            # offers a collapse affordance.
-            app.msg.toggle_output()
-            await pilot.pause()
+            # Auto-expanded on success: full content visible immediately.
             assert app.msg._expanded is True
+            assert app.msg._full_row is not None
             assert app.msg._full_row.display is True
             assert app.msg._full_widget is not None
             full = app.msg._full_widget._Static__content  # ty: ignore
             assert f"line {line_count - 1}" in full.plain
+            assert app.msg._has_expandable_output() is True
+            assert app.msg._hint_widget is not None
             assert app.msg._hint_widget.display is True
             collapse_hint = app.msg._hint_widget._Static__content  # ty: ignore
             assert "collapse" in collapse_hint.plain
 
-            # Toggling again re-collapses back to the count-free expand hint.
+            # Collapsing hides the body — no preview, count-free expand hint.
             app.msg.toggle_output()
             await pilot.pause()
             assert app.msg._expanded is False
+            assert app.msg._preview_row is not None
             assert app.msg._preview_row.display is False
             assert app.msg._full_row.display is False
-            recollapsed = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in recollapsed.plain
-            assert "more" not in recollapsed.plain
+            hint = app.msg._hint_widget._Static__content  # ty: ignore
+            assert "expand" in hint.plain
+            assert "more" not in hint.plain
+
+            # Re-expanding restores full content.
+            app.msg.toggle_output()
+            await pilot.pause()
+            assert app.msg._expanded is True
+            assert app.msg._full_row.display is True
+            full = app.msg._full_widget._Static__content  # ty: ignore
+            assert f"line {line_count - 1}" in full.plain
 
     async def test_read_file_click_toggles_output(self) -> None:
-        """Clicking a collapsed `read_file` expands it via `has_expandable_output`.
+        """Clicking an expanded `read_file` collapses it via `has_expandable_output`.
 
-        The public `has_expandable_output` property drives the click / Ctrl+O
-        routing in `on_click`; `read_file` must report as expandable there so a
-        click reveals the content instead of falling through to the args block.
+        Auto-expand-on-success means the row starts expanded; the public
+        `has_expandable_output` still drives Ctrl+O / click routing, so a click
+        must collapse rather than fall through to the args block.
         """
         output = "\n".join(f"line {index}" for index in range(3))
 
@@ -1674,13 +1681,15 @@ class TestToolCallMessageExpandHint:
             await pilot.pause()
 
             assert app.msg.has_expandable_output is True
-            assert app.msg._expanded is False
+            # Starts auto-expanded on success.
+            assert app.msg._expanded is True
 
             event = MagicMock()
             app.msg.on_click(event)
             await pilot.pause()
             event.stop.assert_called_once()
-            assert app.msg._expanded is True
+            # Click toggles to collapsed.
+            assert app.msg._expanded is False
 
     async def test_short_read_file_error_force_expanded_has_no_collapse_hint(
         self,
@@ -1721,11 +1730,10 @@ class TestToolCallMessageExpandHint:
     async def test_search_collapses_preview_by_default(
         self, tool: str, output: str, expected: str
     ) -> None:
-        """`grep`/`glob` hide their result preview by default but stay expandable.
+        """`grep`/`glob` auto-expand their full result on success.
 
-        The search pattern is already shown in the header, so echoing the matches
-        inline is noise. The collapsed view shows an expand hint instead of the
-        preview, and expanding reveals the full content.
+        The default expanded view shows all matches so users can see what
+        actually matched. Toggling collapses to an expand hint.
         """
         app = _tool_msg_app(tool, {"pattern": "x"})
         async with app.run_test() as pilot:
@@ -1733,25 +1741,25 @@ class TestToolCallMessageExpandHint:
             app.msg.set_success(output)
             await pilot.pause()
 
-            assert app.msg._expanded is False
-            assert app.msg._preview_row is not None
-            assert app.msg._hint_widget is not None
-            # Preview is collapsed away; an expand affordance is shown instead.
-            assert app.msg._preview_row.display is False
-            assert app.msg._has_expandable_output() is True
-            assert app.msg._hint_widget.display is True
-            hint = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in hint.plain
-
-            # Expanding reveals the full content.
-            app.msg.toggle_output()
-            await pilot.pause()
+            # Auto-expanded on success.
             assert app.msg._expanded is True
             assert app.msg._full_row is not None
             assert app.msg._full_row.display is True
             assert app.msg._full_widget is not None
             full = app.msg._full_widget._Static__content  # ty: ignore
             assert expected in full.plain
+            assert app.msg._has_expandable_output() is True
+            assert app.msg._hint_widget is not None
+            assert app.msg._hint_widget.display is True
+
+            # Collapsing hides the body.
+            app.msg.toggle_output()
+            await pilot.pause()
+            assert app.msg._expanded is False
+            assert app.msg._preview_row is not None
+            assert app.msg._preview_row.display is False
+            hint = app.msg._hint_widget._Static__content  # ty: ignore
+            assert "expand" in hint.plain
 
     @pytest.mark.parametrize(
         "tool",
@@ -1760,11 +1768,11 @@ class TestToolCallMessageExpandHint:
     async def test_large_search_collapses_preview_regardless_of_size(
         self, tool: str
     ) -> None:
-        """Large `grep`/`glob` output collapses with a count-free hint.
+        """Large `grep`/`glob` output auto-expands on success.
 
-        Output well over `_PREVIEW_LINES` would normally render a truncated
-        preview with an "N more lines/files" hint. grep/glob instead hide the
-        preview entirely and show a count-free expand affordance.
+        Auto-expand-on-success means large search results start fully visible
+        rather than as a truncated preview. Collapsing hides them behind a
+        count-free expand hint.
         """
         line_count = ToolCallMessage._PREVIEW_LINES * 5
         if tool == "glob":
@@ -1778,30 +1786,29 @@ class TestToolCallMessageExpandHint:
             app.msg.set_success(output)
             await pilot.pause()
 
-            assert app.msg._expanded is False
-            assert app.msg._preview_row is not None
-            assert app.msg._hint_widget is not None
-            # Preview stays hidden even though the size would normally truncate.
-            assert app.msg._preview_row.display is False
-            assert app.msg._has_expandable_output() is True
-            assert app.msg._hint_widget.display is True
-            # The hint is count-free — no "N more" prefix other tools show.
-            hint = app.msg._hint_widget._Static__content  # ty: ignore
-            assert "expand" in hint.plain
-            assert "more" not in hint.plain
-
-            # Expanding reveals the full content and offers a collapse affordance.
-            app.msg.toggle_output()
-            await pilot.pause()
+            # Auto-expanded on success: full content visible immediately.
             assert app.msg._expanded is True
             assert app.msg._full_widget is not None
             full = app.msg._full_widget._Static__content  # ty: ignore
             assert f"{line_count - 1}" in full.plain
+            assert app.msg._has_expandable_output() is True
+            assert app.msg._hint_widget is not None
+            assert app.msg._hint_widget.display is True
             collapse_hint = app.msg._hint_widget._Static__content  # ty: ignore
             assert "collapse" in collapse_hint.plain
 
+            # Collapsing hides the body — no preview, count-free expand hint.
+            app.msg.toggle_output()
+            await pilot.pause()
+            assert app.msg._expanded is False
+            assert app.msg._preview_row is not None
+            assert app.msg._preview_row.display is False
+            hint = app.msg._hint_widget._Static__content  # ty: ignore
+            assert "expand" in hint.plain
+            assert "more" not in hint.plain
+
     async def test_search_click_toggles_output(self) -> None:
-        """Clicking a collapsed `grep` expands it via `has_expandable_output`."""
+        """Clicking an expanded `grep` collapses it via `has_expandable_output`."""
         output = "file.py:1:hit one\nfile.py:2:hit two"
 
         app = _tool_msg_app("grep", {"pattern": "x"})
@@ -1811,13 +1818,15 @@ class TestToolCallMessageExpandHint:
             await pilot.pause()
 
             assert app.msg.has_expandable_output is True
-            assert app.msg._expanded is False
+            # Starts auto-expanded on success.
+            assert app.msg._expanded is True
 
             event = MagicMock()
             app.msg.on_click(event)
             await pilot.pause()
             event.stop.assert_called_once()
-            assert app.msg._expanded is True
+            # Click toggles to collapsed.
+            assert app.msg._expanded is False
 
 
 class TestToolCallMessageEmptyResult:
@@ -1898,9 +1907,9 @@ class TestToolCallMessageEmptyResult:
     async def test_non_empty_serialized_result_still_renders(self) -> None:
         """A populated result must still render — the guard can't false-positive.
 
-        glob collapses its body by default, so "renders" here means it stays
-        expandable (not hidden by the empty guard) and the content is reachable
-        once expanded, rather than shown inline.
+        glob auto-expands its body on success, so a populated result is
+        immediately visible in the full row rather than hidden behind an expand
+        hint.
         """
         app = _tool_msg_app("glob")
         async with app.run_test() as pilot:
@@ -1908,16 +1917,14 @@ class TestToolCallMessageEmptyResult:
             app.msg.set_success("['a.py', 'b.py']")
             await pilot.pause()
 
-            assert app.msg._has_expandable_output() is True
-            assert app.msg._hint_widget is not None
-            assert app.msg._hint_widget.display is True
-
-            app.msg.toggle_output()
-            await pilot.pause()
+            # Auto-expanded on success.
             assert app.msg._expanded is True
+            assert app.msg._has_expandable_output() is True
             assert app.msg._full_widget is not None
             full = app.msg._full_widget._Static__content  # ty: ignore[unresolved-attribute]
             assert "a.py" in full.plain
+            assert app.msg._hint_widget is not None
+            assert app.msg._hint_widget.display is True
 
     async def test_error_body_is_not_hidden(self) -> None:
         """A real (non-empty) error body must stay visible.
