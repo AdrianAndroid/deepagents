@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>zjcode · 安装指引</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2129;--border:#30363d;
+--text:#e6edf3;--muted:#9198a1;--accent:#20a53a;--accent-hover:#2ec14a;
+--danger:#f85149;--code-bg:#0b0f14;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+"Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.65;}
+.container{max-width:920px;margin:0 auto;padding:48px 24px 96px;}
+header{display:flex;align-items:center;justify-content:space-between;
+flex-wrap:wrap;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--border);
+margin-bottom:32px;}
+h1{margin:0;font-size:26px;}
+h1 .tag{display:inline-block;font-size:12px;padding:2px 8px;
+border:1px solid var(--accent);color:var(--accent);border-radius:999px;
+margin-left:10px;vertical-align:middle;}
+header .meta{color:var(--muted);font-size:13px;}
+header .meta code{color:var(--text);}
+h2{font-size:18px;margin:40px 0 12px;display:flex;align-items:center;gap:10px;}
+h2 .num{display:inline-flex;width:24px;height:24px;border-radius:50%;
+background:var(--accent);color:#fff;font-size:13px;
+align-items:center;justify-content:center;}
+p{margin:8px 0 12px;color:#cdd5df;}
+a{color:var(--accent);text-decoration:none;}
+a:hover{color:var(--accent-hover);text-decoration:underline;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:18px 20px;margin:12px 0 20px;}
+.code-block{position:relative;background:var(--code-bg);border:1px solid var(--border);
+border-radius:8px;padding:14px 60px 14px 16px;
+font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+font-size:13px;color:#d1d9e0;overflow-x:auto;white-space:pre;}
+.code-block .copy-btn{position:absolute;top:8px;right:8px;background:var(--panel-2);
+border:1px solid var(--border);color:var(--muted);border-radius:6px;
+padding:4px 10px;font-size:12px;cursor:pointer;transition:.15s;}
+.code-block .copy-btn:hover{color:var(--text);border-color:var(--accent);}
+.code-block .copy-btn.ok{color:var(--accent);border-color:var(--accent);}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel-2);
+border:1px solid var(--border);border-radius:8px;padding:8px 14px;
+color:var(--text);font-size:13px;cursor:pointer;transition:.15s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none;}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn.primary:hover{background:var(--accent-hover);color:#fff;}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 4px;}
+table th,table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;}
+table th{color:var(--muted);font-weight:500;}
+table code{color:var(--accent);}
+code.inline{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;
+padding:1px 6px;font-family:"SF Mono",Menlo,Consolas,monospace;
+font-size:12.5px;color:#d1d9e0;}
+.callout{border-left:3px solid var(--accent);background:rgba(32,165,58,.08);
+padding:10px 14px;border-radius:4px;margin:12px 0;font-size:13.5px;color:#cdd5df;}
+.callout.warn{border-left-color:#d29922;background:rgba(210,153,34,.08);}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);
+color:var(--muted);font-size:12px;text-align:center;}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);
+margin-bottom:-1px;flex-wrap:wrap;}
+.tab{background:transparent;border:1px solid transparent;border-bottom:none;
+color:var(--muted);padding:8px 16px;font-size:13.5px;cursor:pointer;
+border-radius:8px 8px 0 0;transition:.15s;display:inline-flex;
+align-items:center;gap:6px;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--panel);border-color:var(--border);color:var(--accent);}
+.tab-panels{background:var(--panel);border:1px solid var(--border);border-top:none;
+border-radius:0 10px 10px 10px;padding:18px 20px;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<div>
+<h1>zjcode<span class="tag">PyPI</span></h1>
+<div class="meta" style="margin-top:6px">终端 AI 编码代理 · 命令行工具 <code>zjcode</code>(基于 deepagents-code 私有品牌化 fork)</div>
+</div>
+<div class="meta">公开 PyPI: <a href="https://pypi.org/project/zjcode/" target="_blank"><code>pypi.org/project/zjcode</code></a></div>
+</header>
+
+<p>本页说明如何从公开 PyPI 安装 <code class="inline">zjcode</code>(命令 <code class="inline">zjcode</code>)。推荐使用 <code class="inline">uv tool</code> 隔离安装,不污染系统 Python。</p>
+
+<h2><span class="num">1</span>一键安装</h2>
+<p>请根据你的操作系统选择:</p>
+
+<div class="tabs" data-tabs="install">
+<button class="tab active" data-target="install-linux">🐧 Linux</button>
+<button class="tab" data-target="install-macos">🍎 macOS</button>
+<button class="tab" data-target="install-windows">🪟 Windows</button>
+</div>
+<div class="tab-panels">
+
+<div class="tab-panel active" id="install-linux">
+<p>在终端(bash / zsh)中执行:</p>
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/install.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn primary" href="install.sh" download>下载 install.sh</a>
+<a class="btn" href="install.sh" target="_blank">查看源码</a>
+</div>
+<div class="callout">脚本会自动检测并安装 <code class="inline">uv</code>,然后通过 <code class="inline">uv tool install</code> 从公开 PyPI 拉取 <code class="inline">zjcode</code>(附加 <code class="inline">--prerelease=allow</code>,因为依赖 <code class="inline">deepagents==0.7.0a7</code> 是 alpha 预发布)。要求 Python 3.11+(uv 会自动下载合适的 Python)。</div>
+</div>
+
+<div class="tab-panel" id="install-macos">
+<p>在终端(zsh / bash)中执行:</p>
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/install.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn primary" href="install.sh" download>下载 install.sh</a>
+<a class="btn" href="install.sh" target="_blank">查看源码</a>
+</div>
+<div class="callout">与 Linux 使用同一份脚本。若尚未装 <code class="inline">uv</code>,脚本会通过 astral.sh 官方 installer 自动安装到 <code class="inline">~/.local/bin</code>。</div>
+</div>
+
+<div class="tab-panel" id="install-windows">
+<p>以 <strong>普通 PowerShell</strong>(不需要管理员)执行:</p>
+<div class="code-block"><span class="cmd">irm http://8.152.204.58:40080/install.ps1 | iex</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn primary" href="install.ps1" download>下载 install.ps1</a>
+<a class="btn" href="install.ps1" target="_blank">查看源码</a>
+</div>
+<p style="margin-top:12px">若下载后本地执行,遇到执行策略限制可用:</p>
+<div class="code-block"><span class="cmd">powershell -ExecutionPolicy Bypass -File install.ps1</span><button class="copy-btn">复制</button></div>
+<div class="callout warn">如果装了 WSL,也可以直接在 WSL 里跑上面 Linux 的方式,与原生 Windows 环境互不影响。</div>
+</div>
+
+</div>
+
+<h2><span class="num">2</span>手动安装(所有平台)</h2>
+<div class="card">
+<p>若你已经装好 <code class="inline">uv</code>,可跳过脚本直接执行:</p>
+<div class="code-block"><span class="cmd">uv tool install zjcode --prerelease=allow</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:14px">升级到最新版:</p>
+<div class="code-block"><span class="cmd">uv tool upgrade zjcode</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:14px">安装完成后,任何目录下运行:</p>
+<div class="code-block"><span class="cmd">zjcode</span><button class="copy-btn">复制</button></div>
+<div class="callout" style="margin-top:12px"><code class="inline">--prerelease=allow</code> 是必须的:<code class="inline">zjcode</code> 依赖 <code class="inline">deepagents==0.7.0a7</code>(alpha 预发布),uv 默认拒装预发布依赖。</div>
+</div>
+
+<h2><span class="num">3</span>卸载</h2>
+
+<div class="tabs" data-tabs="uninstall">
+<button class="tab active" data-target="uninstall-linux">
+🐧 Linux</button>
+<button class="tab" data-target="uninstall-macos">🍎 macOS</button>
+<button class="tab" data-target="uninstall-windows">🪟 Windows</button>
+</div>
+<div class="tab-panels">
+
+<div class="tab-panel active" id="uninstall-linux">
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/uninstall.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn danger" href="uninstall.sh" download>下载 uninstall.sh</a>
+<a class="btn" href="uninstall.sh" target="_blank">查看源码</a>
+</div>
+<p style="margin-top:10px">或直接:</p>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
+</div>
+
+<div class="tab-panel" id="uninstall-macos">
+<div class="code-block"><span class="cmd">curl -fsSL http://8.152.204.58:40080/uninstall.sh | bash</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn danger" href="uninstall.sh" download>下载 uninstall.sh</a>
+<a class="btn" href="uninstall.sh" target="_blank">查看源码</a>
+</div>
+<p style="margin-top:10px">或直接:</p>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
+</div>
+
+<div class="tab-panel" id="uninstall-windows">
+<div class="code-block"><span class="cmd">irm http://8.152.204.58:40080/uninstall.ps1 | iex</span><button class="copy-btn">复制</button></div>
+<div class="btn-row">
+<a class="btn danger" href="uninstall.ps1" download>下载 uninstall.ps1</a>
+<a class="btn" href="uninstall.ps1" target="_blank">查看源码</a>
+</div>
+<p style="margin-top:10px">或直接:</p>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
+</div>
+
+</div>
+
+<h2><span class="num">4</span>环境变量(可选)</h2>
+<div class="card">
+<p>安装脚本支持以下环境变量覆盖默认配置:</p>
+<table>
+<thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>PKG_VERSION</code></td><td><em>latest</em></td><td>指定版本,例 <code>0.0.2</code></td></tr>
+<tr><td><code>INDEX_URL</code></td><td>https://pypi.org/simple/</td><td>PyPI 索引地址</td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px">Linux / macOS 示例:</p>
+<div class="code-block"><span class="cmd">PKG_VERSION=0.0.2 bash install.sh</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:12px">Windows PowerShell 示例:</p>
+<div class="code-block"><span class="cmd">$env:PKG_VERSION="0.0.2"; irm http://8.152.204.58:40080/install.ps1 | iex</span><button class="copy-btn">复制</button></div>
+</div>
+
+<h2><span class="num">5</span>版本检查</h2>
+<div class="card">
+<p><code class="inline">zjcode</code> 内置的版本检查会直接请求公开 PyPI 的 Warehouse JSON API:</p>
+<div class="code-block"><span class="cmd">https://pypi.org/pypi/zjcode/json</span><button class="copy-btn">复制</button></div>
+<div class="callout warn" style="margin-top:12px">可编辑(<code class="inline">--editable</code>)安装下自动更新始终禁用,版本检查仅用于"有新版可用"提示,不会自动下载重启。</div>
+</div>
+
+<h2><span class="num">6</span>常见问题</h2>
+<div class="card">
+<p><strong>找不到 <code class="inline">zjcode</code> 命令</strong></p>
+<p>Linux / macOS —— 把 <code class="inline">uv</code> 的 bin 目录加入 PATH:</p>
+<div class="code-block"><span class="cmd">echo 'export PATH="$(uv tool dir --bin):$PATH"' >> ~/.zshrc && source ~/.zshrc</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:12px">Windows —— 永久加入用户 PATH:</p>
+<div class="code-block"><span class="cmd">[Environment]::SetEnvironmentVariable('Path', "$(uv tool dir --bin);" + [Environment]::GetEnvironmentVariable('Path','User'), 'User')</span><button class="copy-btn">复制</button></div>
+
+<p style="margin-top:14px"><strong>验证安装</strong></p>
+<div class="code-block"><span class="cmd">uv tool list
+zjcode --version</span><button class="copy-btn">复制</button></div>
+
+<p style="margin-top:14px"><strong>升级到最新版本</strong></p>
+<div class="code-block"><span class="cmd">uv tool upgrade zjcode</span><button class="copy-btn">复制</button></div>
+
+<div class="callout" style="margin-top:14px">
+<code class="inline">zjcode</code> 已发布到公开 PyPI(<a href="https://pypi.org/project/zjcode/" target="_blank">pypi.org/project/zjcode</a>),任何人都可安装。因依赖 <code class="inline">deepagents</code> 的 alpha 预发布,首次安装必须带 <code class="inline">--prerelease=allow</code>。
+</div>
+</div>
+
+<footer>
+zjcode · 安装引导页 ·
+<a href="install.sh">install.sh</a> ·
+<a href="install.ps1">install.ps1</a> ·
+<a href="uninstall.sh">uninstall.sh</a> ·
+<a href="uninstall.ps1">uninstall.ps1</a>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.code-block').forEach(function(block){
+  var btn = block.querySelector('.copy-btn');
+  var cmd = block.querySelector('.cmd');
+  if(!btn || !cmd) return;
+  btn.addEventListener('click', function(){
+    var text = cmd.innerText.replace(/\u00a0/g,' ');
+    navigator.clipboard.writeText(text).then(function(){
+      var old = btn.textContent;
+      btn.textContent = '已复制';
+      btn.classList.add('ok');
+      setTimeout(function(){ btn.textContent = old; btn.classList.remove('ok'); }, 1500);
+    }).catch(function(){ btn.textContent = '复制失败'; });
+  });
+});
+
+// Platform tab switching (scoped per tab group)
+document.querySelectorAll('.tabs').forEach(function(tabs){
+  var panels = tabs.nextElementSibling; // .tab-panels
+  tabs.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      panels.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      var target = document.getElementById(tab.dataset.target);
+      if(target) target.classList.add('active');
+    });
+  });
+});
+
+// Auto-select tab based on OS
+(function(){
+  var ua = navigator.userAgent.toLowerCase();
+  var os = 'linux';
+  if (ua.indexOf('win') !== -1) os = 'windows';
+  else if (ua.indexOf('mac') !== -1) os = 'macos';
+  document.querySelectorAll('.tabs').forEach(function(tabs){
+    var group = tabs.dataset.tabs;
+    var btn = tabs.querySelector('.tab[data-target="' + group + '-' + os + '"]');
+    if (btn) btn.click();
+  });
+})();
+</script>
+</body>
+</html>

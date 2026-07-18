@@ -56,19 +56,6 @@ jobs:
             exit 1
           fi
 
-      - name: Relax deepagents pin for published wheel
-        working-directory: libs/code
-        run: |
-          set -euo pipefail
-          before="$(grep -E '"deepagents==0\.7\.0a[0-9]+"' pyproject.toml || true)"
-          if [ -z "$before" ]; then
-            echo "::error::Expected pin '\"deepagents==0.7.0aN\"' not found in libs/code/pyproject.toml. Update this step in publish-zjcode.yml."
-            exit 1
-          fi
-          sed -i -E 's|"deepagents==0\.7\.0a[0-9]+"|"deepagents>=0.7.0a7,<0.8.0"|' pyproject.toml
-          echo "before: $before"
-          echo "after:  $(grep '"deepagents' pyproject.toml | head -1)"
-
       - name: Build
         working-directory: libs/code
         run: |
