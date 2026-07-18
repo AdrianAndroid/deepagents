@@ -1403,7 +1403,6 @@ NON_OPTION_ENV_VARS: frozenset[str] = frozenset(
         # Advanced overrides for the update-check JSON API mirror URLs. Resolved
         # in `_version.py` at import time, not surfaced as user config options.
         _env_vars.PYPI_URL,
-        _env_vars.PYPI_INDEX_URL,
         _env_vars.SDK_PYPI_URL,
         # Env equivalents of the STRUCTURED `[mcp]` lists. They are read by the
         # dedicated `model_config.load_mcp_server_trust_lists` loader (which the
