@@ -10,7 +10,7 @@ from deepagents_code._env_vars import (
 
 # Keep the `x-release-please-version` annotation — release-please uses it to
 # bump `__version__` in sync with `pyproject.toml` on every release PR.
-__version__ = "0.0.11"  # x-release-please-version
+__version__ = "0.0.1"  # x-release-please-version
 
 DISTRIBUTION_NAME = "zjcode"
 """Distribution (wheel/PyPI) name for this private-branded build.

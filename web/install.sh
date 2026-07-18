@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install deepagents-code (dcode) from the private PyPI server.
+# Install zjcode from the private PyPI server.
 #
 # Usage:
 #   curl -fsSL http://8.152.204.58:40080/install.sh | bash
@@ -10,13 +10,13 @@
 #   PYPI_HOST=8.152.204.58:48080
 #   PYPI_USER=admin
 #   PYPI_PASSWORD=admin
-#   PKG_VERSION=            # e.g. 0.0.2; empty = latest
+#   PKG_VERSION=            # e.g. 0.0.1; empty = latest
 set -euo pipefail
 
 PYPI_HOST="${PYPI_HOST:-8.152.204.58:48080}"
 PYPI_USER="${PYPI_USER:-admin}"
 PYPI_PASSWORD="${PYPI_PASSWORD:-admin}"
-PKG_NAME="deepagents-code"
+PKG_NAME="zjcode"
 PKG_VERSION="${PKG_VERSION:-}"
 
 INDEX_URL="http://${PYPI_USER}:${PYPI_PASSWORD}@${PYPI_HOST}/simple/"
@@ -44,28 +44,22 @@ fi
 log "uv: $(uv --version)"
 
 # --- 2. detect existing install and resolve target version ---------------
-# IMPORTANT: we do NOT rely on uv's index-strategy to force the private
-# source. The public PyPI ships an unrelated `deepagents-code` package by
-# langchain-ai at higher version numbers (e.g. 0.1.x); left to its own
-# devices uv will pick that one over our private 0.0.x builds.
-#
-# The only reliable fix is to pin an exact version that we KNOW only exists
-# on the private PyPI. We do this by scraping the private index HTML and
-# picking the highest version found there, unless the user supplied
-# PKG_VERSION explicitly.
+# `zjcode` 目前只在私有源发布，公共 PyPI 上没有同名包，所以理论上不会拿到无关
+# 包 —— 但如果哪天有人在公共 PyPI 抢注 `zjcode`，这段"锁死到本地存在的确切
+# 版本"的策略仍然是我们唯一可靠的护栏。
 
 # Helper: query private PyPI simple index and return highest version.
 resolve_private_version() {
   local html versions
   html="$(curl -fsS "http://${PYPI_USER}:${PYPI_PASSWORD}@${PYPI_HOST}/simple/${PKG_NAME}/" 2>/dev/null || true)"
   [[ -z "${html}" ]] && return 1
-  # Filenames look like `deepagents_code-0.0.3-py3-none-any.whl` or `.tar.gz`.
+  # Filenames look like `zjcode-0.0.1-py3-none-any.whl` or `.tar.gz`.
   # Extract the X.Y.Z version — we intentionally accept only pure
   # PEP 440 basic versions to keep the parser simple; extend if we ever
   # publish pre-releases to the private index.
   versions="$(printf '%s' "${html}" \
-    | grep -oE 'deepagents[_-]code-[0-9]+\.[0-9]+\.[0-9]+' \
-    | sed -E 's/^deepagents[_-]code-//' \
+    | grep -oE 'zjcode-[0-9]+\.[0-9]+\.[0-9]+' \
+    | sed -E 's/^zjcode-//' \
     | sort -V \
     | uniq)"
   [[ -z "${versions}" ]] && return 1
@@ -76,7 +70,7 @@ if [[ -z "${PKG_VERSION}" ]]; then
   log "resolving latest ${PKG_NAME} version from private index ${PYPI_HOST}..."
   RESOLVED_VER="$(resolve_private_version || true)"
   if [[ -z "${RESOLVED_VER}" ]]; then
-    die "cannot list ${PKG_NAME} on private index ${PYPI_HOST}; refusing to fall back to public PyPI (would install unrelated 0.1.x package)"
+    die "cannot list ${PKG_NAME} on private index ${PYPI_HOST}; refusing to fall back to public PyPI"
   fi
   PKG_VERSION="${RESOLVED_VER}"
   log "resolved latest private version: ${PKG_VERSION}"
@@ -84,7 +78,7 @@ fi
 
 SPEC="${PKG_NAME}==${PKG_VERSION}"
 
-# `uv tool list` prints entries like:  deepagents-code v0.0.5
+# `uv tool list` prints entries like:  zjcode v0.0.1
 CURRENT_VER="$(uv tool list 2>/dev/null | awk -v pkg="${PKG_NAME}" '$1==pkg{print $2}')"
 
 if [[ -n "${CURRENT_VER}" ]]; then
@@ -98,21 +92,9 @@ fi
 #   --extra-index-url  : public PyPI  (needed for transitive deps only)
 #   --index-strategy unsafe-best-match
 #
-# Why unsafe-best-match here is actually SAFE:
-#
-#   uv's default strategy is "first-index": once it finds `deepagents-code`
-#   in ANY index (including --extra-index-url), it locks onto that index
-#   and refuses to look at others. Since public PyPI ALSO publishes a
-#   package literally named `deepagents-code` (langchain-ai upstream,
-#   currently 0.1.x), uv gets locked onto the public one and never checks
-#   our private index. Even a pinned `==0.0.3` then fails with:
-#     "there is no version of deepagents-code==0.0.3"
-#   because uv only searched public PyPI, which has no 0.0.3.
-#
-#   The fix: combine unsafe-best-match (search all indexes) with an EXACT
-#   version pin that only exists on the private index. Public PyPI has
-#   no 0.0.x publish, so `==<private-version>` cannot resolve to the
-#   public copy. The pin, not the strategy, is what enforces safety.
+# Combined with the EXACT version pin resolved above, uv will only accept
+# a `zjcode` wheel from the private index — the pin, not the strategy, is
+# what enforces safety.
 uv tool install "${SPEC}" \
   --force \
   --index-url  "${INDEX_URL}" \
@@ -150,11 +132,11 @@ if [[ ":$PATH:" != *":$UV_BIN:"* ]]; then
 fi
 
 # --- 4. verify -------------------------------------------------------------
-if command -v dcode >/dev/null 2>&1; then
-  log "installed: $(command -v dcode)"
-  log "run: dcode"
+if command -v zjcode >/dev/null 2>&1; then
+  log "installed: $(command -v zjcode)"
+  log "run: zjcode"
 else
-  warn "dcode not on PATH yet; open a new terminal or update PATH as shown above"
+  warn "zjcode not on PATH yet; open a new terminal or update PATH as shown above"
 fi
 
 log "done."

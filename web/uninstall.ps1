@@ -1,10 +1,11 @@
-# Uninstall deepagents-code (dcode) - broad-spectrum cleanup. (Windows PowerShell)
+# Uninstall zjcode - broad-spectrum cleanup, plus legacy deepagents-code shim removal. (Windows PowerShell)
 #
-# Removes deepagents-code no matter how it was installed:
+# Removes zjcode no matter how it was installed:
 #   - uv tool install    (our recommended path)
 #   - pipx install
-#   - pip install / pip install --user  (public PyPI copy)
+#   - pip install / pip install --user
 #   - stray shims in %USERPROFILE%\.local\bin and Python Scripts dirs
+# Also cleans up leftover shims from the pre-rebrand `deepagents-code` / `dcode` install.
 #
 # Usage:
 #   irm http://8.152.204.58:40080/uninstall.ps1 | iex
@@ -13,10 +14,17 @@
 #   $env:DRY_RUN = "1"; powershell -ExecutionPolicy Bypass -File uninstall.ps1
 
 $ErrorActionPreference = "Continue"
-$PkgName  = "deepagents-code"
-$BinNames = @("dcode.exe", "dcode", "deepagents-code.exe", "deepagents-code", "deepagents.exe", "deepagents")
-$DryRun   = ($env:DRY_RUN -eq "1")
-$changed  = $false
+$PkgName    = "zjcode"
+$LegacyPkgs = @("deepagents-code")
+$AllPkgs    = @($PkgName) + $LegacyPkgs
+$BinNames   = @(
+    "zjcode.exe", "zjcode",
+    "dcode.exe", "dcode",
+    "deepagents-code.exe", "deepagents-code",
+    "deepagents.exe", "deepagents"
+)
+$DryRun     = ($env:DRY_RUN -eq "1")
+$changed    = $false
 
 function Info($msg) { Write-Host "[uninstall] $msg" -ForegroundColor Cyan }
 function Warn($msg) { Write-Host "[warn] $msg"      -ForegroundColor Yellow }
@@ -33,13 +41,15 @@ function Invoke-Step {
 # --- 1. uv tool ------------------------------------------------------------
 if (Get-Command uv -ErrorAction SilentlyContinue) {
     $uvList = (uv tool list 2>$null) | Out-String
-    if ($uvList -match "(?m)^$PkgName\b") {
-        Info "found via 'uv tool'; uninstalling..."
-        if (Invoke-Step "uv tool uninstall $PkgName" { uv tool uninstall $PkgName }) {
-            $changed = $true
+    foreach ($pkg in $AllPkgs) {
+        if ($uvList -match "(?m)^$pkg\b") {
+            Info "found via 'uv tool'; uninstalling $pkg..."
+            if (Invoke-Step "uv tool uninstall $pkg" { uv tool uninstall $pkg }) {
+                $changed = $true
+            }
+        } else {
+            Info "'uv tool' has no $pkg"
         }
-    } else {
-        Info "'uv tool' has no $PkgName"
     }
 } else {
     Info "uv not installed; skipping uv tool"
@@ -48,13 +58,15 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 # --- 2. pipx ---------------------------------------------------------------
 if (Get-Command pipx -ErrorAction SilentlyContinue) {
     $pipxList = (pipx list --short 2>$null) | Out-String
-    if ($pipxList -match "(?m)^$PkgName\b") {
-        Info "found via 'pipx'; uninstalling..."
-        if (Invoke-Step "pipx uninstall $PkgName" { pipx uninstall $PkgName }) {
-            $changed = $true
+    foreach ($pkg in $AllPkgs) {
+        if ($pipxList -match "(?m)^$pkg\b") {
+            Info "found via 'pipx'; uninstalling $pkg..."
+            if (Invoke-Step "pipx uninstall $pkg" { pipx uninstall $pkg }) {
+                $changed = $true
+            }
+        } else {
+            Info "'pipx' has no $pkg"
         }
-    } else {
-        Info "'pipx' has no $PkgName"
     }
 }
 
@@ -67,11 +79,13 @@ foreach ($py in @("python", "python3", "py")) {
     }
 }
 foreach ($py in $pythons) {
-    $showOut = & $py -m pip show $PkgName 2>$null
-    if ($LASTEXITCODE -eq 0 -and $showOut) {
-        Info "found via '$py -m pip'; uninstalling..."
-        if (Invoke-Step "$py -m pip uninstall -y $PkgName" { & $py -m pip uninstall -y $PkgName }) {
-            $changed = $true
+    foreach ($pkg in $AllPkgs) {
+        $showOut = & $py -m pip show $pkg 2>$null
+        if ($LASTEXITCODE -eq 0 -and $showOut) {
+            Info "found via '$py -m pip'; uninstalling $pkg..."
+            if (Invoke-Step "$py -m pip uninstall -y $pkg" { & $py -m pip uninstall -y $pkg }) {
+                $changed = $true
+            }
         }
     }
 }
@@ -102,7 +116,7 @@ foreach ($dir in $shimDirs) {
                 $take = [Math]::Min(2048, $bytes.Length)
                 $head = [System.Text.Encoding]::UTF8.GetString($bytes, 0, $take)
             } catch { }
-            if ($head -match "$PkgName|deepagents_code|site-packages" -or $path -like "*.exe") {
+            if ($head -match "$PkgName|deepagents-code|deepagents_code|site-packages" -or $path -like "*.exe") {
                 Info "removing shim: $path"
                 if (Invoke-Step "Remove-Item $path" { Remove-Item -Force $path }) {
                     $changed = $true
@@ -114,7 +128,7 @@ foreach ($dir in $shimDirs) {
 
 # --- 5. summary + residual check ------------------------------------------
 if (-not $changed) {
-    Warn "no $PkgName installation was detected"
+    Warn "no $PkgName (or legacy deepagents-code) installation was detected"
 }
 
 Info "post-cleanup check:"
@@ -126,6 +140,6 @@ foreach ($name in $BinNames) {
         $foundAny = $true
     }
 }
-if (-not $foundAny) { Info "  no dcode/deepagents-code binary remains on PATH" }
+if (-not $foundAny) { Info "  no zjcode/dcode/deepagents-code binary remains on PATH" }
 
 Info "done."

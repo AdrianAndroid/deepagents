@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bump the `deepagents-code` version in all tracked locations.
+"""Bump the `zjcode` version in all tracked locations.
 
 This is a single-package variant of the monorepo bump script, scoped
 to this package (`libs/code`). It updates:

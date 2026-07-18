@@ -7,7 +7,7 @@ PYTHON_VER="3.12"
 PYPI_HOST="8.152.204.58:48080"          # 私有 pypiserver (Simple Index + 上传)
 PYPI_USER="admin"
 PYPI_PWD="admin"
-PKG_NAME="deepagents-code"              # 主程序包名
+PKG_NAME="zjcode"                       # 主程序包名（zjcode 品牌化后的分发名）
 SDK_NAME="deepagents"                   # SDK 包名（用于版本检查的发布时间）
 SDK_FALLBACK_VERSION="0.7.0a3"         # 私有源暂无 SDK 时的占位版本
 
