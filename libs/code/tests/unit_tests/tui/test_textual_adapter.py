@@ -3215,7 +3215,12 @@ class TestExecuteTaskTextualRubricRevisionStreaming:
             "yellow yellow",
         ]
 
-        app_messages = [widget for widget in mounted if isinstance(widget, AppMessage)]
+        app_messages = [
+            widget
+            for widget in mounted
+            if isinstance(widget, AppMessage)
+            and "\u23f9" not in str(widget._content)
+        ]
         assert [str(widget._content) for widget in app_messages] == [
             (
                 f"{UNICODE_GLYPHS.hourglass} Checking acceptance criteria"
@@ -3682,7 +3687,12 @@ class TestExecuteTaskTextualAskUser:
 
         assert len(agent.stream_inputs) == 1
         assert "tool-1" not in adapter._current_tool_messages
-        app_messages = [widget for widget in mounted if isinstance(widget, AppMessage)]
+        app_messages = [
+            widget
+            for widget in mounted
+            if isinstance(widget, AppMessage)
+            and "\u23f9" not in str(widget._content)
+        ]
         assert len(app_messages) == 1
         assert "Question cancelled" in str(app_messages[0]._content)
         assert token_events == ["pending", "show:False"]
@@ -3744,7 +3754,12 @@ class TestExecuteTaskTextualAskUser:
         )
 
         assert len(agent.stream_inputs) == 1
-        app_messages = [widget for widget in mounted if isinstance(widget, AppMessage)]
+        app_messages = [
+            widget
+            for widget in mounted
+            if isinstance(widget, AppMessage)
+            and "\u23f9" not in str(widget._content)
+        ]
         assert len(app_messages) == 1
         assert "Command rejected" in str(app_messages[0]._content)
         assert token_events == ["pending", "show:False"]
@@ -3806,7 +3821,12 @@ class TestExecuteTaskTextualAskUser:
         resume_payload = cast("dict[str, dict[str, Any]]", resume_cmd.resume)
         decisions = resume_payload["interrupt-1"]["decisions"]
         assert decisions == [{"type": "reject", "message": "use a safer command"}]
-        app_messages = [widget for widget in mounted if isinstance(widget, AppMessage)]
+        app_messages = [
+            widget
+            for widget in mounted
+            if isinstance(widget, AppMessage)
+            and "\u23f9" not in str(widget._content)
+        ]
         assert not any("Command rejected" in str(msg._content) for msg in app_messages)
 
     async def test_ask_user_invalid_answers_payload_marks_row_error(self) -> None:

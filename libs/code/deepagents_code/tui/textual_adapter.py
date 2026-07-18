@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import sys
 import time
 import uuid
 from typing import TYPE_CHECKING, Any
@@ -812,6 +813,16 @@ async def execute_task_textual(
         turn_stats = SessionStats()
     start_time = time.monotonic()
 
+    # Begin per-turn end-status tracking. Fires for every prompt; guaranteed
+    # marker emit runs from the finally block below regardless of exit path.
+    from deepagents_code import turn_end_summary
+
+    turn_end_summary.mark_turn_start(
+        thread_id=thread_id or "",
+        turn_id=turn_id or "",
+        turn_number=turn_number,
+    )
+
     # Warn if token display callbacks are only partially wired — all three
     # should be set together to avoid inconsistent status-bar behavior.
     token_cbs = (
@@ -1589,6 +1600,24 @@ async def execute_task_textual(
                             pending_text_by_namespace[ns_key] = ""
                             assistant_message_by_namespace.pop(ns_key, None)
 
+                        # Feed the finish reason from the main agent's model
+                        # call to the per-turn end-status tracker. `length` /
+                        # `max_tokens` etc. get classified there and win the
+                        # priority contest for the final marker.
+                        if is_main_agent:
+                            _meta = call_metadata_by_namespace.get(ns_key) or {}
+                            _fr = _meta.get("finish_reason") or _meta.get(
+                                "stop_reason"
+                            )
+                            if _fr:
+                                try:
+                                    turn_end_summary.observe_finish_reason(_fr)
+                                except Exception:  # never mask streaming
+                                    logger.debug(
+                                        "observe_finish_reason failed",
+                                        exc_info=True,
+                                    )
+
                         # Show a compact per-call info line so the user can
                         # see the model response metadata (usage, finish
                         # reason, model id, latency) inline after the AI
@@ -2125,7 +2154,16 @@ async def execute_task_textual(
                 await dispatch_hook("task.complete", {"thread_id": thread_id})
                 break
 
-    except (asyncio.CancelledError, KeyboardInterrupt):
+    except (asyncio.CancelledError, KeyboardInterrupt) as _interrupt_exc:
+        # Classify the interrupt for the per-turn end-status marker before
+        # cleanup runs — the marker emit itself happens in the `finally`.
+        try:
+            turn_end_summary.mark_turn_reason(
+                turn_end_summary.REASON_USER_INTERRUPTED,
+                type(_interrupt_exc).__name__,
+            )
+        except Exception:
+            logger.debug("mark_turn_reason (interrupt) failed", exc_info=True)
         await _handle_interrupt_cleanup(
             adapter=adapter,
             agent=agent,
@@ -2211,6 +2249,31 @@ async def execute_task_textual(
                 "Unparsed tool-call buffer check failed unexpectedly",
                 exc_info=True,
             )
+
+        # Per-turn end-status marker. Always emitted, regardless of exit path
+        # (clean end, user interrupt, mid-stream exception). If an unhandled
+        # exception is in flight, classify it here so the marker reflects the
+        # real cause instead of the default `unknown_truncation`. `finalize`
+        # is idempotent, so double-invocation from nested `finally`s is safe.
+        try:
+            _exc = sys.exc_info()[1]
+            if _exc is not None and not isinstance(
+                _exc, (asyncio.CancelledError, KeyboardInterrupt)
+            ):
+                _reason, _detail = turn_end_summary.classify_exception(_exc)
+                turn_end_summary.mark_turn_reason(_reason, _detail)
+            _record = turn_end_summary.finalize_turn()
+            if _record is not None:
+                try:
+                    await adapter._mount_message(
+                        AppMessage(turn_end_summary.render_marker_text(_record))
+                    )
+                except Exception:
+                    logger.debug(
+                        "Failed to mount turn-end marker", exc_info=True
+                    )
+        except Exception:
+            logger.debug("turn_end_summary finalize failed", exc_info=True)
 
     # Update token count and return stats. Persistence is handled inside the
     # graph by `ResumeStateMiddleware.after_model`, so this only refreshes UI.

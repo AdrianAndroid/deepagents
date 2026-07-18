@@ -477,6 +477,19 @@ def _process_ai_message(
         elif total_toks:
             state.stats.record_request(active_model, total_toks, 0, active_provider)
 
+    # Feed the finish reason to the per-turn end-status tracker so the marker
+    # printed at the bottom of the turn reflects `length` / `max_tokens` /
+    # `content_filter` etc. instead of defaulting to `unknown_truncation`.
+    _resp_meta = getattr(message_obj, "response_metadata", None) or {}
+    _fr = _resp_meta.get("finish_reason") or _resp_meta.get("stop_reason")
+    if _fr:
+        try:
+            from deepagents_code import turn_end_summary
+
+            turn_end_summary.observe_finish_reason(_fr)
+        except Exception:
+            logger.debug("observe_finish_reason (headless) failed", exc_info=True)
+
     if not hasattr(message_obj, "content_blocks"):
         logger.debug("AIMessage missing content_blocks attribute, skipping")
         return
@@ -1102,6 +1115,15 @@ async def _run_agent_loop(
 
     start_time = time.monotonic()
 
+    # Begin per-turn end-status tracking; the marker prints from the finally
+    # block below regardless of exit path (clean end, HITL cap, interrupt,
+    # stream error). Import lazily so a bad module never blocks the loop.
+    from deepagents_code import turn_end_summary
+
+    turn_end_summary.mark_turn_start(
+        thread_id=thread_id if isinstance(thread_id, str) else "",
+    )
+
     try:
         # Initial stream
         await _stream_agent(
@@ -1181,6 +1203,32 @@ async def _run_agent_loop(
                 "Unparsed tool-call buffer check failed unexpectedly",
                 exc_info=True,
             )
+
+        # Per-turn end-status marker. Always emitted, regardless of exit
+        # path. If an unhandled exception is in flight, classify it here so
+        # the marker reflects the real cause; interrupts are attributed to
+        # `user_interrupted`. Guarded so a marker failure can never mask the
+        # propagating exception (this runs on the error path too).
+        try:
+            _exc = sys.exc_info()[1]
+            if isinstance(_exc, (asyncio.CancelledError, KeyboardInterrupt)):
+                turn_end_summary.mark_turn_reason(
+                    turn_end_summary.REASON_USER_INTERRUPTED,
+                    type(_exc).__name__,
+                )
+            elif _exc is not None:
+                _reason, _detail = turn_end_summary.classify_exception(_exc)
+                turn_end_summary.mark_turn_reason(_reason, _detail)
+            _record = turn_end_summary.finalize_turn()
+            if _record is not None and not quiet:
+                try:
+                    console.print(turn_end_summary.render_marker_text(_record))
+                except Exception:
+                    logger.debug(
+                        "Failed to print turn-end marker", exc_info=True
+                    )
+        except Exception:
+            logger.debug("turn_end_summary finalize failed", exc_info=True)
 
     wall_time = time.monotonic() - start_time
 
