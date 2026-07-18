@@ -562,7 +562,7 @@ def load_async_subagents(config_path: Path | None = None) -> list[AsyncSubAgent]
         List of `AsyncSubAgent` specs (empty if section is absent or invalid).
     """
     if config_path is None:
-        config_path = Path.home() / ".deepagents" / "config.toml"
+        config_path = Path.home() / ".zjcode" / "config.toml"
 
     if not config_path.exists():
         return []

@@ -63,7 +63,7 @@ RIPGREP_ASSETS: dict[tuple[str, str], tuple[str, str]] = {
 }
 """`(sys.platform, normalized arch) -> (asset filename, sha256 hex)`."""
 
-BIN_DIR: Path = Path.home() / ".deepagents" / "bin"
+BIN_DIR: Path = Path.home() / ".zjcode" / "bin"
 """Directory holding managed binaries. Prepended to `PATH` on startup."""
 
 _DOWNLOAD_TIMEOUT_SECONDS = 120

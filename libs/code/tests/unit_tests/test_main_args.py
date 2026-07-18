@@ -1626,11 +1626,11 @@ class TestRecentAgentIsValid:
     """`_recent_agent_is_valid` survives filesystem errors."""
 
     def test_returns_true_for_existing_dir(self, tmp_path, monkeypatch) -> None:
-        """Existing `~/.deepagents/<name>/` resolves to True."""
+        """Existing `~/.zjcode/<name>/` resolves to True."""
         from deepagents_code.main import _recent_agent_is_valid
 
         monkeypatch.setenv("HOME", str(tmp_path))
-        (tmp_path / ".deepagents" / "coder").mkdir(parents=True)
+        (tmp_path / ".zjcode" / "coder").mkdir(parents=True)
 
         assert _recent_agent_is_valid("coder") is True
 

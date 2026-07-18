@@ -110,7 +110,7 @@ class TestResolveMcpConfigAutodiscover:
     ) -> None:
         """User-level configs bypass the trust gate."""
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_cfg = user_dir / ".mcp.json"
         user_cfg.write_text(
@@ -140,7 +140,7 @@ class TestResolveMcpConfigAutodiscover:
     ) -> None:
         """User config loads OK while an untrusted project config is noted."""
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_cfg = user_dir / ".mcp.json"
         user_cfg.write_text(
@@ -181,7 +181,7 @@ class TestResolveMcpConfigAutodiscover:
     ) -> None:
         """Trusted project config merges into resolution alongside user configs."""
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_cfg = user_dir / ".mcp.json"
         user_cfg.write_text(

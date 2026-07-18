@@ -26,6 +26,8 @@ from urllib.request import url2pathname
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
+from deepagents_code._version import DISTRIBUTION_NAME
+
 logger = logging.getLogger(__name__)
 
 SdkVersionStatus = Literal["resolved", "not_installed", "error"]
@@ -292,7 +294,7 @@ def _extract_extra_name(marker_str: str) -> str | None:
 
 
 def get_extras_status(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> ExtrasStatus:
     """Return installed optional dependencies grouped by extra.
 
@@ -322,7 +324,7 @@ def get_extras_status(
 
 
 def installed_extra_names(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     *,
     strict: bool = False,
 ) -> set[str]:
@@ -342,7 +344,7 @@ def installed_extra_names(
 
 
 def get_optional_dependency_status(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     *,
     strict: bool = False,
 ) -> tuple[ExtraDependencyStatus, ...]:
@@ -423,7 +425,7 @@ def get_optional_dependency_status(
 
 def extra_for_package(
     package: str,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str | None:
     """Return the installable extra that declares a package.
 

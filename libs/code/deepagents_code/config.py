@@ -27,7 +27,7 @@ from deepagents_code._env_vars import (
     is_env_truthy,
 )
 from deepagents_code._git import resolve_git_branch
-from deepagents_code._version import __version__
+from deepagents_code._version import DISTRIBUTION_NAME, __version__
 from deepagents_code.config_manifest import (
     INTERPRETER_ENABLE_DEFAULT,
     INTERPRETER_MAX_PTC_CALLS_DEFAULT,
@@ -211,9 +211,9 @@ def _find_dotenv_from_start_path(start_path: Path) -> Path | None:
 
 # Global user-level .env (~/.deepagents/.env); sentinel when Path.home() fails.
 try:
-    _GLOBAL_DOTENV_PATH = Path.home() / ".deepagents" / ".env"
+    _GLOBAL_DOTENV_PATH = Path.home() / ".zjcode" / ".env"
 except RuntimeError:
-    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.deepagents/.env")
+    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.zjcode/.env")
 
 
 def _preview_dotenv_environ(*, start_path: Path | None = None) -> dict[str, str]:
@@ -1259,7 +1259,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
     path: str | None = None
 
     try:
-        dist = distribution("deepagents-code")
+        dist = distribution(DISTRIBUTION_NAME)
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)
@@ -2629,7 +2629,7 @@ class Settings:
         Returns:
             Path to `~/.deepagents`
         """
-        return Path.home() / ".deepagents"
+        return Path.home() / ".zjcode"
 
     @staticmethod
     def get_user_agent_md_path(agent_name: str) -> Path:
@@ -2643,7 +2643,7 @@ class Settings:
         Returns:
             Path to ~/.deepagents/{agent_name}/AGENTS.md
         """
-        return Path.home() / ".deepagents" / agent_name / "AGENTS.md"
+        return Path.home() / ".zjcode" / agent_name / "AGENTS.md"
 
     def get_project_agent_md_path(self) -> list[Path]:
         """Get project-level AGENTS.md paths.
@@ -2696,7 +2696,7 @@ class Settings:
                 "contain letters, numbers, hyphens, underscores, and spaces."
             )
             raise ValueError(msg)
-        return Path.home() / ".deepagents" / agent_name
+        return Path.home() / ".zjcode" / agent_name
 
     def ensure_agent_dir(self, agent_name: str) -> Path:
         """Ensure the global agent directory exists and return its path.

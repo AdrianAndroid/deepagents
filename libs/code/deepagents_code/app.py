@@ -62,7 +62,7 @@ from deepagents_code._session_stats import (
 # All config imports — settings, create_model, detect_provider, is_ascii_mode,
 # etc. — are deferred to local imports at their call sites since they are only
 # accessed after user interaction begins.
-from deepagents_code._version import CHANGELOG_URL, DOCS_URL
+from deepagents_code._version import CHANGELOG_URL, DISTRIBUTION_NAME, DOCS_URL
 from deepagents_code.formatting import format_message_timestamp
 from deepagents_code.iterm_cursor_guide import restore_iterm_cursor_guide
 from deepagents_code.notifications import (
@@ -5056,7 +5056,7 @@ class DeepAgentsApp(App):
                 dep_changes = [
                     change
                     for change in parse_dependency_changes(output)
-                    if change.name != "deepagents-code"
+                    if change.name != DISTRIBUTION_NAME
                 ]
                 if dep_changes:
                     await self._mount_message(
@@ -5141,15 +5141,15 @@ class DeepAgentsApp(App):
                 "format may have drifted.",
             )
         self_changes = [
-            change for change in changes if change.name == "deepagents-code"
+            change for change in changes if change.name == DISTRIBUTION_NAME
         ]
-        dep_changes = [change for change in changes if change.name != "deepagents-code"]
+        dep_changes = [change for change in changes if change.name != DISTRIBUTION_NAME]
         if not dep_changes and not self_changes:
             if app_update_version is not None:
                 await self._mount_message(
                     AppMessage(
                         "Dependencies are already up to date. "
-                        "A deepagents-code update is available: "
+                        f"A {DISTRIBUTION_NAME} update is available: "
                         f"v{app_update_version}.",
                     ),
                 )
@@ -5162,7 +5162,7 @@ class DeepAgentsApp(App):
         message_parts: list[str] = []
         if self_changes:
             message_parts.append(
-                f"Updated deepagents-code:\n{format_dependency_changes(self_changes)}"
+                f"Updated {DISTRIBUTION_NAME}:\n{format_dependency_changes(self_changes)}"
             )
         if dep_changes:
             message_parts.append(
@@ -5170,7 +5170,7 @@ class DeepAgentsApp(App):
             )
         if app_update_version is not None:
             message_parts.append(
-                f"A deepagents-code update is available: v{app_update_version}."
+                f"A {DISTRIBUTION_NAME} update is available: v{app_update_version}."
             )
         await self._mount_message(
             AppMessage(
@@ -5714,17 +5714,22 @@ class DeepAgentsApp(App):
         """
         lines: list[str] = []
         try:
-            from deepagents_code._version import __version__ as cli_version
+            from deepagents_code._version import (
+                DISTRIBUTION_NAME as cli_distribution_name,
+                __version__ as cli_version,
+            )
             from deepagents_code.update_check import format_age_suffix
 
             age_suffix = await asyncio.to_thread(format_age_suffix, cli_version)
-            lines.append(f"deepagents-code version: {cli_version}{age_suffix}")
+            lines.append(
+                f"{cli_distribution_name} version: {cli_version}{age_suffix}"
+            )
         except ImportError:
             logger.debug("deepagents_code._version module not found")
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
         except Exception:
             logger.warning("Unexpected error looking up app version", exc_info=True)
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
 
         from deepagents_code.extras_info import resolve_sdk_version
 

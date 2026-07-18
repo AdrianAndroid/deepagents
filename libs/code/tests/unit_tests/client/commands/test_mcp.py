@@ -250,11 +250,11 @@ class TestRunMCPLogin:
         tmp_path: Path,
         monkeypatch,
     ) -> None:
-        """Configs under `~/.deepagents` are always trusted."""
+        """Configs under `~/.zjcode` are always trusted."""
         from deepagents_code.client.commands.mcp import run_mcp_login
 
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_cfg = user_dir / ".mcp.json"
         user_cfg.write_text(

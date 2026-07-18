@@ -15267,7 +15267,7 @@ class TestDeferredActions:
         from deepagents_code.tui.widgets.messages import ErrorMessage
 
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
+            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -15303,7 +15303,7 @@ class TestDeferredActions:
             rendered = str(widget._content)
             assert (
                 "uv tool install --reinstall -U "
-                f"deepagents-code=={__version__} "
+                f"zjcode=={__version__} "
                 "--with langchain-custom_provider --prerelease allow" in rendered
             )
             assert "/model custom_provider:<model>" in rendered
@@ -18135,7 +18135,7 @@ class TestNotificationCenterIntegration:
             status = app.screen.query(Static).filter(".up-status").first()
             assert "Update complete" not in str(status.render())
             assert "/opt/stale/bin/dcode" in str(status.render())
-            assert "/home/user/.local/bin/dcode" in str(status.render())
+            assert "/home/user/.local/bin/zjcode" in str(status.render())
             await pilot.press("c")
             await pilot.pause()
 

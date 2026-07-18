@@ -500,8 +500,14 @@ class ProviderConfig(TypedDict, total=False):
     """
 
 
-DEFAULT_CONFIG_DIR = Path.home() / ".deepagents"
-"""Directory for user-level Deep Agents configuration (`~/.deepagents`)."""
+DEFAULT_CONFIG_DIR = Path.home() / ".zjcode"
+"""Directory for user-level Deep Agents configuration (`~/.zjcode`).
+
+Renamed from `~/.deepagents` for the private-branded `zjcode` build so
+config, sessions, tokens, and update caches are fully isolated from any
+side-by-side install of the upstream `dcode`. Every other module reads this
+constant rather than hard-coding the path, so switching brands is one line.
+"""
 
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.toml"
 """Path to the user's model configuration file (`~/.deepagents/config.toml`)."""
