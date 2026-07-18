@@ -259,6 +259,17 @@ Set to a truthy value to bring the standalone integrations screen back into the
 flow. Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` as enabled.
 """
 
+PYPI_INDEX_URL = "DEEPAGENTS_CODE_PYPI_INDEX_URL"
+"""Override the Simple Index URL used by `uv tool install -U` when upgrading.
+
+Defaults (in `_version.py`) to the private `pypiserver` Simple Index so the
+`/update` flow pulls the newer wheel from the same mirror that `PYPI_URL`
+answers for version checks — otherwise version detection sees the private
+release but uv resolves against public PyPI and either misses the release
+entirely or "upgrades" to a same-named public package. Set to
+`https://pypi.org/simple` to route upgrades back through public PyPI.
+"""
+
 PYPI_URL = "DEEPAGENTS_CODE_PYPI_URL"
 """Override the JSON API URL used to check for `deepagents-code` updates.
 

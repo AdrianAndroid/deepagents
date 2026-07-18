@@ -2838,6 +2838,91 @@ class TestUpgradeInstallCommand:
         ):
             upgrade_install_command()
 
+    def test_appends_private_index_url_when_configured(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """`PYPI_INDEX_URL` is appended so `/update` pulls from the private mirror.
+
+        Autouse `_neutralize_private_pypi_index_url` normally strips the pin so
+        the rest of this suite can assert bare command strings; this test opts
+        back in to verify the flag really lands on the command when a URL is
+        configured. Regression guard: without the flag, uv defaults to public
+        PyPI and either misses a private release or upgrades to a same-named
+        public package.
+        """
+        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        monkeypatch.setattr("sys.prefix", str(tmp_path))
+        monkeypatch.setattr(
+            "deepagents_code.update_check.PYPI_INDEX_URL",
+            "http://8.152.204.58:48080/simple/",
+        )
+        with patch(
+            "deepagents_code.extras_info.installed_extra_names",
+            return_value=frozenset(),
+        ):
+            assert upgrade_install_command() == (
+                "uv tool install -U deepagents-code "
+                "--index-url http://8.152.204.58:48080/simple/"
+            )
+
+    def test_appends_private_index_url_with_prerelease(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """`--index-url` comes before `--prerelease allow`, both survive together."""
+        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        monkeypatch.setattr("sys.prefix", str(tmp_path))
+        monkeypatch.setattr(
+            "deepagents_code.update_check.PYPI_INDEX_URL",
+            "http://8.152.204.58:48080/simple/",
+        )
+        with patch(
+            "deepagents_code.extras_info.installed_extra_names",
+            return_value=frozenset(),
+        ):
+            assert upgrade_install_command(include_prereleases=True) == (
+                "uv tool install -U deepagents-code "
+                "--index-url http://8.152.204.58:48080/simple/ --prerelease allow"
+            )
+
+    def test_shell_quotes_index_url_with_special_chars(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """A URL with characters that need shell-quoting is `shlex.quote`-d.
+
+        Regression guard: passing an unquoted URL through the shell can split
+        on `&` or `;` and silently attach part of the URL as a stray argument.
+        """
+        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        monkeypatch.setattr("sys.prefix", str(tmp_path))
+        monkeypatch.setattr(
+            "deepagents_code.update_check.PYPI_INDEX_URL",
+            "http://host/simple/?token=a&b=c",
+        )
+        with patch(
+            "deepagents_code.extras_info.installed_extra_names",
+            return_value=frozenset(),
+        ):
+            assert upgrade_install_command() == (
+                "uv tool install -U deepagents-code "
+                "--index-url 'http://host/simple/?token=a&b=c'"
+            )
+
+    def test_omits_index_url_when_unset(self, tmp_path, monkeypatch) -> None:
+        """Empty `PYPI_INDEX_URL` neutralizes the flag entirely.
+
+        This is the fixture-default state that lets legacy assertions keep
+        pinning bare command strings without spelling out a URL. It also
+        matches the "override to public PyPI by unsetting" contract.
+        """
+        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        monkeypatch.setattr("sys.prefix", str(tmp_path))
+        monkeypatch.setattr("deepagents_code.update_check.PYPI_INDEX_URL", "")
+        with patch(
+            "deepagents_code.extras_info.installed_extra_names",
+            return_value=frozenset(),
+        ):
+            assert upgrade_install_command() == "uv tool install -U deepagents-code"
+
 
 class TestParseDependencyChanges:
     """`parse_dependency_changes` collapses uv's env diff into changes."""

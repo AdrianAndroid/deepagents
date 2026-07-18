@@ -36,7 +36,13 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
-from deepagents_code._version import PYPI_URL, SDK_PYPI_URL, USER_AGENT, __version__
+from deepagents_code._version import (
+    PYPI_INDEX_URL,
+    PYPI_URL,
+    SDK_PYPI_URL,
+    USER_AGENT,
+    __version__,
+)
 from deepagents_code.model_config import DEFAULT_CONFIG_PATH, DEFAULT_STATE_DIR
 
 logger = logging.getLogger(__name__)
@@ -93,7 +99,28 @@ upgrade` for the same receipt-pin reason documented on `_UPGRADE_COMMANDS`:
 showing a user the `upgrade` form would hand them a command that silently
 stays on the old version for a pinned install. Execution paths still refuse
 unrecognized installs instead of updating a separate environment.
+
+Does **not** include `--index-url`; callers append the flag through
+`_index_url_flag()` so the URL is resolved at command-build time (which lets
+tests neutralize it via monkeypatch) and non-uv callers like `brew` are
+unaffected.
 """
+
+
+def _index_url_flag() -> str:
+    """Return ` --index-url <PYPI_INDEX_URL>` or `""` when the URL is empty.
+
+    Read at command-build time (not import time) so tests can neutralize the
+    private-mirror pin with `monkeypatch.setattr(update_check, "PYPI_INDEX_URL",
+    "")` without every assertion having to spell out the private URL. The
+    default `PYPI_INDEX_URL` (from `_version.py`) is a private mirror and must
+    stay in sync with `PYPI_URL` so version detection and install path pick the
+    same source.
+    """
+    if not PYPI_INDEX_URL:
+        return ""
+    return f" --index-url {shlex.quote(PYPI_INDEX_URL)}"
+
 
 _UPGRADE_COMMANDS: dict[InstallMethod, str] = {
     # Use `uv tool install -U` instead of `uv tool upgrade`: the latter
@@ -1191,15 +1218,24 @@ def upgrade_command(
     include_prereleases = _resolve_include_prereleases(include_prereleases)
     if version is not None:
         requirement = _dcode_extras_requirement((), version=version)
-        cmd = f"uv tool install -U {requirement}"
+        # Match the receipt-aware `_uv_tool_install_command` path: pin the
+        # resolver to the same mirror `PYPI_URL` reports versions for.
+        cmd = f"uv tool install -U {requirement}{_index_url_flag()}"
         if include_prereleases:
             cmd += " --prerelease allow"
         return cmd
     if include_prereleases:
-        return _UV_PRERELEASE_UPGRADE_COMMAND
+        return f"{FALLBACK_UPGRADE_COMMAND}{_index_url_flag()} --prerelease allow"
     if method is None:
         method = detect_install_method()
-    return _UPGRADE_COMMANDS.get(method, FALLBACK_UPGRADE_COMMAND)
+    base = _UPGRADE_COMMANDS.get(method, FALLBACK_UPGRADE_COMMAND)
+    # Append the private mirror pin to any `uv tool install -U` command so
+    # display guidance stays copy-pasteable against the same source that
+    # version checks read from. Non-uv upgrades (currently `brew`) fall
+    # through untouched.
+    if base.startswith("uv tool install "):
+        base += _index_url_flag()
+    return base
 
 
 def prerelease_upgrade_supported(
@@ -2364,6 +2400,12 @@ def _uv_tool_install_command(
             known.add(canonicalize_name(package))
     for package in with_packages:
         cmd += f" --with {shlex.quote(package)}"
+    # Pin the resolver to the same mirror that `PYPI_URL` answers version
+    # checks from. Without this, uv defaults to public PyPI and either misses
+    # the private release or "upgrades" to a same-named public package. This
+    # applies to every uv install path — upgrade, dependency refresh, extras
+    # install — because they all funnel through this helper.
+    cmd += _index_url_flag()
     if _resolve_include_prereleases(include_prereleases):
         cmd += " --prerelease allow"
     return cmd

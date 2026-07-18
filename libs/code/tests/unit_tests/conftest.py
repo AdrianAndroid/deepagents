@@ -210,6 +210,22 @@ def _clear_external_event_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _neutralize_private_pypi_index_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Strip the private-mirror `--index-url` pin from upgrade commands.
+
+    Production builds ship with `PYPI_INDEX_URL` hard-coded to the private
+    `pypiserver` so `/update` resolves `deepagents-code` from the same mirror
+    `PYPI_URL` reports versions for. Test assertions predate that pin and
+    encode the bare command string (`uv tool install -U deepagents-code ...`);
+    forcing the URL to `""` neutralizes `_index_url_flag()` so those assertions
+    still hold without individually rewriting them. Tests that specifically
+    cover the private-mirror routing should set `PYPI_INDEX_URL` back with
+    their own `monkeypatch.setattr`.
+    """
+    monkeypatch.setattr("deepagents_code.update_check.PYPI_INDEX_URL", "")
+
+
+@pytest.fixture(autouse=True)
 def _disable_terminal_escape(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stop tests from leaking terminal control sequences to the real terminal.
 

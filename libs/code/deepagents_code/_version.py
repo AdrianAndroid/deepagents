@@ -3,6 +3,7 @@
 import os
 
 from deepagents_code._env_vars import (
+    PYPI_INDEX_URL as _PYPI_INDEX_URL_ENV,
     PYPI_URL as _PYPI_URL_ENV,
     SDK_PYPI_URL as _SDK_PYPI_URL_ENV,
 )
@@ -26,6 +27,22 @@ at publish time. The private `pypiserver` (port 48080) only exposes a Simple
 Index, so the JSON API is hosted alongside the install page on the static site.
 Override with `DEEPAGENTS_CODE_PYPI_URL` to point at public PyPI
 (`https://pypi.org/pypi/deepagents-code/json`) or another mirror.
+"""
+
+PYPI_INDEX_URL = os.environ.get(
+    _PYPI_INDEX_URL_ENV,
+    "http://8.152.204.58:48080/simple/",
+)
+"""Simple Index URL used by `uv tool install -U` when upgrading dcode.
+
+Defaults to the private `pypiserver` Simple Index (port 48080). Must stay in
+sync with `PYPI_URL`: the JSON API answers "is there a new version?" and this
+index answers "download it from where?". Override with
+`DEEPAGENTS_CODE_PYPI_INDEX_URL` to point at public PyPI
+(`https://pypi.org/simple`) or another mirror. The private mirror is expected
+to resolve every runtime dependency as well — dcode does not fall back to
+public PyPI, so a mirror that only serves `deepagents-code` will break
+`/update` at dependency resolution.
 """
 
 SDK_PYPI_URL = os.environ.get(
