@@ -1208,6 +1208,15 @@ async def _run_agent_loop(
     await dispatch_hook("task.complete", {"thread_id": thread_id})
     await dispatch_hook("session.end", {"thread_id": thread_id})
 
+    # Attach the thread id to the session_end_summary so the atexit-driven
+    # exit panel names this session. Best-effort; must not affect exit code.
+    try:
+        from deepagents_code import session_end_summary
+
+        session_end_summary.set_thread_id(thread_id)
+    except Exception:
+        logger.debug("session_end_summary.set_thread_id failed", exc_info=True)
+
 
 def _build_non_interactive_header(
     assistant_id: str,

@@ -65,6 +65,15 @@ def _handle_termination_signal(signum: int, _frame: object) -> NoReturn:
         `BaseException` like `SystemExit`), and the app's cleanup `finally` block
         re-invokes `stop()` as the exception unwinds, resuming the teardown.
     """
+    # Tag the shutdown as interrupted before we raise. `SystemExit` bypasses
+    # `sys.excepthook`, so this is the only place we can attribute a signal to
+    # the reason classifier used by `session_end_summary._finalize`.
+    try:
+        from deepagents_code import session_end_summary
+
+        session_end_summary.mark_signal(signum)
+    except Exception:
+        pass
     raise SystemExit(128 + signum)
 
 
@@ -2753,6 +2762,18 @@ def cli_main() -> None:
         print(build_version_text())  # noqa: T201  # Version output
         sys.exit(0)
 
+    # Arm session-end summary AFTER the trivial --version fast path so a
+    # `dcode --version` invocation prints only the version. All heavier
+    # sessions (headless run, interactive TUI, doctor, deploy, etc.) get the
+    # exit-reason + duration summary at shutdown. Kept in a try so a bug in
+    # the summary module can never break startup.
+    try:
+        from deepagents_code import session_end_summary
+
+        session_end_summary.install()
+    except Exception:
+        logger.debug("Failed to install session_end_summary", exc_info=True)
+
     # ACP mode does not require Textual, so skip UI dependency checks when
     # the flag is present in raw argv.
     if "--acp" not in sys.argv[1:]:
@@ -3945,6 +3966,14 @@ def cli_main() -> None:
     except KeyboardInterrupt:
         # Clean exit on Ctrl+C — suppress ugly traceback.
         # `console` may not be bound if Ctrl+C arrives during config import.
+        try:
+            from deepagents_code import session_end_summary
+
+            session_end_summary.mark_reason(
+                session_end_summary.REASON_INTERRUPTED, "KeyboardInterrupt"
+            )
+        except Exception:
+            pass
         try:
             console.print("\n\n[yellow]Interrupted[/yellow]")
         except NameError:

@@ -14038,6 +14038,16 @@ class DeepAgentsApp(App):
             has_pending_hooks,
         )
 
+        # Register the thread id with session_end_summary so the atexit-driven
+        # summary can attribute the exit to this session. Kept next to the
+        # existing session.end dispatch to minimize merge friction.
+        try:
+            from deepagents_code import session_end_summary
+
+            session_end_summary.set_thread_id(getattr(self, "_lc_thread_id", ""))
+        except Exception:
+            logger.debug("session_end_summary.set_thread_id failed", exc_info=True)
+
         hooks = _load_hooks()
         if hooks:
             payload = json.dumps(
