@@ -4009,7 +4009,11 @@ class TestToolGroupSummary:
     """Runtime collapse/expand behavior for the group summary widget."""
 
     async def test_collapsed_hides_members_and_renders_summary(self) -> None:
-        """On mount the summary collapses its members and shows the count line."""
+        """On mount the summary starts expanded so every tool call is visible.
+
+        Members stay attached and visible by default; toggling collapses them.
+        The summary line still renders the roll-up count either way.
+        """
         from deepagents_code.tui.widgets.messages import ToolGroupSummary
 
         async with _ToolGroupApp().run_test() as pilot:
@@ -4017,9 +4021,9 @@ class TestToolGroupSummary:
             t1 = pilot.app.query_one("#t1", ToolCallMessage)
             t2 = pilot.app.query_one("#t2", ToolCallMessage)
 
-            assert summary._collapsed is True
-            assert t1.display is False
-            assert t2.display is False
+            assert summary._collapsed is False
+            assert t1.display is True
+            assert t2.display is True
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Read 1 file, ran 1 shell command" in rendered.plain
@@ -4033,17 +4037,18 @@ class TestToolGroupSummary:
             t1 = pilot.app.query_one("#t1", ToolCallMessage)
             t2 = pilot.app.query_one("#t2", ToolCallMessage)
 
-            summary.toggle()
-            await pilot.pause()
-            assert summary._collapsed is False
-            assert t1.display is True
-            assert t2.display is True
-
+            # Default is now expanded; first toggle collapses.
             summary.toggle()
             await pilot.pause()
             assert summary._collapsed is True
             assert t1.display is False
             assert t2.display is False
+
+            summary.toggle()
+            await pilot.pause()
+            assert summary._collapsed is False
+            assert t1.display is True
+            assert t2.display is True
 
     async def test_has_attached_members_tracks_removal(self) -> None:
         """`has_attached_members` flips to False once members are removed."""
@@ -4093,7 +4098,13 @@ class _LiveToolGroupApp(App[None]):
 
 
 class TestLiveToolGroupSummary:
-    """Eager/live group: collapsed from the start, running -> ran transition."""
+    """Eager/live group: expanded from the start, running -> ran transition.
+
+    The group defaults to expanded (per user preference) so every tool call is
+    visible on the very first paint; the summary header still renders the
+    "Running N ..." / "Ran N ..." roll-up. Members can be collapsed by clicking
+    the header (see the toggle test in `TestToolGroupSummary`).
+    """
 
     async def test_present_tense_while_running_then_past_on_close(self) -> None:
         from deepagents_code.tui.widgets.messages import ToolGroupSummary
@@ -4108,7 +4119,7 @@ class TestLiveToolGroupSummary:
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Running 1 shell command" in rendered.plain
-            assert t1.display is False  # collapsed from the start
+            assert t1.display is True  # expanded from the start
 
             t1.set_success("done")
             summary.close()  # stops the spinner timer, flips to past tense
@@ -4116,7 +4127,7 @@ class TestLiveToolGroupSummary:
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Ran 1 shell command" in rendered.plain
-            assert t1.display is False
+            assert t1.display is True
             # Survives the idle tick after close — guards against the summary's
             # state attributes colliding with Textual's MessagePump internals
             # (e.g. `_closed`), which would silently prune the widget.
@@ -4139,10 +4150,11 @@ class TestLiveToolGroupSummary:
             summary.close()
             await pilot.pause()
 
-            # The errored tool is un-folded; the successful one stays collapsed.
+            # The errored tool is un-folded; the successful one stays visible
+            # too because the group is expanded by default.
             assert t1.display is True
             assert not t1.has_class("-grouped")
-            assert t2.display is False
+            assert t2.display is True
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Read 1 file" in rendered.plain
@@ -4165,7 +4177,7 @@ class TestLiveToolGroupSummary:
 
             assert t1.display is True
             assert not t1.has_class("-grouped")
-            assert t2.display is False
+            assert t2.display is True
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Read 1 file" in rendered.plain
@@ -4194,7 +4206,7 @@ class TestLiveToolGroupSummary:
             # The skipped tool is un-folded and no longer part of the group.
             assert t1.display is True
             assert not t1.has_class("-grouped")
-            assert t2.display is False
+            assert t2.display is True
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Read 1 file" in rendered.plain

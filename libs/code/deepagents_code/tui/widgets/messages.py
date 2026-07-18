@@ -3176,7 +3176,13 @@ class ToolGroupSummary(Static):
 
     _SPINNER_INTERVAL: ClassVar[float] = 0.1
 
-    _collapsed: var[bool] = var(True)
+    _collapsed: var[bool] = var(False)
+    """User preference: default the group to expanded so every tool call in
+    the run (`read_file(...)`, `grep(...)`, ...) is visible from the moment
+    it mounts. The per-tool result body still honors its own collapse rules
+    (`_COLLAPSE_OUTPUT_BY_DEFAULT`), so verbose output stays folded. Click the
+    header or press Ctrl+O to re-collapse the whole group.
+    """
 
     def __init__(
         self,
