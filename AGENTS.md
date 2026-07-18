@@ -601,6 +601,17 @@ This repository require actions to be pinned to a full-length commit SHA. Attemp
 - **Documentation:** https://docs.langchain.com/oss/python/deepagents/overview and source at https://github.com/langchain-ai/docs or `../docs/`. Prefer the local install and use file search tools for best results. If needed, use the docs MCP server as defined in `.mcp.json` for programmatic access.
 - **Contributing Guide:** [Contributing Guide](https://docs.langchain.com/oss/python/contributing/overview)
 
+## 发布默认目标
+
+当用户提到 "发布"、"发版"、"publish"、"release"、"上传新版本"、"打包发布" 等相关操作，且**没有明确指定包名或路径**时，默认目标为 `libs/code/`（分发名 `zjcode`，发布到公开 PyPI `https://pypi.org/`）。
+
+- 默认发布脚本：`libs/code/run-publish.sh`
+- 默认版本 bump 工具：`libs/code/bump-version.py`（会同步 `pyproject.toml` / `_version.py` / `.release-please-manifest.json` 三处）
+- 默认凭据来源：环境变量 `UV_PUBLISH_TOKEN` 或 `~/.pypirc` 的 `[pypi]` section
+- Test PyPI 试跑：`UV_PUBLISH_TOKEN=<test-token> ./run-publish.sh --publish-url https://test.pypi.org/legacy/`
+
+如果用户想发布 monorepo 里的其他包（`deepagents`、`deepagents-cli`、`deepagents-acp`、`deepagents-talon`、partner 包等），必须在指令中显式指名，否则一律按 `libs/code/zjcode` 处理。上游 langchain-ai 的 release-please 自动化链路在 fork 上默认不启用，用户手工发布 `zjcode` 时也不要动 release-please 相关工作流。
+
 ## 文档留存规则
 1. 每轮问答实时留存要求：每一轮问答（单次 user → assistant 交互）结束后，必须**主动、自动**立即对该轮问答内容进行结构化总结，提取有价值的信息（需求说明、技术方案、问题排查过程、开发指南、架构分析、决策记录、用户反馈等）追加保存为 Markdown 文档，不得等到整个会话结束再一次性总结，避免遗漏细节。**禁止在保存前询问用户是否需要保存**——这是默认行为，无需确认；即使用户没有明确要求也必须保存。
 2. 统一存储路径：所有问答/会话总结文档必须保存到项目根目录的 `doc/` 文件夹中。
