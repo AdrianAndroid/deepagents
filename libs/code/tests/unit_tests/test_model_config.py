@@ -6332,3 +6332,136 @@ class TestLoadStartupMode:
         config = tmp_path / "config.toml"
         config.write_text("this is not valid toml [[[\n")
         assert load_startup_mode(config) == STARTUP_MODE_MANUAL
+
+
+class TestFetchProviderModels:
+    """Tests for `fetch_provider_models` — the /models discovery helper."""
+
+    def _mock_httpx(
+        self,
+        payload: Any,
+        status_code: int = 200,
+    ) -> AbstractContextManager[MagicMock]:
+        """Patch `httpx.get` to return a canned response."""
+        response = MagicMock()
+        response.status_code = status_code
+        response.text = "" if isinstance(payload, dict) else str(payload)
+        response.json.return_value = payload
+        return patch("httpx.get", return_value=response)
+
+    def test_openai_shape_returns_sorted_unique_ids(self) -> None:
+        """Standard OpenAI `{"object":"list","data":[{"id":...}]}` shape."""
+        from deepagents_code.model_config import fetch_provider_models
+
+        payload = {
+            "object": "list",
+            "data": [
+                {"id": "gpt-4o"},
+                {"id": "gpt-4o-mini"},
+                {"id": "gpt-4o"},  # duplicate should be de-duped
+            ],
+        }
+        with self._mock_httpx(payload):
+            result = fetch_provider_models("https://api.example.com/v1", "sk-x")
+        assert result == ["gpt-4o", "gpt-4o-mini"]
+
+    def test_volcengine_ark_status_shutdown_filtered(self) -> None:
+        """Entries with `status="Shutdown"` are dropped (Volcengine Ark shape)."""
+        from deepagents_code.model_config import fetch_provider_models
+
+        payload = {
+            "object": "list",
+            "data": [
+                {"id": "doubao-alive", "status": "None"},
+                {"id": "doubao-dead", "status": "Shutdown"},
+                {"id": "doubao-retiring", "status": "Retiring"},
+            ],
+        }
+        with self._mock_httpx(payload):
+            result = fetch_provider_models(
+                "https://ark.example.com/api/coding/v3", "sk-x",
+            )
+        # Retiring is kept by default; Shutdown is dropped.
+        assert result == ["doubao-alive", "doubao-retiring"]
+
+    def test_retiring_can_be_excluded(self) -> None:
+        """`include_retiring=False` also drops `Retiring` entries."""
+        from deepagents_code.model_config import fetch_provider_models
+
+        payload = {
+            "data": [
+                {"id": "a", "status": "None"},
+                {"id": "b", "status": "Retiring"},
+            ],
+        }
+        with self._mock_httpx(payload):
+            result = fetch_provider_models(
+                "https://x.example.com/v1", "sk-x", include_retiring=False,
+            )
+        assert result == ["a"]
+
+    def test_bare_list_payload_supported(self) -> None:
+        """Some providers return a bare list rather than `{data: [...]}`."""
+        from deepagents_code.model_config import fetch_provider_models
+
+        payload = [{"id": "m1"}, {"id": "m2"}]
+        with self._mock_httpx(payload):
+            result = fetch_provider_models("https://x.example.com/v1", "sk-x")
+        assert result == ["m1", "m2"]
+
+    def test_401_raises_readable_error(self) -> None:
+        """HTTP 401 → user-facing `ModelDiscoveryError`."""
+        from deepagents_code.model_config import (
+            ModelDiscoveryError,
+            fetch_provider_models,
+        )
+
+        with (
+            self._mock_httpx({}, status_code=401),
+            pytest.raises(ModelDiscoveryError, match="Authentication failed"),
+        ):
+            fetch_provider_models("https://x.example.com/v1", "bad-key")
+
+    def test_404_raises_readable_error(self) -> None:
+        """HTTP 404 → user-facing `ModelDiscoveryError`."""
+        from deepagents_code.model_config import (
+            ModelDiscoveryError,
+            fetch_provider_models,
+        )
+
+        with (
+            self._mock_httpx({}, status_code=404),
+            pytest.raises(ModelDiscoveryError, match="404"),
+        ):
+            fetch_provider_models("https://x.example.com/v1", "sk-x")
+
+    def test_missing_base_url_raises(self) -> None:
+        """Empty base_url is rejected up front."""
+        from deepagents_code.model_config import (
+            ModelDiscoveryError,
+            fetch_provider_models,
+        )
+
+        with pytest.raises(ModelDiscoveryError, match="Base URL is required"):
+            fetch_provider_models("", "sk-x")
+
+    def test_bearer_token_forwarded(self) -> None:
+        """When `api_key` is provided it is sent as `Authorization: Bearer ...`."""
+        from deepagents_code.model_config import fetch_provider_models
+
+        captured: dict[str, Any] = {}
+
+        def _fake_get(url: str, *, headers: dict[str, str], timeout: float) -> Any:
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["timeout"] = timeout
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"data": []}
+            resp.text = ""
+            return resp
+
+        with patch("httpx.get", side_effect=_fake_get):
+            fetch_provider_models("https://x.example.com/v1/", "sk-abc")
+        assert captured["url"] == "https://x.example.com/v1/models"
+        assert captured["headers"]["Authorization"] == "Bearer sk-abc"

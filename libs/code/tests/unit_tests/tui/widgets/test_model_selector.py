@@ -3568,7 +3568,11 @@ class TestCustomProviderModalScreen:
             # Tab to cancel button
             await pilot.press("tab")
             assert modal.query_one("#cancel-btn").has_focus
-            
+
+            # Tab to discover button (added for /models discovery UX)
+            await pilot.press("tab")
+            assert modal.query_one("#discover-btn").has_focus
+
             # Tab to save button
             await pilot.press("tab")
             assert modal.query_one("#save-btn").has_focus
@@ -3622,3 +3626,64 @@ class TestCustomProviderModalScreen:
             assert model_input.region.width > 0  # Input still fits without overflow
             # Verify no layout breakage: input remains visible below API key field
             assert model_input.region.y > modal.query_one("#api-key", Input).region.y
+
+    async def test_discover_button_populates_models_list(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`Discover` fetches /models, opens picker, and persists the selection.
+
+        Uses `pilot.run_test` to drive the flow, monkeypatching
+        `fetch_provider_models` to a canned list so no network is touched.
+        """
+        import tomllib
+
+        import deepagents_code.model_config as mc
+
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(mc, "DEFAULT_CONFIG_PATH", config_path)
+        # Patch fetch_provider_models where the modal imports it from.
+        from deepagents_code.tui.widgets import model_selector as ms_mod
+
+        canned = ["alpha", "beta", "gamma"]
+        monkeypatch.setattr(
+            ms_mod, "fetch_provider_models", lambda *a, **k: canned,
+        )
+
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+
+            modal.query_one("#provider-id", Input).value = "myapi"
+            modal.query_one("#display-name", Input).value = "My API"
+            modal.query_one("#base-url", Input).value = "https://api.example.com/v1"
+            modal.query_one("#api-key", Input).value = "sk-x"
+
+            # Trigger Discover — will push DiscoverModelsScreen with all 3 preselected off.
+            await modal.action_discover()
+            await pilot.pause()
+
+            picker = app.screen
+            assert isinstance(picker, ms_mod.DiscoverModelsScreen)
+            # Select first two options and confirm.
+            selection = picker.query_one(ms_mod.SelectionList)
+            selection.select_all()
+            selection.deselect(selection.get_option_at_index(2).value)
+            picker.action_submit()
+            await pilot.pause()
+
+            # Back on the parent modal — discovered_models has been set.
+            back = app.screen
+            assert isinstance(back, CustomProviderModalScreen)
+            assert set(back._discovered_models) == {"alpha", "beta"}
+
+            # Save the provider.
+            await back.action_submit()
+            await pilot.pause()
+
+        # Config file now contains BOTH models — the whole point of Discover.
+        with config_path.open("rb") as f:
+            data = tomllib.load(f)
+        saved = data["models"]["providers"]["myapi"]["models"]
+        assert set(saved) == {"alpha", "beta"}
