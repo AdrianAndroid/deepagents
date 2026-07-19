@@ -3446,7 +3446,11 @@ class TestCustomProviderModalScreen:
             await modal.action_submit()
             await pilot.pause()
             assert str(error_widget.content) == ""  # No error
-            assert app.modal_result is True  # Modal dismissed successfully
+            # Modal returns (success, provider_id, default_model) tuple
+            assert isinstance(app.modal_result, tuple)
+            assert app.modal_result[0] is True  # Success flag
+            assert app.modal_result[1] == "test-provider"  # Provider ID
+            assert app.modal_result[2] == "valid-model_id.v1:chat"  # Default model
 
     async def test_default_model_prefill_on_edit(self) -> None:
         """Test that default model is pre-filled when editing an existing provider."""
@@ -3512,7 +3516,8 @@ class TestCustomProviderModalScreen:
                 await modal.action_submit()
                 await pilot.pause()
                 
-                assert app.modal_result is True
+                assert isinstance(app.modal_result, tuple)
+                assert app.modal_result[0] is True
                 
                 # Verify config saved correctly
                 with open(deepagents_code.model_config.DEFAULT_CONFIG_PATH, "rb") as f:

@@ -2024,10 +2024,22 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 
     async def action_add_custom_provider(self) -> None:
         """Open the custom provider add modal."""
-        def _on_provider_saved(success: bool) -> None:
+        def _on_provider_saved(result: bool | tuple[bool, str, str | None]) -> None:
             help_widget = self.query_one(".model-selector-help", Static)
-            if success:
-                # Reload model list to show new provider
+            # Handle both old (bool) and new (tuple) return values
+            if isinstance(result, tuple):
+                success, provider_id, default_model = result
+            else:
+                success = result
+                provider_id = None
+                default_model = None
+
+            if success and provider_id:
+                # Use the new provider immediately and close all modals
+                model = default_model or "custom_model"
+                self._dismiss_with_result((model, provider_id))
+            elif success:
+                # Fallback for old behavior (should not happen with new modal)
                 self._reload_task = asyncio.create_task(self._reload_model_list())
                 help_widget.update(
                     Content.styled(
@@ -2084,7 +2096,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         self._update_footer()
 
 
-class CustomProviderModalScreen(ModalScreen[bool]):
+class CustomProviderModalScreen(ModalScreen[bool | tuple[bool, str, str | None]]):
     """Modal screen for adding/editing a custom OpenAI-compatible provider."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
@@ -2332,7 +2344,7 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         )
 
         if success:
-            self.dismiss(success)
+            self.dismiss((success, provider_id, default_model))
         else:
             error_widget.update(
                 "Failed to save custom provider. Check permissions and try again."
