@@ -507,12 +507,12 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             f"{glyphs.arrow_up}/{glyphs.arrow_down} navigate",
             "Tab autocomplete",
             "Enter select",
+            "Ctrl+A add provider",
         ]
         if not self._curated:
             parts.extend((
                 "Ctrl+S set default",
                 "Ctrl+R recommended",
-                "Ctrl+A add provider",
                 "Ctrl+N IDs",
             ))
         sep = f" {glyphs.bullet} "
@@ -584,13 +584,12 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             # Model detail footer
             yield Static("", classes="model-detail-footer", id="model-detail-footer")
 
-            # Add custom provider button (only in non-curated mode)
-            if not self._curated:
-                yield Button(
-                    "Add Custom Provider (Ctrl+A)",
-                    id="add-custom-provider-btn",
-                    variant="primary",
-                )
+            # Add custom provider button (always visible, for curated onboarding too)
+            yield Button(
+                "Add Custom Provider (Ctrl+A)",
+                id="add-custom-provider-btn",
+                variant="primary",
+            )
 
             yield Static(self._help_text(), classes="model-selector-help")
 
