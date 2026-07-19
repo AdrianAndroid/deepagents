@@ -1449,8 +1449,18 @@ class ChatTextArea(TextArea):
         if image is not None:
             event.prevent_default()
             event.stop()
-            # Add image to media tracker to get numbered placeholder
-            placeholder = self._chat_input_owner._image_tracker.add_image(image)
+            # Bind a timestamped placeholder before archiving so the local
+            # filename matches the token the user sees (e.g. img_YYYYMMDDHHMMSS).
+            existing_text = self.text
+            placeholder = self._chat_input_owner._image_tracker.add_image(
+                image, existing_text=existing_text
+            )
+            stem = placeholder.strip("[]")
+            from deepagents_code.media_utils import save_pasted_media
+
+            await asyncio.to_thread(
+                save_pasted_media, image.base64_data, stem, image.format
+            )
             # Insert placeholder at cursor position
             self.insert(placeholder)
             return

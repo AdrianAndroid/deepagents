@@ -3851,7 +3851,7 @@ class TestMessageQueue:
             ) as mock_send:
                 await app._handle_user_message(f"describe {placeholder}")
 
-            mock_send.assert_awaited_once_with("describe [image 1]")
+            mock_send.assert_awaited_once_with(f"describe {placeholder}")
             active = app._active_user_message
             assert active is not None
             app._image_tracker.clear()
@@ -3863,10 +3863,10 @@ class TestMessageQueue:
                 app.action_interrupt()
 
             images = app._image_tracker.get_images()
-            assert chat.value == "describe [image 1]"
+            assert chat.value == f"describe {placeholder}"
             assert len(images) == 1
             assert images[0].base64_data == "abc123"
-            assert images[0].placeholder == "[image 1]"
+            assert images[0].placeholder == placeholder
             worker.cancel.assert_called_once()
             assert active.has_class("-cancelled")
             mock_notify.assert_called_once_with("Message restored to input", timeout=2)
