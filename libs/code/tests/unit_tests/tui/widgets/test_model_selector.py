@@ -2027,6 +2027,83 @@ class TestAvailabilityOrdering:
             assert providers[1] == "openai_codex"
 
 
+class TestAddCustomProviderDismissal:
+    """Tests for the callback fired after adding a custom provider from within
+    the model selector.
+
+    Regression: when the model selector dismisses the parent onboarding flow
+    after `Add Custom Provider`, the payload must be `(provider:model, provider)`,
+    not `(model, provider)`. If only the bare model name is returned, the
+    downstream startup routine re-runs `detect_provider(model_name)`, which
+    knows nothing about the user's freshly-added custom provider and either
+    mis-detects it (e.g., `gpt-*` -> `openai`) or returns `None`. In both cases
+    the server never starts against the user's `base_url` / `api_key` and the
+    right-hand model badge shows the provider but the request can't connect.
+    """
+
+    async def test_dismiss_payload_includes_provider_prefix(self) -> None:
+        """Callback must dismiss with `provider:model` when a default model was set."""
+        app = ModelSelectorTestApp()
+        async with app.run_test() as pilot:
+            screen = ModelSelectorScreen(curated=True)
+            app.push_screen(screen)
+            await pilot.pause()
+
+            recorded: list[tuple[str, str] | None] = []
+            screen._dismiss_with_result = recorded.append  # type: ignore[method-assign]
+
+            captured_callback: list[object] = []
+
+            def fake_push_screen(*args: object, **kwargs: object) -> None:
+                # push_screen(screen, callback) — capture the callback
+                if len(args) >= 2:
+                    captured_callback.append(args[1])
+                elif "callback" in kwargs:
+                    captured_callback.append(kwargs["callback"])
+
+            screen.app.push_screen = fake_push_screen  # type: ignore[method-assign]
+
+            await screen.action_add_custom_provider()
+            assert captured_callback, "Expected push_screen to be called with a callback"
+            callback = captured_callback[0]
+
+            # Simulate successful provider save
+            callback((True, "myprovider", "gpt-4o"))  # type: ignore[operator]
+
+            assert recorded == [("myprovider:gpt-4o", "myprovider")]
+
+    async def test_dismiss_payload_falls_back_to_placeholder_when_no_default(
+        self,
+    ) -> None:
+        """When no default model is set, still send a `provider:model` spec."""
+        app = ModelSelectorTestApp()
+        async with app.run_test() as pilot:
+            screen = ModelSelectorScreen(curated=True)
+            app.push_screen(screen)
+            await pilot.pause()
+
+            recorded: list[tuple[str, str] | None] = []
+            screen._dismiss_with_result = recorded.append  # type: ignore[method-assign]
+
+            captured_callback: list[object] = []
+
+            def fake_push_screen(*args: object, **kwargs: object) -> None:
+                if len(args) >= 2:
+                    captured_callback.append(args[1])
+                elif "callback" in kwargs:
+                    captured_callback.append(kwargs["callback"])
+
+            screen.app.push_screen = fake_push_screen  # type: ignore[method-assign]
+
+            await screen.action_add_custom_provider()
+            assert captured_callback
+            callback = captured_callback[0]
+
+            callback((True, "myprovider", None))  # type: ignore[operator]
+
+            assert recorded == [("myprovider:custom_model", "myprovider")]
+
+
 class TestCuratedModelSelection:
     """Tests for onboarding curated model selection."""
 

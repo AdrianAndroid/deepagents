@@ -2036,9 +2036,16 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
                 default_model = None
 
             if success and provider_id:
-                # Use the new provider immediately and close all modals
+                # Use the new provider immediately and close all modals.
+                # Downstream (`_switch_model` / `_retry_startup_with_model`) expects
+                # the full `provider:model` spec, not just a bare model name — a
+                # bare name would be routed through `detect_provider` and would
+                # miss the custom provider entirely (or worse, get mis-detected
+                # as `openai` for a `gpt-*` model), so the server never uses the
+                # provider's `base_url` / `api_key`.
                 model = default_model or "custom_model"
-                self._dismiss_with_result((model, provider_id))
+                model_spec = f"{provider_id}:{model}"
+                self._dismiss_with_result((model_spec, provider_id))
             elif success:
                 # Fallback for old behavior (should not happen with new modal)
                 self._reload_task = asyncio.create_task(self._reload_model_list())
