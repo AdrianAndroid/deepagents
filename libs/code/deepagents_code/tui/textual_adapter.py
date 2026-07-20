@@ -812,6 +812,18 @@ async def execute_task_textual(
         turn_stats = SessionStats()
     start_time = time.monotonic()
 
+    # Turn boundary marker: makes it trivial to grep the debug log for the
+    # start/end of a specific turn (`TURN_START` / `TURN_END`). Kept as INFO
+    # (not DEBUG) so it lands in the log even at default verbosity.
+    turn_exit_reason: dict[str, str] = {"reason": "unknown"}
+    logger.info(
+        "TURN_START thread=%s turn_id=%s turn_number=%s prompt_len=%d",
+        thread_id,
+        turn_id,
+        turn_number,
+        len(prompt_text or ""),
+    )
+
     # Warn if token display callbacks are only partially wired — all three
     # should be set together to avoid inconsistent status-bar behavior.
     token_cbs = (
@@ -2092,6 +2104,11 @@ async def execute_task_textual(
                         captured_input_tokens,
                         captured_output_tokens,
                     )
+                    turn_exit_reason["reason"] = (
+                        "hitl_ask_user_cancelled"
+                        if ask_user_cancelled
+                        else "hitl_rejected"
+                    )
                     return turn_stats
 
                 stream_input = Command(resume=resume_payload)
@@ -2123,6 +2140,7 @@ async def execute_task_textual(
                 # end) — mirroring the headless surface, whose identical
                 # diagnostic lives in `_run_agent_loop`'s `finally`.
                 await dispatch_hook("task.complete", {"thread_id": thread_id})
+                turn_exit_reason["reason"] = "clean_end"
                 break
 
     except (asyncio.CancelledError, KeyboardInterrupt):
@@ -2137,7 +2155,13 @@ async def execute_task_textual(
             turn_stats=turn_stats,
             start_time=start_time,
         )
+        turn_exit_reason["reason"] = "cancelled"
         return turn_stats
+    except Exception as turn_exc:
+        # Record the exception class so `TURN_END` in the `finally` block names
+        # the failure mode; re-raise so behavior is unchanged.
+        turn_exit_reason["reason"] = f"error:{type(turn_exc).__name__}"
+        raise
     finally:
         # Streamed text is coalesced in each AssistantMessage's `_pending_append`
         # buffer and flushed on a throttled timer, so up to one flush interval of
@@ -2211,6 +2235,28 @@ async def execute_task_textual(
                 "Unparsed tool-call buffer check failed unexpectedly",
                 exc_info=True,
             )
+
+        # Turn boundary marker paired with `TURN_START` above. Kept inside the
+        # `finally` so it fires on every exit path — clean end, HITL reject,
+        # cancel, and mid-stream error — with the reason set by the branch that
+        # produced the exit. `wall_time_seconds` is recomputed here so this
+        # value reflects the moment the turn actually exited, even on paths
+        # that never reached the tail-of-function update below.
+        try:
+            turn_elapsed = time.monotonic() - start_time
+            logger.info(
+                "TURN_END thread=%s turn_id=%s turn_number=%s reason=%s "
+                "elapsed=%.3fs input_tokens=%d output_tokens=%d",
+                thread_id,
+                turn_id,
+                turn_number,
+                turn_exit_reason["reason"],
+                turn_elapsed,
+                captured_input_tokens,
+                captured_output_tokens,
+            )
+        except Exception:  # boundary marker must never mask the real exit
+            logger.warning("TURN_END logging failed", exc_info=True)
 
     # Update token count and return stats. Persistence is handled inside the
     # graph by `ResumeStateMiddleware.after_model`, so this only refreshes UI.
