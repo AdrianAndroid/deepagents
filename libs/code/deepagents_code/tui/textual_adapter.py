@@ -2121,11 +2121,6 @@ async def execute_task_textual(
                         captured_input_tokens,
                         captured_output_tokens,
                     )
-                    turn_exit_reason["reason"] = (
-                        "hitl_ask_user_cancelled"
-                        if ask_user_cancelled
-                        else "hitl_rejected"
-                    )
                     return turn_stats
 
                 stream_input = Command(resume=resume_payload)
@@ -2157,7 +2152,6 @@ async def execute_task_textual(
                 # end) — mirroring the headless surface, whose identical
                 # diagnostic lives in `_run_agent_loop`'s `finally`.
                 await dispatch_hook("task.complete", {"thread_id": thread_id})
-                turn_exit_reason["reason"] = "clean_end"
                 break
 
     except (asyncio.CancelledError, KeyboardInterrupt) as _interrupt_exc:
@@ -2181,13 +2175,7 @@ async def execute_task_textual(
             turn_stats=turn_stats,
             start_time=start_time,
         )
-        turn_exit_reason["reason"] = "cancelled"
         return turn_stats
-    except Exception as turn_exc:
-        # Record the exception class so `TURN_END` in the `finally` block names
-        # the failure mode; re-raise so behavior is unchanged.
-        turn_exit_reason["reason"] = f"error:{type(turn_exc).__name__}"
-        raise
     finally:
         # Streamed text is coalesced in each AssistantMessage's `_pending_append`
         # buffer and flushed on a throttled timer, so up to one flush interval of
