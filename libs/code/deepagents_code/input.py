@@ -4,6 +4,7 @@ import logging
 import re
 import shlex
 from dataclasses import dataclass, replace
+from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Literal
@@ -59,19 +60,44 @@ slash commands, so a `/` mid-string is not highlighted.
 MediaKind = Literal["image", "video"]
 """Accepted values for the `kind` parameter in `MediaTracker` methods."""
 
-IMAGE_PLACEHOLDER_PATTERN = re.compile(r"\[image (?P<id>\d+)\]")
-"""Pattern for image placeholders with a named `id` capture group.
+IMAGE_PLACEHOLDER_PATTERN = re.compile(
+    r"\[img_(?P<id>[0-9]+(?:_[0-9]+)?)\]"
+)
+"""Pattern for image placeholders (e.g. ``[img_20250115143022]``).
 
-Used to extract numeric IDs from placeholder tokens so the tracker can prune
-stale entries and compute the next available ID.
+The id is either a local timestamp ``YYYYMMDDHHMMSS`` or (in tests) a plain
+counter, optionally followed by ``_N`` to disambiguate same-second collisions.
 """
 
-VIDEO_PLACEHOLDER_PATTERN = re.compile(r"\[video (?P<id>\d+)\]")
-"""Pattern for video placeholders with a named `id` capture group.
+VIDEO_PLACEHOLDER_PATTERN = re.compile(
+    r"\[vid_(?P<id>[0-9]+(?:_[0-9]+)?)\]"
+)
+"""Pattern for video placeholders (e.g. ``[vid_20250115143022]``).
 
-Used to extract numeric IDs from placeholder tokens so the tracker can prune
-stale entries and compute the next available ID.
+Same id scheme as `IMAGE_PLACEHOLDER_PATTERN` but with a ``vid_`` prefix so
+images and videos never share an id namespace.
 """
+
+_MEDIA_PLACEHOLDER_PREFIX: dict[MediaKind, str] = {
+    "image": "img_",
+    "video": "vid_",
+}
+
+
+def _now_timestamp() -> str:
+    """Return the current local time formatted as ``YYYYMMDDHHMMSS``."""
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+
+def _generate_media_id(kind: MediaKind) -> str:  # noqa: ARG001
+    """Generate a placeholder id for a new media attachment.
+
+    Exposed as a hook so tests can substitute a deterministic id generator
+    without patching `datetime`. ``kind`` is accepted for future
+    per-namespace override needs but the production path returns the same
+    timestamp for both images and videos.
+    """
+    return _now_timestamp()
 
 _UNICODE_SPACE_EQUIVALENTS = str.maketrans(
     {
@@ -111,13 +137,11 @@ class MediaTracker:
     def __init__(self) -> None:
         """Initialize an empty media tracker.
 
-        Sets up empty lists to store images and videos, and initializes the
-        ID counters to 1 for generating unique placeholder identifiers.
+        Sets up empty lists to store images and videos. Placeholder IDs are now
+        derived from timestamps, so there is no per-tracker counter to keep.
         """
         self.images: list[ImageData] = []
         self.videos: list[VideoData] = []
-        self.next_image_id: int = 1
-        self.next_video_id: int = 1
 
     def add_media(
         self,
@@ -131,38 +155,55 @@ class MediaTracker:
         Args:
             data: The image or video data to track.
             kind: Media type key.
-            existing_text: Current draft text. Placeholder IDs already present
-                here are skipped so literal user text is not bound to new media.
+            existing_text: Current draft text. Placeholder tokens already
+                present there are skipped so literal user text is not rebound
+                to new media (a same-second collision falls through to a
+                ``_2`` / ``_3`` suffix).
 
         Returns:
-            Placeholder string like "[image 1]" or "[video 1]".
+            Placeholder string like ``[img_20250115143022]`` or
+            ``[vid_20250115143022]``. When the base timestamp is already used
+            in the current draft or by another tracked item, a ``_N`` suffix
+            is appended so every attachment gets a unique token.
         """
+        prefix = _MEDIA_PLACEHOLDER_PREFIX[kind]
+        base_id = _generate_media_id(kind)
+        existing = self._all_placeholders() | self._draft_placeholders(existing_text)
+        candidate = f"[{prefix}{base_id}]"
+        suffix = 2
+        while candidate in existing:
+            candidate = f"[{prefix}{base_id}_{suffix}]"
+            suffix += 1
+        data.placeholder = candidate
         if kind == "image":
-            while f"[image {self.next_image_id}]" in existing_text:
-                self.next_image_id += 1
-            placeholder = f"[image {self.next_image_id}]"
-            data.placeholder = placeholder
             self.images.append(data)  # ty: ignore[invalid-argument-type]
-            self.next_image_id += 1
         else:
-            while f"[video {self.next_video_id}]" in existing_text:
-                self.next_video_id += 1
-            placeholder = f"[video {self.next_video_id}]"
-            data.placeholder = placeholder
             self.videos.append(data)  # ty: ignore[invalid-argument-type]
-            self.next_video_id += 1
-        return placeholder
+        return candidate
+
+    def _all_placeholders(self) -> set[str]:
+        """Return placeholders currently held by this tracker."""
+        return {item.placeholder for item in (*self.images, *self.videos)}
+
+    @staticmethod
+    def _draft_placeholders(text: str) -> set[str]:
+        """Return every media placeholder token literally present in `text`."""
+        tokens: set[str] = set()
+        for pattern in (IMAGE_PLACEHOLDER_PATTERN, VIDEO_PLACEHOLDER_PATTERN):
+            tokens.update(match.group(0) for match in pattern.finditer(text))
+        return tokens
 
     def add_image(self, image_data: ImageData, *, existing_text: str = "") -> str:
         """Add an image and return its placeholder text.
 
         Args:
             image_data: The image data to track.
-            existing_text: Current draft text. Placeholder IDs already present
-                here are skipped so literal user text is not bound to new media.
+            existing_text: Current draft text. Placeholder tokens already
+                present there are skipped so literal user text is not bound to
+                new media.
 
         Returns:
-            Placeholder string like "[image 1]".
+            Placeholder string like ``[img_20250115143022]``.
         """
         return self.add_media(image_data, "image", existing_text=existing_text)
 
@@ -171,11 +212,12 @@ class MediaTracker:
 
         Args:
             video_data: The video data to track.
-            existing_text: Current draft text. Placeholder IDs already present
-                here are skipped so literal user text is not bound to new media.
+            existing_text: Current draft text. Placeholder tokens already
+                present there are skipped so literal user text is not bound to
+                new media.
 
         Returns:
-            Placeholder string like "[video 1]".
+            Placeholder string like ``[vid_20250115143022]``.
         """
         return self.add_media(video_data, "video", existing_text=existing_text)
 
@@ -196,19 +238,15 @@ class MediaTracker:
         return list(self.videos)
 
     def clear(self) -> None:
-        """Clear all tracked media and reset counters."""
+        """Clear all tracked media."""
         self.images.clear()
         self.videos.clear()
-        self.next_image_id = 1
-        self.next_video_id = 1
 
     def snapshot(self) -> "MediaTracker":
         """Return an independent copy of the currently tracked media."""
         tracker = MediaTracker()
         tracker.images = [replace(img) for img in self.images]
         tracker.videos = [replace(vid) for vid in self.videos]
-        tracker.next_image_id = self.next_image_id
-        tracker.next_video_id = self.next_video_id
         return tracker
 
     def restore(self, snapshot: "MediaTracker") -> None:
@@ -219,8 +257,6 @@ class MediaTracker:
         """
         self.images = [replace(img) for img in snapshot.images]
         self.videos = [replace(vid) for vid in snapshot.videos]
-        self.next_image_id = snapshot.next_image_id
-        self.next_video_id = snapshot.next_video_id
 
     def sync_to_text(
         self,
@@ -298,12 +334,6 @@ class MediaTracker:
         self._update_placeholder_spans(
             self.images, matches, text, previous_text, cursor_offset
         )
-        if not self.images:
-            self.next_image_id = 1
-        else:
-            self.next_image_id = self._max_placeholder_id(
-                self.images, IMAGE_PLACEHOLDER_PATTERN, len(self.images)
-            )
         return bool(placeholders)
 
     def _sync_kind_videos(
@@ -329,12 +359,6 @@ class MediaTracker:
         self._update_placeholder_spans(
             self.videos, matches, text, previous_text, cursor_offset
         )
-        if not self.videos:
-            self.next_video_id = 1
-        else:
-            self.next_video_id = self._max_placeholder_id(
-                self.videos, VIDEO_PLACEHOLDER_PATTERN, len(self.videos)
-            )
         return bool(placeholders)
 
     def _update_placeholder_spans(
@@ -439,29 +463,6 @@ class MediaTracker:
             if old_start > end:
                 break
         return None
-
-    @staticmethod
-    def _max_placeholder_id(
-        items: list[ImageData] | list[VideoData],
-        pattern: re.Pattern[str],
-        fallback_count: int,
-    ) -> int:
-        """Compute next ID from the highest surviving placeholder.
-
-        Args:
-            items: Surviving media items.
-            pattern: Placeholder regex with an `id` group.
-            fallback_count: Fallback when no IDs can be parsed.
-
-        Returns:
-            Next ID value (max_id + 1).
-        """
-        max_id = 0
-        for item in items:
-            match = pattern.fullmatch(item.placeholder)
-            if match is not None:
-                max_id = max(max_id, int(match.group("id")))
-        return max_id + 1 if max_id else fallback_count + 1
 
 
 def parse_file_mentions(text: str) -> tuple[str, list[Path]]:

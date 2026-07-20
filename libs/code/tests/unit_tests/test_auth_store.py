@@ -20,13 +20,13 @@ def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(Path, "home", staticmethod(lambda: fake))
     monkeypatch.setattr(
         "deepagents_code.model_config.DEFAULT_STATE_DIR",
-        fake / ".deepagents" / ".state",
+        fake / ".zjcode" / ".state",
     )
     return fake
 
 
 def _auth_file(home: Path) -> Path:
-    return home / ".deepagents" / ".state" / "auth.json"
+    return home / ".zjcode" / ".state" / "auth.json"
 
 
 @pytest.mark.usefixtures("fake_home")

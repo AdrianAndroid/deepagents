@@ -3851,7 +3851,7 @@ class TestMessageQueue:
             ) as mock_send:
                 await app._handle_user_message(f"describe {placeholder}")
 
-            mock_send.assert_awaited_once_with("describe [image 1]")
+            mock_send.assert_awaited_once_with(f"describe {placeholder}")
             active = app._active_user_message
             assert active is not None
             app._image_tracker.clear()
@@ -3863,10 +3863,10 @@ class TestMessageQueue:
                 app.action_interrupt()
 
             images = app._image_tracker.get_images()
-            assert chat.value == "describe [image 1]"
+            assert chat.value == f"describe {placeholder}"
             assert len(images) == 1
             assert images[0].base64_data == "abc123"
-            assert images[0].placeholder == "[image 1]"
+            assert images[0].placeholder == placeholder
             worker.cancel.assert_called_once()
             assert active.has_class("-cancelled")
             mock_notify.assert_called_once_with("Message restored to input", timeout=2)
@@ -15267,7 +15267,7 @@ class TestDeferredActions:
         from deepagents_code.tui.widgets.messages import ErrorMessage
 
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
+            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -15303,7 +15303,7 @@ class TestDeferredActions:
             rendered = str(widget._content)
             assert (
                 "uv tool install --reinstall -U "
-                f"deepagents-code=={__version__} "
+                f"zjcode=={__version__} "
                 "--with langchain-custom_provider --prerelease allow" in rendered
             )
             assert "/model custom_provider:<model>" in rendered
@@ -18135,7 +18135,7 @@ class TestNotificationCenterIntegration:
             status = app.screen.query(Static).filter(".up-status").first()
             assert "Update complete" not in str(status.render())
             assert "/opt/stale/bin/dcode" in str(status.render())
-            assert "/home/user/.local/bin/dcode" in str(status.render())
+            assert "/home/user/.local/bin/zjcode" in str(status.render())
             await pilot.press("c")
             await pilot.pause()
 
@@ -25513,7 +25513,8 @@ class TestToolGroupCollapse:
 
             summaries = list(app.query(ToolGroupSummary))
             assert len(summaries) == 1
-            assert all(tool.display is False for tool in tools)
+            # Group defaults to expanded so each tool call stays visible.
+            assert all(tool.display is True for tool in tools)
             rendered = summaries[0].render()
             assert isinstance(rendered, Content)
             assert "Read 1 file, ran 1 shell command" in rendered.plain
@@ -25542,10 +25543,11 @@ class TestToolGroupCollapse:
             await pilot.pause()
 
             assert len(list(app.query(ToolGroupSummary))) == 2
-            assert before.display is False
+            # Groups default to expanded, so the members stay visible.
+            assert before.display is True
             assert excluded.display is True
             assert not excluded.has_class("-grouped")
-            assert after.display is False
+            assert after.display is True
 
     async def test_regroup_leaves_edit_diff_outside_later_tool_group(self) -> None:
         """An edit diff arriving after a parallel read stays expanded."""
@@ -25573,7 +25575,7 @@ class TestToolGroupCollapse:
 
             assert len(list(app.query(ToolGroupSummary))) == 1
             assert edit.display is True
-            assert read.display is False
+            assert read.display is True
             assert diff.display is True
             assert not diff.has_class("-grouped")
 
@@ -25655,8 +25657,9 @@ class TestToolGroupCollapse:
             # Both tools fold into one summary despite the intervening footer.
             summaries = list(app.query(ToolGroupSummary))
             assert len(summaries) == 1
-            assert t1.display is False
-            assert t2.display is False
+            # Group defaults to expanded so both members stay visible.
+            assert t1.display is True
+            assert t2.display is True
             rendered = summaries[0].render()
             assert isinstance(rendered, Content)
             assert "Read 2 files" in rendered.plain
@@ -25705,7 +25708,8 @@ class TestToolGroupCollapse:
 
             # The success prefix folds; the errored tool is never grouped.
             assert len(list(app.query(ToolGroupSummary))) == 1
-            assert ok_tool.display is False
+            # Group defaults to expanded, so the successful member stays visible.
+            assert ok_tool.display is True
             assert err_tool.display is True
             assert not err_tool.has_class("-grouped")
 
@@ -25728,7 +25732,8 @@ class TestToolGroupCollapse:
             await pilot.pause()
 
             assert len(list(app.query(ToolGroupSummary))) == 1
-            assert tools[0].display is False
+            # Group defaults to expanded so the finalized member stays visible.
+            assert tools[0].display is True
 
     async def test_separate_steps_get_separate_summaries(self) -> None:
         """Tools split by an assistant message form two independent groups."""
@@ -25770,10 +25775,11 @@ class TestToolGroupCollapse:
             # the live spinner timer runs (it blocks the idle wait).
             await app._mount_message(tool)
 
-            # A live group was opened and the tool hidden from the start.
+            # A live group was opened; the tool stays visible because the
+            # group defaults to expanded.
             summaries = list(app.query(ToolGroupSummary))
             assert len(summaries) == 1
-            assert tool.display is False
+            assert tool.display is True
             assert app._active_tool_group is summaries[0]
 
             # A boundary closes the group and flips it to past tense.
@@ -25784,7 +25790,8 @@ class TestToolGroupCollapse:
             rendered = summaries[0].render()
             assert isinstance(rendered, Content)
             assert "Read 1 file" in rendered.plain
-            assert tool.display is False
+            # Still expanded after finalization.
+            assert tool.display is True
             await pilot.pause()
 
     @pytest.mark.parametrize("tool_name", ["ask_user", "edit_file", "write_todos"])
@@ -25824,7 +25831,7 @@ class TestToolGroupCollapse:
 
             assert len(list(app.query(ToolGroupSummary))) == 1
             assert edit.display is True
-            assert read.display is False
+            assert read.display is True
             assert diff.display is True
             assert not diff.has_class("-grouped")
             assert app._active_tool_group is None

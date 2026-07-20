@@ -52,6 +52,44 @@ VIDEO_EXTENSIONS: frozenset[str] = frozenset(
 MAX_MEDIA_BYTES: int = 20 * 1024 * 1024
 """Maximum media file size (20 MB). Keeps base64 payload under ~27 MB."""
 
+PASTED_MEDIA_DIR: pathlib.Path = pathlib.Path.home() / ".zjcode" / "pasted"
+"""Directory where pasted media is archived for local reference.
+
+Images pasted into the TUI are decoded and written here so the user can inspect
+or forward the original file later. The base64 payload is still what gets sent
+to the model; this local copy is purely an archive of what was pasted.
+"""
+
+
+def save_pasted_media(base64_data: str, stem: str, image_format: str) -> pathlib.Path | None:
+    """Persist a pasted media payload to `PASTED_MEDIA_DIR` as `<stem>.<ext>`.
+
+    Failures are logged and swallowed: the local archive is a convenience, not
+    a hard requirement. The caller keeps the in-memory base64 blob regardless.
+
+    Args:
+        base64_data: Base64-encoded media bytes (no data-URL prefix).
+        stem: File stem (typically the placeholder id such as
+            ``img_20250115143022``). Callers guarantee uniqueness within the
+            current draft.
+        image_format: Image format label (e.g. ``"png"``, ``"jpeg"``); used to
+            derive the file extension.
+
+    Returns:
+        The absolute path written on success, ``None`` when the write failed.
+    """
+    try:
+        PASTED_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        extension = image_format.lower() or "png"
+        if extension == "jpeg":
+            extension = "jpg"
+        target = PASTED_MEDIA_DIR / f"{stem}.{extension}"
+        target.write_bytes(base64.b64decode(base64_data))
+    except (OSError, ValueError) as exc:
+        logger.warning("Failed to archive pasted media to %s: %s", PASTED_MEDIA_DIR, exc)
+        return None
+    return target
+
 
 def strip_media_placeholders(
     text: str,
@@ -61,7 +99,7 @@ def strip_media_placeholders(
 ) -> str:
     """Remove display-only media placeholders from user text.
 
-    Placeholders like `[image 1]` are inserted into the terminal input purely for
+    Placeholders like `[img_20250115143022]` are inserted into the terminal input purely for
     display; the actual media travels as structured content blocks. They must not
     leak into the canonical model-facing message or LangSmith trace as if the user
     typed them.
@@ -74,7 +112,7 @@ def strip_media_placeholders(
     Args:
         text: Raw user text that may contain media placeholders.
         placeholders: Exact placeholder tokens for the media actually attached to
-            this message (e.g. ``["[image 1]", "[video 1]"]``).
+            this message (e.g. ``["[img_20250115143022]", "[vid_20250115143022]"]``).
         placeholder_spans: Exact `(start, end)` spans for tracked display tokens
             in `text`, when known.
 
@@ -118,7 +156,7 @@ def strip_media_placeholders(
 
     # Only strip spaces/tabs (not newlines) so code indentation on lines after a
     # removed placeholder is preserved. A full .strip() would collapse
-    # "[image 1]\n    def foo():" to "def foo():", losing the leading indent.
+    # "[img_20250115143022]\n    def foo():" to "def foo():", losing the leading indent.
     cleaned = text
     for start, end in sorted(spans, reverse=True):
         cleaned = cleaned[:start] + cleaned[end:]
@@ -183,7 +221,7 @@ class ImageData:
 
     base64_data: str
     format: str  # "png", "jpeg", etc.
-    placeholder: str  # Display text like "[image 1]"
+    placeholder: str  # Display text like "[img_20250115143022]"
     placeholder_span: tuple[int, int] | None = None
 
     def to_message_content(self) -> dict:
@@ -204,7 +242,7 @@ class VideoData:
 
     base64_data: str
     format: str  # "mp4", "quicktime", etc.
-    placeholder: str  # Display text like "[video 1]"
+    placeholder: str  # Display text like "[vid_20250115143022]"
     placeholder_span: tuple[int, int] | None = None
 
     def to_message_content(self) -> "VideoContentBlock":
@@ -796,7 +834,7 @@ def create_multimodal_content(
     content_blocks = []
 
     # Add text block. Strip only the display-only placeholders bound to the media
-    # actually attached here (e.g. "[image 1]") so the canonical/model-facing text
+    # actually attached here (e.g. "[img_20250115143022]") so the canonical/model-facing text
     # never contains fake user-authored placeholder text. When a span is known,
     # text that merely resembles the schema is preserved exactly; without a span
     # `strip_media_placeholders` falls back to removing one occurrence per item,

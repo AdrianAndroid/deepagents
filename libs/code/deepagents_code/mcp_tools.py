@@ -876,7 +876,7 @@ def _resolve_project_config_base(project_context: ProjectContext | None) -> Path
 
 
 MCP_CONFIG_DISCOVERY_PATHS: tuple[tuple[str, str], ...] = (
-    ("~/.deepagents/.mcp.json", "user-level"),
+    ("~/.zjcode/.mcp.json", "user-level"),
     ("<project-root>/.deepagents/.mcp.json", "project subdir"),
     ("<project-root>/.mcp.json", "project root"),
 )
@@ -904,7 +904,7 @@ def discover_mcp_configs(
     Returns:
         Existing config file paths, ordered from lowest to highest precedence.
     """
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     project_root = _resolve_project_config_base(project_context)
 
     candidates = [
@@ -934,7 +934,7 @@ def classify_discovered_configs(
     Returns:
         Tuple of `(user_configs, project_configs)`.
     """
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     user: list[Path] = []
     project: list[Path] = []
     for path in config_paths:

@@ -500,8 +500,14 @@ class ProviderConfig(TypedDict, total=False):
     """
 
 
-DEFAULT_CONFIG_DIR = Path.home() / ".deepagents"
-"""Directory for user-level Deep Agents configuration (`~/.deepagents`)."""
+DEFAULT_CONFIG_DIR = Path.home() / ".zjcode"
+"""Directory for user-level Deep Agents configuration (`~/.zjcode`).
+
+Renamed from `~/.deepagents` for the private-branded `zjcode` build so
+config, sessions, tokens, and update caches are fully isolated from any
+side-by-side install of the upstream `dcode`. Every other module reads this
+constant rather than hard-coding the path, so switching brands is one line.
+"""
 
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.toml"
 """Path to the user's model configuration file (`~/.deepagents/config.toml`)."""
@@ -4148,3 +4154,111 @@ def save_custom_provider(
 
     clear_caches()
     return True
+
+
+class ModelDiscoveryError(Exception):
+    """Raised when discovering models from a provider's `/models` endpoint fails.
+
+    The message is user-facing and safe to render verbatim in the TUI.
+    """
+
+
+def fetch_provider_models(
+    base_url: str,
+    api_key: str | None = None,
+    *,
+    timeout: float = 10.0,
+    include_retiring: bool = True,
+) -> list[str]:
+    """Fetch the list of available models from an OpenAI-compatible provider.
+
+    Calls `GET {base_url}/models` with a Bearer token when `api_key` is
+    provided. Filters out models whose `status` is `"Shutdown"` (a Volcengine
+    Ark extension); other providers usually omit the field, in which case all
+    models are kept.
+
+    Args:
+        base_url: Provider's OpenAI-compatible API base URL (with or without a
+            trailing slash).
+        api_key: Optional API key sent as `Authorization: Bearer <key>`.
+        timeout: Total request timeout in seconds.
+        include_retiring: When `False`, also drop models with `status="Retiring"`.
+
+    Returns:
+        Sorted list of unique model IDs.
+
+    Raises:
+        ModelDiscoveryError: If the request fails, the response is not
+            successful, or the payload cannot be parsed as an OpenAI-style
+            model list.
+    """
+    import httpx  # local import to avoid pulling httpx at module import time
+
+    if not base_url:
+        msg = "Base URL is required to discover models."
+        raise ModelDiscoveryError(msg)
+
+    url = base_url.rstrip("/") + "/models"
+    headers: dict[str, str] = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        response = httpx.get(url, headers=headers, timeout=timeout)
+    except httpx.TimeoutException as exc:
+        msg = f"Request to {url} timed out after {timeout:.0f}s."
+        raise ModelDiscoveryError(msg) from exc
+    except httpx.HTTPError as exc:
+        msg = f"Could not reach {url}: {exc}"
+        raise ModelDiscoveryError(msg) from exc
+
+    if response.status_code == 401:  # noqa: PLR2004 -- HTTP status codes are self-documenting
+        msg = "Authentication failed (HTTP 401). Check the API key."
+        raise ModelDiscoveryError(msg)
+    if response.status_code == 403:  # noqa: PLR2004
+        msg = "Forbidden (HTTP 403). The API key may lack permission."
+        raise ModelDiscoveryError(msg)
+    if response.status_code == 404:  # noqa: PLR2004
+        msg = f"{url} returned 404. This provider may not expose /models."
+        raise ModelDiscoveryError(msg)
+    if response.status_code >= 400:  # noqa: PLR2004
+        msg = f"HTTP {response.status_code} from {url}: {response.text[:200]}"
+        raise ModelDiscoveryError(msg)
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        msg = f"{url} did not return JSON: {exc}"
+        raise ModelDiscoveryError(msg) from exc
+
+    # OpenAI shape: {"object": "list", "data": [{"id": ..., ...}, ...]}
+    # Some providers just return a bare list.
+    if isinstance(payload, dict):
+        data = payload.get("data", payload.get("models", []))
+    else:
+        data = payload
+
+    if not isinstance(data, list):
+        msg = "Unexpected /models response shape (expected list under 'data')."
+        raise ModelDiscoveryError(msg)
+
+    ids: set[str] = set()
+    for entry in data:
+        if isinstance(entry, str):
+            ids.add(entry)
+            continue
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if not isinstance(model_id, str) or not model_id:
+            continue
+        # Volcengine Ark surfaces lifecycle in `status`; hide retired entries.
+        status = entry.get("status")
+        if isinstance(status, str):
+            if status == "Shutdown":
+                continue
+            if not include_retiring and status == "Retiring":
+                continue
+        ids.add(model_id)
+
+    return sorted(ids)

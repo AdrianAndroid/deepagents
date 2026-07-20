@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # Suppress Pydantic v1 compatibility warnings from langchain on Python 3.14+
 warnings.filterwarnings("ignore", message=".*Pydantic V1.*", category=UserWarning)
 
-from deepagents_code._version import __version__
+from deepagents_code._version import DISTRIBUTION_NAME, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,15 @@ def _handle_termination_signal(signum: int, _frame: object) -> NoReturn:
         `BaseException` like `SystemExit`), and the app's cleanup `finally` block
         re-invokes `stop()` as the exception unwinds, resuming the teardown.
     """
+    # Tag the shutdown as interrupted before we raise. `SystemExit` bypasses
+    # `sys.excepthook`, so this is the only place we can attribute a signal to
+    # the reason classifier used by `session_end_summary._finalize`.
+    try:
+        from deepagents_code import session_end_summary
+
+        session_end_summary.mark_signal(signum)
+    except Exception:
+        pass
     raise SystemExit(128 + signum)
 
 
@@ -100,7 +109,7 @@ def build_version_text() -> str:
     sdk_version_value, status = resolve_sdk_version()
     sdk_version = sdk_version_value if status == "resolved" else "unknown"
 
-    text = f"deepagents-code {__version__}\ndeepagents (SDK) {sdk_version}"
+    text = f"{DISTRIBUTION_NAME} {__version__}\ndeepagents (SDK) {sdk_version}"
 
     editable = False
     try:
@@ -818,7 +827,7 @@ def _recent_agent_is_valid(name: str) -> bool:
     from pathlib import Path as _Path
 
     try:
-        return (_Path.home() / ".deepagents" / name).is_dir()
+        return (_Path.home() / ".zjcode" / name).is_dir()
     except OSError:
         logger.warning(
             "Could not validate recent agent %r; falling back to default",
@@ -852,7 +861,7 @@ def check_cli_dependencies() -> None:
         print("\nReinstall dcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
         print("  curl -LsSf https://langch.in/dcode | bash")  # noqa: T201  # CLI output for missing dependencies
         print("\nOr install the tool directly via uv:")  # noqa: T201  # CLI output for missing dependencies
-        print("  uv tool install -U deepagents-code")  # noqa: T201  # CLI output for missing dependencies
+        print(f"  uv tool install -U {DISTRIBUTION_NAME}")  # noqa: T201  # CLI output for missing dependencies
         sys.exit(1)
 
 
@@ -1858,7 +1867,7 @@ def parse_args() -> argparse.Namespace:
         # Never surfaced: argparse only emits `version=` when the flag is
         # actually passed, which takes the `build_version_text()` branch above.
         # This placeholder only exists because `version=` requires a value.
-        version_text = f"deepagents-code {__version__}"
+        version_text = f"{DISTRIBUTION_NAME} {__version__}"
     parser.add_argument(
         "-v",
         "--version",
@@ -2753,6 +2762,18 @@ def cli_main() -> None:
         print(build_version_text())  # noqa: T201  # Version output
         sys.exit(0)
 
+    # Arm session-end summary AFTER the trivial --version fast path so a
+    # `dcode --version` invocation prints only the version. All heavier
+    # sessions (headless run, interactive TUI, doctor, deploy, etc.) get the
+    # exit-reason + duration summary at shutdown. Kept in a try so a bug in
+    # the summary module can never break startup.
+    try:
+        from deepagents_code import session_end_summary
+
+        session_end_summary.install()
+    except Exception:
+        logger.debug("Failed to install session_end_summary", exc_info=True)
+
     # ACP mode does not require Textual, so skip UI dependency checks when
     # the flag is present in raw argv.
     if "--acp" not in sys.argv[1:]:
@@ -2877,7 +2898,7 @@ def cli_main() -> None:
             except ImportError as exc:
                 msg = (
                     f"ACP dependencies not available: {exc}\n"
-                    "Install with: uv tool install --reinstall -U deepagents-code "
+                    f"Install with: uv tool install --reinstall -U {DISTRIBUTION_NAME} "
                     "--with deepagents-acp\n"
                 )
                 sys.stderr.write(msg)
@@ -3945,6 +3966,14 @@ def cli_main() -> None:
     except KeyboardInterrupt:
         # Clean exit on Ctrl+C — suppress ugly traceback.
         # `console` may not be bound if Ctrl+C arrives during config import.
+        try:
+            from deepagents_code import session_end_summary
+
+            session_end_summary.mark_reason(
+                session_end_summary.REASON_INTERRUPTED, "KeyboardInterrupt"
+            )
+        except Exception:
+            pass
         try:
             console.print("\n\n[yellow]Interrupted[/yellow]")
         except NameError:

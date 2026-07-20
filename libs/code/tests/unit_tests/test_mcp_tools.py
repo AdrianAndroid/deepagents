@@ -114,7 +114,7 @@ def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(Path, "home", staticmethod(lambda: fake))
     monkeypatch.setattr(
         "deepagents_code.model_config.DEFAULT_STATE_DIR",
-        fake / ".deepagents" / ".state",
+        fake / ".zjcode" / ".state",
     )
     return fake
 
@@ -638,8 +638,8 @@ class TestDiscoverMcpConfigs:
         """All three config locations are returned when present."""
         home = tmp_path / "home"
         project = tmp_path / "proj"
-        (home / ".deepagents").mkdir(parents=True)
-        (home / ".deepagents" / ".mcp.json").write_text("{}")
+        (home / ".zjcode").mkdir(parents=True)
+        (home / ".zjcode" / ".mcp.json").write_text("{}")
         (project / ".deepagents").mkdir(parents=True)
         (project / ".deepagents" / ".mcp.json").write_text("{}")
         (project / ".mcp.json").write_text("{}")
@@ -2100,7 +2100,7 @@ class TestDiscoveryHelpers:
             lambda: tmp_path / "repo",
         )
 
-        user_cfg = fake_home / ".deepagents" / ".mcp.json"
+        user_cfg = fake_home / ".zjcode" / ".mcp.json"
         user_cfg.parent.mkdir(parents=True)
         user_cfg.write_text("{}")
 
@@ -2115,12 +2115,12 @@ class TestDiscoveryHelpers:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Configs under `~/.deepagents` are user-level."""
+        """Configs under `~/.zjcode` are user-level."""
         fake_home = tmp_path / "home"
         fake_home.mkdir()
         monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
 
-        user_cfg = fake_home / ".deepagents" / ".mcp.json"
+        user_cfg = fake_home / ".zjcode" / ".mcp.json"
         project_cfg = tmp_path / "repo" / ".mcp.json"
         user, project = classify_discovered_configs([user_cfg, project_cfg])
 
@@ -4048,7 +4048,7 @@ class TestSelectiveProjectMcpTrust:
         """
         # Isolate discovery and the trust store from the developer's real home.
         home = project_root.parent / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
             "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
@@ -4382,7 +4382,7 @@ class TestSelectiveProjectMcpTrust:
         project.mkdir()
         self._write_project_config(project, {"docs": self._stdio()})
         home = tmp_path / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         user_config = tmp_path / "config.toml"
         user_config.write_text("[[not valid toml")

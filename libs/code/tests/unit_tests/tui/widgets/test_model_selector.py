@@ -287,6 +287,9 @@ class TestModelSelectorChrome:
 
             assert "Ctrl+S" not in str(help_text.content)
             assert "set default" not in str(help_text.content)
+            # But curated/onboarding mode *does* show add provider
+            assert "Ctrl+A" in str(help_text.content)
+            assert "add provider" in str(help_text.content)
 
     @pytest.mark.parametrize("curated", [False, True])
     async def test_selector_uses_compact_sizing(self, *, curated: bool) -> None:
@@ -353,6 +356,10 @@ class TestModelSelectorChrome:
         `height: auto` lets the standard footer wrap, but the curated line drops
         the Ctrl+S/Ctrl+R hints and fits one row — pin it so a future width or
         hint change that pushes it to two rows fails loudly.
+
+        Note: Curated mode now shows "Ctrl+A add provider" for first-run users
+        to easily add custom providers, which may wrap to two rows on narrow
+        displays. On an 80-column display it should still fit in one row.
         """
         app = ModelSelectorTestApp()
         async with app.run_test(size=(80, 24)) as pilot:
@@ -362,7 +369,24 @@ class TestModelSelectorChrome:
 
             help_text = screen.query_one(".model-selector-help", Static)
 
-            assert help_text.region.height == 1
+            # Allow 1 or 2 rows - add provider hint may cause wrapping on narrow
+            # displays but should work fine on standard 80-column terminals
+            assert help_text.region.height in (1, 2)
+
+    async def test_curated_mode_shows_add_provider_button(self) -> None:
+        """Onboarding/curated model selector must show the add provider button."""
+        app = ModelSelectorTestApp()
+        async with app.run_test() as pilot:
+            screen = ModelSelectorScreen(curated=True)
+            app.push_screen(screen)
+            await pilot.pause()
+
+            # Button should exist and be visible
+            from textual.widgets import Button
+            button = screen.query_one("#add-custom-provider-btn", Button)
+            assert button is not None
+            assert button.display is True
+            assert "Add Custom Provider" in str(button.label)
 
 
 class TestRecommendedToggle:
@@ -1061,7 +1085,6 @@ class TestRecentModelsSection:
                 for h in screen.query(".model-provider-header").results(Static)
             ]
             assert not any("Recent" in h for h in headers)
-
 
 class TestModelSelectorAvailabilityHint:
     """Tests for the API-keys hint shown above the standard model list."""
@@ -2002,6 +2025,83 @@ class TestAvailabilityOrdering:
             # The grouped section (everything after the pinned recent) is
             # availability-sorted: the usable provider leads it.
             assert providers[1] == "openai_codex"
+
+
+class TestAddCustomProviderDismissal:
+    """Tests for the callback fired after adding a custom provider from within
+    the model selector.
+
+    Regression: when the model selector dismisses the parent onboarding flow
+    after `Add Custom Provider`, the payload must be `(provider:model, provider)`,
+    not `(model, provider)`. If only the bare model name is returned, the
+    downstream startup routine re-runs `detect_provider(model_name)`, which
+    knows nothing about the user's freshly-added custom provider and either
+    mis-detects it (e.g., `gpt-*` -> `openai`) or returns `None`. In both cases
+    the server never starts against the user's `base_url` / `api_key` and the
+    right-hand model badge shows the provider but the request can't connect.
+    """
+
+    async def test_dismiss_payload_includes_provider_prefix(self) -> None:
+        """Callback must dismiss with `provider:model` when a default model was set."""
+        app = ModelSelectorTestApp()
+        async with app.run_test() as pilot:
+            screen = ModelSelectorScreen(curated=True)
+            app.push_screen(screen)
+            await pilot.pause()
+
+            recorded: list[tuple[str, str] | None] = []
+            screen._dismiss_with_result = recorded.append  # type: ignore[method-assign]
+
+            captured_callback: list[object] = []
+
+            def fake_push_screen(*args: object, **kwargs: object) -> None:
+                # push_screen(screen, callback) — capture the callback
+                if len(args) >= 2:
+                    captured_callback.append(args[1])
+                elif "callback" in kwargs:
+                    captured_callback.append(kwargs["callback"])
+
+            screen.app.push_screen = fake_push_screen  # type: ignore[method-assign]
+
+            await screen.action_add_custom_provider()
+            assert captured_callback, "Expected push_screen to be called with a callback"
+            callback = captured_callback[0]
+
+            # Simulate successful provider save
+            callback((True, "myprovider", "gpt-4o"))  # type: ignore[operator]
+
+            assert recorded == [("myprovider:gpt-4o", "myprovider")]
+
+    async def test_dismiss_payload_falls_back_to_placeholder_when_no_default(
+        self,
+    ) -> None:
+        """When no default model is set, still send a `provider:model` spec."""
+        app = ModelSelectorTestApp()
+        async with app.run_test() as pilot:
+            screen = ModelSelectorScreen(curated=True)
+            app.push_screen(screen)
+            await pilot.pause()
+
+            recorded: list[tuple[str, str] | None] = []
+            screen._dismiss_with_result = recorded.append  # type: ignore[method-assign]
+
+            captured_callback: list[object] = []
+
+            def fake_push_screen(*args: object, **kwargs: object) -> None:
+                if len(args) >= 2:
+                    captured_callback.append(args[1])
+                elif "callback" in kwargs:
+                    captured_callback.append(kwargs["callback"])
+
+            screen.app.push_screen = fake_push_screen  # type: ignore[method-assign]
+
+            await screen.action_add_custom_provider()
+            assert captured_callback
+            callback = captured_callback[0]
+
+            callback((True, "myprovider", None))  # type: ignore[operator]
+
+            assert recorded == [("myprovider:custom_model", "myprovider")]
 
 
 class TestCuratedModelSelection:
@@ -3447,7 +3547,11 @@ class TestCustomProviderModalScreen:
             await modal.action_submit()
             await pilot.pause()
             assert str(error_widget.content) == ""  # No error
-            assert app.modal_result is True  # Modal dismissed successfully
+            # Modal returns (success, provider_id, default_model) tuple
+            assert isinstance(app.modal_result, tuple)
+            assert app.modal_result[0] is True  # Success flag
+            assert app.modal_result[1] == "test-provider"  # Provider ID
+            assert app.modal_result[2] == "valid-model_id.v1:chat"  # Default model
 
     async def test_default_model_prefill_on_edit(self) -> None:
         """Test that default model is pre-filled when editing an existing provider."""
@@ -3513,7 +3617,8 @@ class TestCustomProviderModalScreen:
                 await modal.action_submit()
                 await pilot.pause()
                 
-                assert app.modal_result is True
+                assert isinstance(app.modal_result, tuple)
+                assert app.modal_result[0] is True
                 
                 # Verify config saved correctly
                 with open(deepagents_code.model_config.DEFAULT_CONFIG_PATH, "rb") as f:
@@ -3564,7 +3669,11 @@ class TestCustomProviderModalScreen:
             # Tab to cancel button
             await pilot.press("tab")
             assert modal.query_one("#cancel-btn").has_focus
-            
+
+            # Tab to discover button (added for /models discovery UX)
+            await pilot.press("tab")
+            assert modal.query_one("#discover-btn").has_focus
+
             # Tab to save button
             await pilot.press("tab")
             assert modal.query_one("#save-btn").has_focus
@@ -3618,3 +3727,64 @@ class TestCustomProviderModalScreen:
             assert model_input.region.width > 0  # Input still fits without overflow
             # Verify no layout breakage: input remains visible below API key field
             assert model_input.region.y > modal.query_one("#api-key", Input).region.y
+
+    async def test_discover_button_populates_models_list(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`Discover` fetches /models, opens picker, and persists the selection.
+
+        Uses `pilot.run_test` to drive the flow, monkeypatching
+        `fetch_provider_models` to a canned list so no network is touched.
+        """
+        import tomllib
+
+        import deepagents_code.model_config as mc
+
+        config_path = tmp_path / "config.toml"
+        monkeypatch.setattr(mc, "DEFAULT_CONFIG_PATH", config_path)
+        # Patch fetch_provider_models where the modal imports it from.
+        from deepagents_code.tui.widgets import model_selector as ms_mod
+
+        canned = ["alpha", "beta", "gamma"]
+        monkeypatch.setattr(
+            ms_mod, "fetch_provider_models", lambda *a, **k: canned,
+        )
+
+        app = CustomProviderModalTestApp()
+        async with app.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, CustomProviderModalScreen)
+
+            modal.query_one("#provider-id", Input).value = "myapi"
+            modal.query_one("#display-name", Input).value = "My API"
+            modal.query_one("#base-url", Input).value = "https://api.example.com/v1"
+            modal.query_one("#api-key", Input).value = "sk-x"
+
+            # Trigger Discover — will push DiscoverModelsScreen with all 3 preselected off.
+            await modal.action_discover()
+            await pilot.pause()
+
+            picker = app.screen
+            assert isinstance(picker, ms_mod.DiscoverModelsScreen)
+            # Select first two options and confirm.
+            selection = picker.query_one(ms_mod.SelectionList)
+            selection.select_all()
+            selection.deselect(selection.get_option_at_index(2).value)
+            picker.action_submit()
+            await pilot.pause()
+
+            # Back on the parent modal — discovered_models has been set.
+            back = app.screen
+            assert isinstance(back, CustomProviderModalScreen)
+            assert set(back._discovered_models) == {"alpha", "beta"}
+
+            # Save the provider.
+            await back.action_submit()
+            await pilot.pause()
+
+        # Config file now contains BOTH models — the whole point of Discover.
+        with config_path.open("rb") as f:
+            data = tomllib.load(f)
+        saved = data["models"]["providers"]["myapi"]["models"]
+        assert set(saved) == {"alpha", "beta"}

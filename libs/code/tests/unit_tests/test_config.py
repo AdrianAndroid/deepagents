@@ -4811,7 +4811,7 @@ class TestCreateModelViaInitImportError:
         fallback (see the sibling unreadable-receipt test).
         """
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
+            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -4826,7 +4826,7 @@ class TestCreateModelViaInitImportError:
                 ModelConfigError,
                 match=(
                     "Install with: uv tool install --reinstall -U "
-                    f"deepagents-code=={__version__} "
+                    f"zjcode=={__version__} "
                     "--with langchain-custom_provider --prerelease allow"
                 ),
             ),

@@ -14,6 +14,7 @@ from textual.widgets import Static
 from textual.widgets.text_area import Selection
 
 from deepagents_code import _textual_patches as _textual_patches
+from deepagents_code import input as _input_module
 from deepagents_code.command_registry import SLASH_COMMANDS
 from deepagents_code.input import MediaTracker
 from deepagents_code.media_utils import ImageData, create_multimodal_content
@@ -31,6 +32,26 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from textual.pilot import Pilot
+
+
+@pytest.fixture(autouse=True)
+def _deterministic_media_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace `_generate_media_id` with a per-kind counter for stable tokens.
+
+    Placeholder tokens shown in ChatInput tests use short literal forms like
+    ``[img_001]`` / ``[vid_001]``. In production the id is a wall-clock
+    timestamp, so without this substitution tests would be non-deterministic
+    (and would break every second). The 3-digit zero-padded id also keeps the
+    token 9 characters wide so span-offset assertions carried over from the
+    old ``[image N]`` scheme stay valid.
+    """
+    counters: dict[str, int] = {"image": 0, "video": 0}
+
+    def fake_id(kind: str) -> str:
+        counters[kind] += 1
+        return f"{counters[kind]:03d}"
+
+    monkeypatch.setattr(_input_module, "_generate_media_id", fake_id)
 
 
 class TestCompletionOption:
@@ -2756,7 +2777,7 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
 
             # Move cursor to start and press forward-delete
             chat._text_area.move_cursor((0, 0))
@@ -2768,7 +2789,6 @@ class TestDroppedImagePaste:
             # trailing space (unlike backspace which catches it).
             assert "[image" not in chat._text_area.text
             assert app.tracker.get_images() == []
-            assert app.tracker.next_image_id == 1
 
     async def test_backspace_removes_full_image_placeholder(self, tmp_path) -> None:
         """Backspace should remove `[image N]` as a single token."""
@@ -2785,17 +2805,25 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
 
             await pilot.press("backspace")
             await pilot.pause()
 
             assert chat._text_area.text == ""
             assert app.tracker.get_images() == []
-            assert app.tracker.next_image_id == 1
 
-    async def test_readding_after_delete_restarts_image_counter(self, tmp_path) -> None:
-        """Re-adding after deleting all placeholders should restart at `[image 1]`."""
+    async def test_readding_after_delete_gets_fresh_placeholder(self, tmp_path) -> None:
+        """Re-adding after deleting all placeholders still gets a unique token.
+
+        Historically the tracker maintained its own counter that reset to 1
+        when the draft went empty; today the id comes from a
+        wall-clock-timestamped generator (deterministic per-kind counter in
+        tests), so the second paste gets the next id from that generator
+        rather than "restarting at 1". The invariant that still matters is
+        that the returned placeholder is unique and correctly rebound to the
+        newly attached image.
+        """
         img_path = tmp_path / "readd.png"
         from PIL import Image
 
@@ -2809,40 +2837,38 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
 
             await pilot.press("backspace")
             await pilot.pause()
-            assert app.tracker.next_image_id == 1
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_002] "
             assert len(app.tracker.get_images()) == 1
-            assert app.tracker.next_image_id == 2
 
     async def test_typed_image_placeholder_is_not_atomic(self) -> None:
         """Manually typed `[image N]` (no attachment) edits char-by-char.
 
         Regression test: placeholder-shaped text the user typed must not be
         treated as an atomic media token, so backspace removes a single
-        character instead of deleting the whole `[image 2]`.
+        character instead of deleting the whole `[img_002]`.
         """
         app = _ImagePasteApp()
         async with app.run_test() as pilot:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
 
-            chat._text_area.text = "[image 2]"
+            chat._text_area.text = "[img_002]"
             await pilot.pause()
             assert app.tracker.get_images() == []
 
-            chat._text_area.move_cursor((0, len("[image 2]")))
+            chat._text_area.move_cursor((0, len("[img_002]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
-            assert chat._text_area.text == "[image 2"
+            assert chat._text_area.text == "[img_002"
 
     async def test_typed_placeholder_not_atomic_alongside_real_image(
         self, tmp_path
@@ -2861,28 +2887,28 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
 
             # Append a manually typed placeholder-shaped token that is not
             # backed by any attachment.
-            chat._text_area.text = "[image 1] [image 2]"
+            chat._text_area.text = "[img_001] [img_002]"
             await pilot.pause()
             assert len(app.tracker.get_images()) == 1
 
-            chat._text_area.move_cursor((0, len("[image 1] [image 2]")))
+            chat._text_area.move_cursor((0, len("[img_001] [img_002]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
             # Only one character of the typed token is removed; the real
-            # `[image 1]` placeholder is untouched and still tracked.
-            assert chat._text_area.text == "[image 1] [image 2"
+            # `[img_001]` placeholder is untouched and still tracked.
+            assert chat._text_area.text == "[img_001] [img_002"
             assert len(app.tracker.get_images()) == 1
 
     async def test_real_image_placeholder_still_atomic_with_typed_lookalike(
         self, tmp_path
     ) -> None:
-        """The real `[image 1]` deletes atomically even beside a typed token."""
+        """The real `[img_001]` deletes atomically even beside a typed token."""
         img_path = tmp_path / "atomic.png"
         from PIL import Image
 
@@ -2896,19 +2922,19 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            chat._text_area.text = "[image 2] [image 1]"
+            chat._text_area.text = "[img_002] [img_001]"
             await pilot.pause()
             assert len(app.tracker.get_images()) == 1
 
-            # Cursor just after the real trailing `[image 1]` token.
-            chat._text_area.move_cursor((0, len("[image 2] [image 1]")))
+            # Cursor just after the real trailing `[img_001]` token.
+            chat._text_area.move_cursor((0, len("[img_002] [img_001]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
             # The whole real placeholder is removed atomically, leaving the
             # typed look-alike intact.
-            assert chat._text_area.text == "[image 2] "
+            assert chat._text_area.text == "[img_002] "
 
     async def test_submit_remaps_span_onto_stripped_value(self, tmp_path) -> None:
         """`_submit_value` re-maps placeholder spans onto the final submitted text.
@@ -2932,7 +2958,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             # Leading whitespace shifts every offset when submit strips it.
-            chat._text_area.text = "  look [image 1]"
+            chat._text_area.text = "  look [img_001]"
             await pilot.pause()
             img = app.tracker.get_images()[0]
             assert img.placeholder_span == (7, 16)
@@ -2940,7 +2966,7 @@ class TestDroppedImagePaste:
             chat._submit_value(chat._text_area.text.strip())
             await pilot.pause()
 
-            assert app.submitted[-1].value == "look [image 1]"
+            assert app.submitted[-1].value == "look [img_001]"
             # The span now indexes the submitted value, not the raw draft.
             assert img.placeholder_span == (5, 14)
             content = create_multimodal_content(
@@ -2964,7 +2990,7 @@ class TestDroppedImagePaste:
             assert chat.handle_external_paste(str(img_path))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[image 1]"
+            assert chat._text_area.text.strip() == "[img_001]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_handle_external_paste_attaches_unquoted_path_with_spaces(
@@ -2985,7 +3011,7 @@ class TestDroppedImagePaste:
             assert chat.handle_external_paste(str(img_path))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[image 1]"
+            assert chat._text_area.text.strip() == "[img_001]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_handle_external_paste_inserts_plain_text(self) -> None:
@@ -3019,7 +3045,7 @@ class TestDroppedImagePaste:
             await chat._text_area._on_paste(events.Paste(str(img_path)))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[image 1]"
+            assert chat._text_area.text.strip() == "[img_001]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_paste_image_path_skips_literal_placeholder_in_draft(
@@ -3036,15 +3062,18 @@ class TestDroppedImagePaste:
         async with app.run_test() as pilot:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
-            chat._text_area.text = "restore [image 1] "
+            chat._text_area.text = "restore [img_001] "
             chat._text_area.move_cursor_to_end()
 
             await chat._text_area._on_paste(events.Paste(str(img_path)))
             await pilot.pause()
 
-            assert chat._text_area.text == "restore [image 1] [image 2] "
+            # First attachment: generator returns id "001", but that token
+            # already appears in the draft, so the tracker appends "_2" to
+            # keep the new token distinct from the user-typed literal.
+            assert chat._text_area.text == "restore [img_001] [img_001_2] "
             assert [img.placeholder for img in app.tracker.get_images()] == [
-                "[image 2]"
+                "[img_001_2]"
             ]
 
     async def test_paste_non_image_path_keeps_original_text(self, tmp_path) -> None:
@@ -3082,7 +3111,7 @@ class TestDroppedImagePaste:
             chat._text_area.text = f"'{img_path}'"
             await pilot.pause()
 
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
             assert len(app.tracker.get_images()) == 1
 
     async def test_key_burst_quoted_path_rewrites_without_showing_raw_path(
@@ -3115,7 +3144,7 @@ class TestDroppedImagePaste:
 
             await pilot.pause(0.35)
 
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
             assert len(app.tracker.get_images()) == 1
 
     async def test_submit_absolute_path_without_paste_event_attaches_image(
@@ -3142,7 +3171,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1]"
+            assert app.submitted[0].value == "[img_001]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3170,7 +3199,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1]"
+            assert app.submitted[0].value == "[img_001]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3197,7 +3226,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1] what's in this"
+            assert app.submitted[0].value == "[img_001] what's in this"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3223,7 +3252,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1] what's in this image?"
+            assert app.submitted[0].value == "[img_001] what's in this image?"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3252,7 +3281,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1] analyze"
+            assert app.submitted[0].value == "[img_001] analyze"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3280,7 +3309,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1] analyze this"
+            assert app.submitted[0].value == "[img_001] analyze this"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3300,7 +3329,7 @@ class TestDroppedImagePaste:
             # Paste an image and submit
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[image 1] "
+            assert chat._text_area.text == "[img_001] "
 
             await pilot.press("enter")
             await pilot.pause()
@@ -3313,7 +3342,6 @@ class TestDroppedImagePaste:
             # The tracker should have synced and cleared images since
             # the new text has no placeholders.
             assert app.tracker.get_images() == []
-            assert app.tracker.next_image_id == 1
 
     async def test_submit_recovers_if_command_mode_already_stripped_path(
         self, tmp_path
@@ -3339,7 +3367,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[image 1]"
+            assert app.submitted[0].value == "[img_001]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3361,7 +3389,7 @@ class TestDroppedVideoPaste:
     async def test_paste_video_attaches_and_inserts_placeholder(
         self, tmp_path: Path
     ) -> None:
-        """Dropping a valid .mp4 should insert `[video 1]` placeholder."""
+        """Dropping a valid .mp4 should insert `[vid_001]` placeholder."""
         video_path = tmp_path / "clip.mp4"
         video_path.write_bytes(_make_mp4_bytes())
 
@@ -3373,7 +3401,7 @@ class TestDroppedVideoPaste:
             assert chat.handle_external_paste(str(video_path))
             await pilot.pause()
 
-            assert "[video 1]" in chat._text_area.text
+            assert "[vid_001]" in chat._text_area.text
             assert len(app.tracker.get_videos()) == 1
 
     async def test_backspace_removes_video_placeholder(self, tmp_path: Path) -> None:
@@ -3388,14 +3416,13 @@ class TestDroppedVideoPaste:
 
             chat.handle_external_paste(str(video_path))
             await pilot.pause()
-            assert "[video 1]" in chat._text_area.text
+            assert "[vid_001]" in chat._text_area.text
 
             await pilot.press("backspace")
             await pilot.pause()
 
             assert "[video" not in chat._text_area.text
             assert app.tracker.get_videos() == []
-            assert app.tracker.next_video_id == 1
 
     async def test_forward_delete_removes_video_placeholder(
         self, tmp_path: Path
@@ -3411,7 +3438,7 @@ class TestDroppedVideoPaste:
 
             chat.handle_external_paste(str(video_path))
             await pilot.pause()
-            assert "[video 1]" in chat._text_area.text
+            assert "[vid_001]" in chat._text_area.text
 
             chat._text_area.move_cursor((0, 0))
             await pilot.pause()
@@ -3433,16 +3460,16 @@ class TestDroppedVideoPaste:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
 
-            chat._text_area.text = "[video 2]"
+            chat._text_area.text = "[vid_002]"
             await pilot.pause()
             assert app.tracker.get_videos() == []
 
-            chat._text_area.move_cursor((0, len("[video 2]")))
+            chat._text_area.move_cursor((0, len("[vid_002]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
-            assert chat._text_area.text == "[video 2"
+            assert chat._text_area.text == "[vid_002"
 
     async def test_mixed_image_and_video_drop(self, tmp_path: Path) -> None:
         """Dropping an image and video should produce both placeholder types."""
@@ -3465,8 +3492,8 @@ class TestDroppedVideoPaste:
             await pilot.pause()
 
             text = chat._text_area.text
-            assert "[image 1]" in text
-            assert "[video 1]" in text
+            assert "[img_001]" in text
+            assert "[vid_001]" in text
             assert len(app.tracker.get_images()) == 1
             assert len(app.tracker.get_videos()) == 1
 
@@ -3565,7 +3592,7 @@ class TestPathPayloadDetectionGating:
             ta.text = str(img_path)
             await pilot.pause()
 
-            assert ta.text == "[image 1] "
+            assert ta.text == "[img_001] "
             assert chat.mode == "normal"
             assert len(app.tracker.get_images()) == 1
 

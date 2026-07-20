@@ -603,7 +603,7 @@ class TestMcpCommandDispatch:
 
         assert exc_info.value.code == 0
         out = capsys.readouterr().out
-        assert "~/.deepagents/.mcp.json" in out
+        assert "~/.zjcode/.mcp.json" in out
         assert "<project-root>/.deepagents/.mcp.json" in out
         assert "<project-root>/.mcp.json" in out
 
@@ -697,8 +697,8 @@ class TestMcpCommandDispatch:
 
         fake_home = pathlib.Path(str(tmp_path)) / "home"
         fake_project = pathlib.Path(str(tmp_path)) / "project"
-        (fake_home / ".deepagents").mkdir(parents=True)
-        (fake_home / ".deepagents" / ".mcp.json").write_text("{}")
+        (fake_home / ".zjcode").mkdir(parents=True)
+        (fake_home / ".zjcode" / ".mcp.json").write_text("{}")
         fake_project.mkdir()
 
         monkeypatch.setattr(pathlib.Path, "home", lambda: fake_home)
@@ -713,7 +713,7 @@ class TestMcpCommandDispatch:
         assert exit_code == 0
         out = capsys.readouterr().out
         user_line = next(
-            line for line in out.splitlines() if "~/.deepagents/.mcp.json" in line
+            line for line in out.splitlines() if "~/.zjcode/.mcp.json" in line
         )
         project_root_line = next(
             line

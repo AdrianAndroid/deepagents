@@ -16,7 +16,7 @@ from textual.events import (
 from textual.fuzzy import Matcher
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Static
+from textual.widgets import Button, Input, SelectionList, Static
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -29,11 +29,13 @@ from deepagents_code.config import Glyphs, get_glyphs, is_ascii_mode
 from deepagents_code.model_config import (
     CODEX_PROVIDER,
     ModelConfig,
+    ModelDiscoveryError,
     ModelProfileEntry,
     ModelSpec,
     ProviderAuthState,
     ProviderAuthStatus,
     clear_default_model,
+    fetch_provider_models,
     get_available_models,
     get_credential_env_var,
     get_model_profiles,
@@ -505,12 +507,12 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             f"{glyphs.arrow_up}/{glyphs.arrow_down} navigate",
             "Tab autocomplete",
             "Enter select",
+            "Ctrl+A add provider",
         ]
         if not self._curated:
             parts.extend((
                 "Ctrl+S set default",
                 "Ctrl+R recommended",
-                "Ctrl+A add provider",
                 "Ctrl+N IDs",
             ))
         sep = f" {glyphs.bullet} "
@@ -582,13 +584,12 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
             # Model detail footer
             yield Static("", classes="model-detail-footer", id="model-detail-footer")
 
-            # Add custom provider button (only in non-curated mode)
-            if not self._curated:
-                yield Button(
-                    "Add Custom Provider (Ctrl+A)",
-                    id="add-custom-provider-btn",
-                    variant="primary",
-                )
+            # Add custom provider button (always visible, for curated onboarding too)
+            yield Button(
+                "Add Custom Provider (Ctrl+A)",
+                id="add-custom-provider-btn",
+                variant="primary",
+            )
 
             yield Static(self._help_text(), classes="model-selector-help")
 
@@ -2024,10 +2025,29 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
 
     async def action_add_custom_provider(self) -> None:
         """Open the custom provider add modal."""
-        def _on_provider_saved(success: bool) -> None:
+        def _on_provider_saved(result: bool | tuple[bool, str, str | None]) -> None:
             help_widget = self.query_one(".model-selector-help", Static)
-            if success:
-                # Reload model list to show new provider
+            # Handle both old (bool) and new (tuple) return values
+            if isinstance(result, tuple):
+                success, provider_id, default_model = result
+            else:
+                success = result
+                provider_id = None
+                default_model = None
+
+            if success and provider_id:
+                # Use the new provider immediately and close all modals.
+                # Downstream (`_switch_model` / `_retry_startup_with_model`) expects
+                # the full `provider:model` spec, not just a bare model name — a
+                # bare name would be routed through `detect_provider` and would
+                # miss the custom provider entirely (or worse, get mis-detected
+                # as `openai` for a `gpt-*` model), so the server never uses the
+                # provider's `base_url` / `api_key`.
+                model = default_model or "custom_model"
+                model_spec = f"{provider_id}:{model}"
+                self._dismiss_with_result((model_spec, provider_id))
+            elif success:
+                # Fallback for old behavior (should not happen with new modal)
                 self._reload_task = asyncio.create_task(self._reload_model_list())
                 help_widget.update(
                     Content.styled(
@@ -2084,7 +2104,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         self._update_footer()
 
 
-class CustomProviderModalScreen(ModalScreen[bool]):
+class CustomProviderModalScreen(ModalScreen[bool | tuple[bool, str, str | None]]):
     """Modal screen for adding/editing a custom OpenAI-compatible provider."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
@@ -2104,6 +2124,10 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         super().__init__(**kwargs)
         self.provider_id = provider_id
         self.existing_providers: dict[str, dict[str, Any]] = {}
+        # Models selected via the Discover flow (or pre-loaded when editing).
+        # When non-empty, the full list is persisted on save; otherwise only
+        # `default_model` is written (legacy behavior).
+        self._discovered_models: list[str] = []
 
     CSS = """
     CustomProviderModalScreen {
@@ -2165,6 +2189,13 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         margin-top: 1;
         text-align: center;
     }
+
+    CustomProviderModalScreen .form-hint {
+        text-style: dim;
+        height: 1;
+        margin-top: 0;
+        text-align: left;
+    }
     """
 
     def compose(self) -> ComposeResult:
@@ -2193,10 +2224,12 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             yield Input(id="api-key", placeholder="sk-...", password=True)
             yield Static("Default Model (optional):", classes="form-label")
             yield Input(id="default-model", placeholder="e.g. gpt-4o")
+            yield Static("", id="discovered-status", classes="form-hint")
             yield Static("", id="error-message", classes="error-message")
             with Container(classes="form-buttons"):
                 with Container(classes="form-buttons-left"):
                     yield Button("Cancel", id="cancel-btn", variant="default")
+                    yield Button("Discover", id="discover-btn", variant="default")
                 with Container(classes="form-buttons-right"):
                     yield Button("Confirm", id="save-btn", variant="primary")
 
@@ -2232,6 +2265,13 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 self.query_one("#default-model", Input).value = provider_config.get(
                     "default_model", ""
                 )
+                # Pre-load existing model list so a plain edit doesn't wipe it
+                existing_models = provider_config.get("models", [])
+                if isinstance(existing_models, list):
+                    self._discovered_models = [
+                        m for m in existing_models if isinstance(m, str) and m
+                    ]
+                    self._update_discovered_status()
                 # API key is not stored in config, it's in env var, so leave empty
 
         if not self.provider_id:
@@ -2263,6 +2303,12 @@ class CustomProviderModalScreen(ModalScreen[bool]):
                 self.query_one("#default-model", Input).value = provider_config.get(
                     "default_model", ""
                 )
+                existing_models = provider_config.get("models", [])
+                if isinstance(existing_models, list):
+                    self._discovered_models = [
+                        m for m in existing_models if isinstance(m, str) and m
+                    ]
+                    self._update_discovered_status()
                 # Disable provider ID input to prevent modification
                 event.input.disabled = True
                 # Move focus to next field
@@ -2274,6 +2320,8 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             self.action_cancel()
         elif event.button.id == "save-btn":
             await self.action_submit()
+        elif event.button.id == "discover-btn":
+            await self.action_discover()
 
     async def action_submit(self) -> None:
         """Validate and submit the form."""
@@ -2283,6 +2331,8 @@ class CustomProviderModalScreen(ModalScreen[bool]):
         api_key = self.query_one("#api-key", Input).value.strip() or None
         default_model = self.query_one("#default-model", Input).value.strip() or None
         error_widget = self.query_one("#error-message", Static)
+        # Clear any prior validation message so a successful submit doesn't
+        # leave a stale error visible in the modal (or reported by tests).
         error_widget.update("")
 
         # Validate inputs
@@ -2320,6 +2370,17 @@ class CustomProviderModalScreen(ModalScreen[bool]):
 
         # Save the provider
         from deepagents_code.model_config import save_custom_provider
+        # Preserve/persist the discovered model set when we have one; otherwise
+        # fall back to legacy behavior (default_model becomes the sole entry).
+        models_to_save: list[str] | None = (
+            list(self._discovered_models) if self._discovered_models else None
+        )
+        if (
+            models_to_save is not None
+            and default_model
+            and default_model not in models_to_save
+        ):
+            models_to_save.append(default_model)
         success = await asyncio.to_thread(
             save_custom_provider,
             provider_id=provider_id,
@@ -2327,15 +2388,261 @@ class CustomProviderModalScreen(ModalScreen[bool]):
             base_url=base_url,
             api_key=api_key,
             default_model=default_model,
+            models=models_to_save,
         )
 
         if success:
-            self.dismiss(success)
+            self.dismiss((success, provider_id, default_model))
         else:
             error_widget.update(
                 "Failed to save custom provider. Check permissions and try again."
             )
 
+    async def action_discover(self) -> None:
+        """Discover available models from the provider and let the user pick.
+
+        Calls the provider's OpenAI-compatible `/models` endpoint using the
+        current `base_url` and (optionally) `api_key`. When editing an existing
+        provider and no key is typed, falls back to the stored credential for
+        that provider so users don't have to retype it.
+        """
+        error_widget = self.query_one("#error-message", Static)
+        status_widget = self.query_one("#discovered-status", Static)
+        error_widget.update("")
+
+        base_url = self.query_one("#base-url", Input).value.strip()
+        api_key: str | None = (
+            self.query_one("#api-key", Input).value.strip() or None
+        )
+
+        if not base_url:
+            error_widget.update("Base URL is required before discovering models")
+            return
+        if not base_url.startswith(("http://", "https://")):
+            error_widget.update("Base URL must start with http:// or https://")
+            return
+
+        # Fallback: reuse the stored API key when editing and the field is blank.
+        if api_key is None and self.provider_id:
+            from deepagents_code import auth_store as _auth_store
+
+            try:
+                stored = _auth_store.get_stored_key(self.provider_id)
+            except RuntimeError:
+                stored = None
+            if stored:
+                api_key = stored
+
+        status_widget.update("Fetching models…")
+
+        try:
+            discovered = await asyncio.to_thread(
+                fetch_provider_models, base_url, api_key,
+            )
+        except ModelDiscoveryError as exc:
+            status_widget.update("")
+            error_widget.update(f"Discover failed: {exc}")
+            return
+        except Exception as exc:
+            logger.exception("Unexpected error while discovering models")
+            status_widget.update("")
+            error_widget.update(f"Discover failed: {exc}")
+            return
+
+        if not discovered:
+            status_widget.update("")
+            error_widget.update("No models returned by /models endpoint")
+            return
+
+        # Pre-select whatever is currently in the discovered list (or the
+        # default_model if nothing has been discovered yet) so the user can
+        # extend rather than start from zero.
+        default_model = self.query_one("#default-model", Input).value.strip()
+        preselected = set(self._discovered_models)
+        if default_model:
+            preselected.add(default_model)
+
+        def _on_selection(selected: list[str] | None) -> None:
+            if selected is None:
+                # User cancelled; leave state as-is
+                self._update_discovered_status()
+                return
+            self._discovered_models = list(selected)
+            # If the current default_model is not in the selection, adopt the
+            # first selected one as the new default so /model has something
+            # sensible to highlight.
+            default_input = self.query_one("#default-model", Input)
+            if default_input.value.strip() not in self._discovered_models:
+                default_input.value = (
+                    self._discovered_models[0] if self._discovered_models else ""
+                )
+            self._update_discovered_status()
+
+        self.app.push_screen(
+            DiscoverModelsScreen(discovered, preselected=preselected),
+            _on_selection,
+        )
+
+    def _update_discovered_status(self) -> None:
+        """Refresh the "N models selected" hint under Default Model."""
+        try:
+            status_widget = self.query_one("#discovered-status", Static)
+        except NoMatches:
+            return
+        count = len(self._discovered_models)
+        if count == 0:
+            status_widget.update("")
+        else:
+            status_widget.update(f"{count} model(s) selected via Discover")
+
     def action_cancel(self) -> None:
         """Cancel the form."""
         self.dismiss(False)
+
+
+class DiscoverModelsScreen(ModalScreen[list[str] | None]):
+    """Multi-select picker for models fetched from a provider's `/models` endpoint.
+
+    Returns the list of selected model IDs on confirm, or `None` on cancel.
+    """
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("enter", "submit", "Save selection", priority=True),
+        Binding("escape", "cancel", "Cancel", priority=True),
+        Binding("ctrl+a", "select_all", "Select all"),
+        Binding("ctrl+n", "select_none", "Select none"),
+    ]
+
+    CSS = """
+    DiscoverModelsScreen {
+        align: center middle;
+    }
+
+    DiscoverModelsScreen > Vertical {
+        background: $surface;
+        border: thick $primary;
+        width: 70;
+        height: 32;
+        padding: 1 2;
+    }
+
+    DiscoverModelsScreen .form-title {
+        text-align: center;
+        width: 100%;
+        height: 1;
+        margin-bottom: 1;
+    }
+
+    DiscoverModelsScreen SelectionList {
+        height: 1fr;
+        width: 100%;
+    }
+
+    DiscoverModelsScreen .form-hint {
+        text-style: dim;
+        height: 1;
+        margin-top: 1;
+    }
+
+    DiscoverModelsScreen .form-buttons {
+        layout: horizontal;
+        width: 100%;
+        height: 3;
+        margin-top: 1;
+    }
+
+    DiscoverModelsScreen .form-buttons-left {
+        width: 1fr;
+        height: 100%;
+        align: left middle;
+    }
+
+    DiscoverModelsScreen .form-buttons-right {
+        width: 1fr;
+        height: 100%;
+        align: right middle;
+    }
+
+    DiscoverModelsScreen Button {
+        margin-left: 1;
+    }
+    """
+
+    def __init__(
+        self,
+        models: list[str],
+        preselected: set[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the picker.
+
+        Args:
+            models: The full list of discovered model IDs.
+            preselected: Optional set of IDs that should start pre-checked.
+            **kwargs: Extra keyword arguments forwarded to `ModalScreen`.
+        """
+        super().__init__(**kwargs)
+        self._models = list(models)
+        self._preselected = set(preselected or ())
+
+    def compose(self) -> ComposeResult:
+        """Compose the picker widgets.
+
+        Yields:
+            Textual widgets that render the selection list and buttons.
+        """
+        with Vertical():
+            yield Static(
+                f"Discover Models — {len(self._models)} found "
+                "(space to toggle)",
+                classes="form-title",
+            )
+            selection_items = [
+                (mid, mid, mid in self._preselected) for mid in self._models
+            ]
+            yield SelectionList[str](*selection_items, id="model-selection")
+            yield Static(
+                "Ctrl+A select all · Ctrl+N select none · "
+                "Enter to save · Esc to cancel",
+                classes="form-hint",
+            )
+            with Container(classes="form-buttons"):
+                with Container(classes="form-buttons-left"):
+                    yield Button(
+                        "Cancel", id="discover-cancel-btn", variant="default",
+                    )
+                with Container(classes="form-buttons-right"):
+                    yield Button(
+                        "Save selection",
+                        id="discover-save-btn",
+                        variant="primary",
+                    )
+
+    def on_mount(self) -> None:
+        """Focus the selection list once mounted."""
+        self.query_one(SelectionList).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Route button presses to the corresponding actions."""
+        if event.button.id == "discover-cancel-btn":
+            self.action_cancel()
+        elif event.button.id == "discover-save-btn":
+            self.action_submit()
+
+    def action_submit(self) -> None:
+        """Return the current selection to the caller."""
+        selection = self.query_one(SelectionList)
+        selected: list[str] = list(selection.selected)
+        self.dismiss(selected)
+
+    def action_cancel(self) -> None:
+        """Dismiss the picker without changing the caller's state."""
+        self.dismiss(None)
+
+    def action_select_all(self) -> None:
+        """Check every option in the selection list."""
+        self.query_one(SelectionList).select_all()
+
+    def action_select_none(self) -> None:
+        """Uncheck every option in the selection list."""
+        self.query_one(SelectionList).deselect_all()

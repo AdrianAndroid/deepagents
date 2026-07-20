@@ -36,7 +36,13 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
-from deepagents_code._version import PYPI_URL, SDK_PYPI_URL, USER_AGENT, __version__
+from deepagents_code._version import (
+    DISTRIBUTION_NAME,
+    PYPI_URL,
+    SDK_PYPI_URL,
+    USER_AGENT,
+    __version__,
+)
 from deepagents_code.model_config import DEFAULT_CONFIG_PATH, DEFAULT_STATE_DIR
 
 logger = logging.getLogger(__name__)
@@ -81,7 +87,7 @@ _RELEASE_PRERELEASE_DEPS_KEY = "release_requires_prereleases"
 
 InstallMethod = Literal["uv", "brew", "other", "unknown"]
 
-FALLBACK_UPGRADE_COMMAND = "uv tool install -U deepagents-code"
+FALLBACK_UPGRADE_COMMAND = f"uv tool install -U {DISTRIBUTION_NAME}"
 """Generic upgrade hint used when install-method detection fails.
 
 Callers that surface an upgrade command in user-facing text should prefer
@@ -94,6 +100,7 @@ showing a user the `upgrade` form would hand them a command that silently
 stays on the old version for a pinned install. Execution paths still refuse
 unrecognized installs instead of updating a separate environment.
 """
+
 
 _UPGRADE_COMMANDS: dict[InstallMethod, str] = {
     # Use `uv tool install -U` instead of `uv tool upgrade`: the latter
@@ -108,7 +115,7 @@ _UPGRADE_COMMANDS: dict[InstallMethod, str] = {
     # `dependency_refresh_command` builds the inverse command for the
     # explicit "stay on this version, refresh deps" flow.
     "uv": FALLBACK_UPGRADE_COMMAND,
-    "brew": "brew upgrade deepagents-code",
+    "brew": f"brew upgrade {DISTRIBUTION_NAME}",
 }
 """Upgrade commands keyed by install method.
 
@@ -190,7 +197,7 @@ def is_installed_version_at_least(version: str) -> bool:
     try:
         from importlib.metadata import PackageNotFoundError, version as pkg_version
 
-        installed = _parse_version(pkg_version("deepagents-code"))
+        installed = _parse_version(pkg_version(DISTRIBUTION_NAME))
         target = _parse_version(version)
     except (InvalidVersion, PackageNotFoundError):
         return False
@@ -445,8 +452,8 @@ def get_latest_version(
     except ImportError:
         logger.warning(
             "requests package not installed — update checks disabled. "
-            "Install with: uv tool install --reinstall -U deepagents-code "
-            "--with requests"
+            "Install with: uv tool install --reinstall -U "
+            f"{DISTRIBUTION_NAME} --with requests"
         )
         return cached_version
 
@@ -1196,10 +1203,11 @@ def upgrade_command(
             cmd += " --prerelease allow"
         return cmd
     if include_prereleases:
-        return _UV_PRERELEASE_UPGRADE_COMMAND
+        return f"{FALLBACK_UPGRADE_COMMAND} --prerelease allow"
     if method is None:
         method = detect_install_method()
-    return _UPGRADE_COMMANDS.get(method, FALLBACK_UPGRADE_COMMAND)
+    base = _UPGRADE_COMMANDS.get(method, FALLBACK_UPGRADE_COMMAND)
+    return base
 
 
 def prerelease_upgrade_supported(
@@ -1232,7 +1240,7 @@ _DEPENDENCY_REFRESH_UNSUPPORTED: dict[InstallMethod, str] = {
     "unknown": "Editable install detected — skipping dependency refresh.",
     "brew": (
         "Homebrew install detected — dependency-only refresh is not "
-        "supported without upgrading deepagents-code."
+        f"supported without upgrading {DISTRIBUTION_NAME}."
     ),
     "other": (
         "Unsupported install method detected — cannot refresh dependencies "
@@ -1325,7 +1333,7 @@ class ShadowedDcode:
         Keeps the `dcode` entry-point name owned by the type rather than
         re-derived at each call site (mirrors `DependencyChange.kind`).
         """
-        return self.upgraded_bin_dir / "dcode"
+        return self.upgraded_bin_dir / DISTRIBUTION_NAME
 
 
 def _uv_tool_bin_dir() -> Path | None:
@@ -1428,7 +1436,7 @@ def detect_shadowed_dcode() -> ShadowedDcode | None:
         return None
     # Check every supported entry point. One healthy command name does not
     # prove another command name cannot still be shadowed earlier on PATH.
-    for name in ("dcode", "deepagents-code"):
+    for name in (DISTRIBUTION_NAME,):
         resolved = shutil.which(name)
         if resolved is None:
             continue
@@ -1511,15 +1519,15 @@ def format_shadowed_dcode_warning(shadow: ShadowedDcode) -> str:
     fix_command = format_shadowed_dcode_fix_command(shadow)
     indented_command = fix_command.replace("\n", "\n  ")
     return (
-        "Update installed, but another `dcode` is earlier on your PATH and "
+        f"Update installed, but another `{DISTRIBUTION_NAME}` is earlier on your PATH and "
         "will keep running the old version on relaunch:\n"
         f"  Shadowing binary: {shadow.shadowing_bin}\n"
         f"  Upgraded shim:    {shadow.upgraded_bin}\n"
-        "After closing dcode, run this to make the upgraded shim win in this "
+        f"After closing {DISTRIBUTION_NAME}, run this to make the upgraded shim win in this "
         "terminal:\n"
         f"  {indented_command}\n"
-        "Then relaunch dcode. To make the fix permanent, add the PATH change "
-        "to your shell profile, or uninstall the older dcode if you no longer "
+        f"Then relaunch {DISTRIBUTION_NAME}. To make the fix permanent, add the PATH change "
+        f"to your shell profile, or uninstall the older {DISTRIBUTION_NAME} if you no longer "
         "need it."
     )
 
@@ -1805,8 +1813,8 @@ async def perform_upgrade(
     if method == "other":
         return False, (
             "Unsupported install method detected — cannot auto-update without "
-            "knowing which environment provides `dcode`. Reinstall with "
-            "`uv tool install -U deepagents-code` or upgrade with the package "
+            f"knowing which environment provides `{DISTRIBUTION_NAME}`. Reinstall with "
+            f"`uv tool install -U {DISTRIBUTION_NAME}` or upgrade with the package "
             "manager originally used for this install."
         )
     resolved_include_prereleases = _resolve_include_prereleases(include_prereleases)
@@ -2188,7 +2196,7 @@ def _uv_tool_python(tool_root: Path | None = None) -> str | None:
 
 def _uv_tool_with_packages(
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     tool_root: Path | None = None,
 ) -> tuple[str, ...]:
     """Return package names recorded as uv tool `--with` requirements.
@@ -2287,11 +2295,11 @@ def _dcode_extras_requirement(
         try:
             parsed = Version(version)
         except InvalidVersion as exc:
-            msg = f"Invalid deepagents-code version {version!r}"
+            msg = f"Invalid {DISTRIBUTION_NAME} version {version!r}"
             raise ValueError(msg) from exc
         version_suffix = f"=={parsed}"
     extras_part = f"[{','.join(names)}]" if names else ""
-    requirement = f"deepagents-code{extras_part}{version_suffix}"
+    requirement = f"{DISTRIBUTION_NAME}{extras_part}{version_suffix}"
     if not names and version is None:
         return requirement
     return shlex.quote(requirement)
@@ -2347,7 +2355,7 @@ def _uv_tool_install_command(
     try:
         requirement = _dcode_extras_requirement(extras, version=version)
     except ValueError as exc:
-        if str(exc).startswith("Invalid deepagents-code version"):
+        if str(exc).startswith(f"Invalid {DISTRIBUTION_NAME} version"):
             raise
         msg = f"Distribution metadata yielded an invalid extra name: {exc}"
         raise ExtrasIntrospectionError(msg) from exc
@@ -2372,7 +2380,7 @@ def _uv_tool_install_command(
 def upgrade_install_command(
     *,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     version: str | None = None,
 ) -> str:
     """Return the uv command that upgrades dcode while clearing stale pins.
@@ -2420,7 +2428,7 @@ def dependency_refresh_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the uv command that refreshes deps for the current dcode version.
 
@@ -2452,7 +2460,7 @@ def dependency_refresh_dry_run_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     python: str | None = None,
 ) -> str:
     """Return the uv command that plans a dependency refresh without installing.
@@ -2496,7 +2504,7 @@ def dependency_refresh_dry_run_command(
 def install_package_command(
     package: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the shell command that adds a package to the dcode tool env.
 
@@ -2578,7 +2586,7 @@ def install_extras_command(extras: Iterable[str]) -> str:
 def install_extra_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the install-script command that adds `extra` to dcode.
 
@@ -2641,7 +2649,7 @@ def install_extra_recovery_command(extra: str) -> str:
 def _install_extra_uv_tool_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the receipt-preserving uv command that installs one dcode extra.
 
@@ -2690,7 +2698,7 @@ def editable_extra_hint(extra: str) -> str:
     """
     return (
         "Rerun your `uv tool install --editable` command with "
-        f"`--with 'deepagents-code[{extra}]'` added so the extra is "
+        f"`--with '{DISTRIBUTION_NAME}[{extra}]'` added so the extra is "
         "resolved against the editable source."
     )
 

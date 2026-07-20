@@ -601,6 +601,17 @@ This repository require actions to be pinned to a full-length commit SHA. Attemp
 - **Documentation:** https://docs.langchain.com/oss/python/deepagents/overview and source at https://github.com/langchain-ai/docs or `../docs/`. Prefer the local install and use file search tools for best results. If needed, use the docs MCP server as defined in `.mcp.json` for programmatic access.
 - **Contributing Guide:** [Contributing Guide](https://docs.langchain.com/oss/python/contributing/overview)
 
+## 发布默认目标
+
+当用户提到 "发布"、"发版"、"publish"、"release"、"上传新版本"、"打包发布" 等相关操作，且**没有明确指定包名或路径**时，默认目标为 `libs/code/`（分发名 `zjcode`，发布到公开 PyPI `https://pypi.org/`）。
+
+- 默认发布脚本：`libs/code/run-publish.sh`
+- 默认版本 bump 工具：`libs/code/bump-version.py`（会同步 `pyproject.toml` / `_version.py` / `.release-please-manifest.json` 三处）
+- 默认凭据来源：环境变量 `UV_PUBLISH_TOKEN` 或 `~/.pypirc` 的 `[pypi]` section
+- Test PyPI 试跑：`UV_PUBLISH_TOKEN=<test-token> ./run-publish.sh --publish-url https://test.pypi.org/legacy/`
+
+如果用户想发布 monorepo 里的其他包（`deepagents`、`deepagents-cli`、`deepagents-acp`、`deepagents-talon`、partner 包等），必须在指令中显式指名，否则一律按 `libs/code/zjcode` 处理。上游 langchain-ai 的 release-please 自动化链路在 fork 上默认不启用，用户手工发布 `zjcode` 时也不要动 release-please 相关工作流。
+
 ## 文档留存规则
 1. 每轮问答实时留存要求：每一轮问答（单次 user → assistant 交互）结束后，必须**主动、自动**立即对该轮问答内容进行结构化总结，提取有价值的信息（需求说明、技术方案、问题排查过程、开发指南、架构分析、决策记录、用户反馈等）追加保存为 Markdown 文档，不得等到整个会话结束再一次性总结，避免遗漏细节。**禁止在保存前询问用户是否需要保存**——这是默认行为，无需确认；即使用户没有明确要求也必须保存。
 2. 统一存储路径：所有问答/会话总结文档必须保存到项目根目录的 `doc/` 文件夹中。
@@ -615,3 +626,11 @@ This repository require actions to be pinned to a full-length commit SHA. Attemp
 ---
 ```
 分隔符需要独占三行，上下各一条横线，中间是带 emoji 的会话标识，确保视觉上足够明显，长文档中可快速定位不同会话的内容边界。
+
+7. 单轮结束标记：**该标记由 dcode 客户端在每轮问答的 finally 阶段自动追加，模型自身不需要每轮手动输出这行**。作用是记录本轮墙钟耗时、finish_reason 归一化后的结束状态（`completed` / `length_capped` / `user_interrupted` / `stream_error` 等 10 类），用于排查“回答没显示完就结束”这类被截断场景。以下条目仅作为**手工整理 doc 或在非 dcode 环境下补齐时**的排版参考：
+   - 格式统一为：`> ⏹ 结束状态：<emoji> <标签> | ⏱ 总耗时：<HH:MM:SS 或 Xs> | 🕒 结束时间：<YYYY-MM-DD HH:MM:SS>`
+   - `<状态>` 取值：`✅ 正常结束`（任务完整完成）/ `✂️ 输出被截断(max_tokens)`（模型生成到达上限）/ `⏸ 用户中断`（用户主动 stop / Ctrl+C）/ `🚫 工具被拒绝`（HITL reject）/ `⚠️ 流异常` / `⏱ 超时` / `❔ 疑似截断(无 finish_reason)`。
+   - `<总耗时>` 指从本轮 user 消息发出到 assistant 最终回复完成的墙钟时间。
+   - 该标记应位于本轮所有内容之后、下一轮标题或分隔符之前，作为单轮记录的最后一行，且使用引用块（`> ` 前缀）与正文区分。
+   - 若为异常/中断情况，可另起一行简要说明失败原因或中断上下文，供复盘参考。
+   - 全量审计日志同时写入 `~/.deepagents/turn_end_log.jsonl`（每轮一行 JSON）；当项目根存在 `doc/YYYY-MM-DD-*.md` 时会自动追加到当天 mtime 最新的那份文档尾部。

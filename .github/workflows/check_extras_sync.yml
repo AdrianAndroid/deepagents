@@ -9,7 +9,7 @@ on:
       - ".github/scripts/check_extras_sync.py"
       - ".github/workflows/check_extras_sync.yml"
   push:
-    branches: [main]
+    branches: [main, learn]
     paths:
       - "libs/**/pyproject.toml"
       - ".github/scripts/check_extras_sync.py"

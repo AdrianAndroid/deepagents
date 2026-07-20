@@ -260,10 +260,9 @@ flow. Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` as enabled.
 """
 
 PYPI_URL = "DEEPAGENTS_CODE_PYPI_URL"
-"""Override the JSON API URL used to check for `deepagents-code` updates.
+"""Override the JSON API URL used to check for `zjcode` updates.
 
-Defaults (in `_version.py`) to the private static mirror. Set to
-`https://pypi.org/pypi/deepagents-code/json` to check public PyPI instead.
+Defaults (in `_version.py`) to `https://pypi.org/pypi/zjcode/json`.
 """
 
 RESTARTED_AFTER_UPDATE = "DEEPAGENTS_CODE_RESTARTED_AFTER_UPDATE"

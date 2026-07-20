@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>DeepAgents Code · 私有仓库安装指引</title>
+<title>zjcode · 安装指引</title>
 <style>
 :root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2129;--border:#30363d;
 --text:#e6edf3;--muted:#9198a1;--accent:#20a53a;--accent-hover:#2ec14a;
@@ -80,13 +80,13 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 
 <header>
 <div>
-<h1>DeepAgents Code<span class="tag">Private PyPI</span></h1>
-<div class="meta" style="margin-top:6px">终端 AI 编码代理 · 命令行工具 <code>dcode</code></div>
+<h1>zjcode<span class="tag">PyPI</span></h1>
+<div class="meta" style="margin-top:6px">终端 AI 编码代理 · 命令行工具 <code>zjcode</code>(基于 deepagents-code 私有品牌化 fork)</div>
 </div>
-<div class="meta">私有仓库: <code>http://8.152.204.58:48080</code></div>
+<div class="meta">公开 PyPI: <a href="https://pypi.org/project/zjcode/" target="_blank"><code>pypi.org/project/zjcode</code></a></div>
 </header>
 
-<p>本页说明如何从内网私有 PyPI 仓库安装 <code class="inline">deepagents-code</code>(命令 <code class="inline">dcode</code>)。推荐使用 <code class="inline">uv tool</code> 隔离安装,不污染系统 Python。</p>
+<p>本页说明如何从公开 PyPI 安装 <code class="inline">zjcode</code>(命令 <code class="inline">zjcode</code>)。推荐使用 <code class="inline">uv tool</code> 隔离安装,不污染系统 Python。</p>
 
 <h2><span class="num">1</span>一键安装</h2>
 <p>请根据你的操作系统选择:</p>
@@ -105,7 +105,7 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <a class="btn primary" href="install.sh" download>下载 install.sh</a>
 <a class="btn" href="install.sh" target="_blank">查看源码</a>
 </div>
-<div class="callout">脚本会自动检测并安装 <code class="inline">uv</code>,然后通过 <code class="inline">uv tool install</code> 从私有仓库拉取 <code class="inline">deepagents-code</code>。要求 Python 3.11+(uv 会自动下载合适的 Python)。</div>
+<div class="callout">脚本会自动检测并安装 <code class="inline">uv</code>,然后通过 <code class="inline">uv tool install</code> 从公开 PyPI 拉取 <code class="inline">zjcode</code>(附加 <code class="inline">--prerelease=allow</code>,因为依赖 <code class="inline">deepagents==0.7.0a7</code> 是 alpha 预发布)。要求 Python 3.11+(uv 会自动下载合适的 Python)。</div>
 </div>
 
 <div class="tab-panel" id="install-macos">
@@ -135,15 +135,12 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <h2><span class="num">2</span>手动安装(所有平台)</h2>
 <div class="card">
 <p>若你已经装好 <code class="inline">uv</code>,可跳过脚本直接执行:</p>
-<div class="code-block"><span class="cmd">uv tool install deepagents-code \
-  --index-url http://admin:admin@8.152.204.58:48080/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  --index-strategy unsafe-best-match \
-  --force</span><button class="copy-btn">复制</button></div>
-<p style="margin-top:14px">Windows PowerShell 请用反引号续行,或直接写成单行:</p>
-<div class="code-block"><span class="cmd">uv tool install deepagents-code --index-url http://admin:admin@8.152.204.58:48080/simple/ --extra-index-url https://pypi.org/simple/ --index-strategy unsafe-best-match --force</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">uv tool install zjcode --prerelease=allow</span><button class="copy-btn">复制</button></div>
+<p style="margin-top:14px">升级到最新版:</p>
+<div class="code-block"><span class="cmd">uv tool upgrade zjcode</span><button class="copy-btn">复制</button></div>
 <p style="margin-top:14px">安装完成后,任何目录下运行:</p>
-<div class="code-block"><span class="cmd">dcode</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">zjcode</span><button class="copy-btn">复制</button></div>
+<div class="callout" style="margin-top:12px"><code class="inline">--prerelease=allow</code> 是必须的:<code class="inline">zjcode</code> 依赖 <code class="inline">deepagents==0.7.0a7</code>(alpha 预发布),uv 默认拒装预发布依赖。</div>
 </div>
 
 <h2><span class="num">3</span>卸载</h2>
@@ -163,7 +160,7 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <a class="btn" href="uninstall.sh" target="_blank">查看源码</a>
 </div>
 <p style="margin-top:10px">或直接:</p>
-<div class="code-block"><span class="cmd">uv tool uninstall deepagents-code</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
 </div>
 
 <div class="tab-panel" id="uninstall-macos">
@@ -173,7 +170,7 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <a class="btn" href="uninstall.sh" target="_blank">查看源码</a>
 </div>
 <p style="margin-top:10px">或直接:</p>
-<div class="code-block"><span class="cmd">uv tool uninstall deepagents-code</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
 </div>
 
 <div class="tab-panel" id="uninstall-windows">
@@ -183,7 +180,7 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <a class="btn" href="uninstall.ps1" target="_blank">查看源码</a>
 </div>
 <p style="margin-top:10px">或直接:</p>
-<div class="code-block"><span class="cmd">uv tool uninstall deepagents-code</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">uv tool uninstall zjcode</span><button class="copy-btn">复制</button></div>
 </div>
 
 </div>
@@ -194,10 +191,8 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <table>
 <thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><code>PYPI_HOST</code></td><td>8.152.204.58:48080</td><td>私有仓库地址</td></tr>
-<tr><td><code>PYPI_USER</code></td><td>admin</td><td>用户名</td></tr>
-<tr><td><code>PYPI_PASSWORD</code></td><td>admin</td><td>密码</td></tr>
 <tr><td><code>PKG_VERSION</code></td><td><em>latest</em></td><td>指定版本,例 <code>0.0.2</code></td></tr>
+<tr><td><code>INDEX_URL</code></td><td>https://pypi.org/simple/</td><td>PyPI 索引地址</td></tr>
 </tbody>
 </table>
 <p style="margin-top:12px">Linux / macOS 示例:</p>
@@ -206,25 +201,16 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 <div class="code-block"><span class="cmd">$env:PKG_VERSION="0.0.2"; irm http://8.152.204.58:40080/install.ps1 | iex</span><button class="copy-btn">复制</button></div>
 </div>
 
-<h2><span class="num">5</span>版本检查镜像(JSON API)</h2>
+<h2><span class="num">5</span>版本检查</h2>
 <div class="card">
-<p><code class="inline">dcode</code> 内置的版本检查会请求 Warehouse JSON API。私有 <code class="inline">pypiserver</code>(48080) 只提供 Simple Index,没有该接口,因此本站(40080)额外托管了兼容的静态 JSON:</p>
-<table>
-<thead><tr><th>用途</th><th>地址</th></tr></thead>
-<tbody>
-<tr><td>主程序版本检查</td><td><code>http://8.152.204.58:40080/pypi/deepagents-code/json</code></td></tr>
-<tr><td>SDK 发布时间</td><td><code>http://8.152.204.58:40080/pypi/deepagents/json</code></td></tr>
-</tbody>
-</table>
-<p style="margin-top:12px">这两个 JSON 由 <code class="inline">libs/code/run-build-upload.sh</code> 在发布时自动生成(读取私有源当前版本列表)并部署到本站,<strong>免认证</strong>访问。删除旧版本后重新运行该脚本即可同步。</p>
-<div class="callout">客户端默认已指向以上地址。如需切回公网 PyPI,可设置环境变量:<br>
-<code class="inline">DEEPAGENTS_CODE_PYPI_URL=https://pypi.org/pypi/deepagents-code/json</code></div>
+<p><code class="inline">zjcode</code> 内置的版本检查会直接请求公开 PyPI 的 Warehouse JSON API:</p>
+<div class="code-block"><span class="cmd">https://pypi.org/pypi/zjcode/json</span><button class="copy-btn">复制</button></div>
 <div class="callout warn" style="margin-top:12px">可编辑(<code class="inline">--editable</code>)安装下自动更新始终禁用,版本检查仅用于"有新版可用"提示,不会自动下载重启。</div>
 </div>
 
 <h2><span class="num">6</span>常见问题</h2>
 <div class="card">
-<p><strong>找不到 <code class="inline">dcode</code> 命令</strong></p>
+<p><strong>找不到 <code class="inline">zjcode</code> 命令</strong></p>
 <p>Linux / macOS —— 把 <code class="inline">uv</code> 的 bin 目录加入 PATH:</p>
 <div class="code-block"><span class="cmd">echo 'export PATH="$(uv tool dir --bin):$PATH"' >> ~/.zshrc && source ~/.zshrc</span><button class="copy-btn">复制</button></div>
 <p style="margin-top:12px">Windows —— 永久加入用户 PATH:</p>
@@ -232,18 +218,18 @@ border-radius:0 10px 10px 10px;padding:18px 20px;}
 
 <p style="margin-top:14px"><strong>验证安装</strong></p>
 <div class="code-block"><span class="cmd">uv tool list
-dcode --version</span><button class="copy-btn">复制</button></div>
+zjcode --version</span><button class="copy-btn">复制</button></div>
 
 <p style="margin-top:14px"><strong>升级到最新版本</strong></p>
-<div class="code-block"><span class="cmd">uv tool upgrade deepagents-code</span><button class="copy-btn">复制</button></div>
+<div class="code-block"><span class="cmd">uv tool upgrade zjcode</span><button class="copy-btn">复制</button></div>
 
-<div class="callout warn" style="margin-top:14px">
-私有仓库当前使用 HTTP + 明文 Basic 认证(admin/admin),仅供内网使用,请勿在公网环境暴露。
+<div class="callout" style="margin-top:14px">
+<code class="inline">zjcode</code> 已发布到公开 PyPI(<a href="https://pypi.org/project/zjcode/" target="_blank">pypi.org/project/zjcode</a>),任何人都可安装。因依赖 <code class="inline">deepagents</code> 的 alpha 预发布,首次安装必须带 <code class="inline">--prerelease=allow</code>。
 </div>
 </div>
 
 <footer>
-DeepAgents Code · 私有分发页 ·
+zjcode · 安装引导页 ·
 <a href="install.sh">install.sh</a> ·
 <a href="install.ps1">install.ps1</a> ·
 <a href="uninstall.sh">uninstall.sh</a> ·

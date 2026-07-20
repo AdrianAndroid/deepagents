@@ -94,3 +94,81 @@
 
 #### 后续 TODO
 - 如需深入某个子系统（如 MCP 集成、沙箱架构、agent graph 编译流程等），可进一步分析
+
+---
+✨ ✨ ✨ ✨ ✨ ✨ 【 NEW SESSION 】 ✨ ✨ ✨ ✨ ✨ ✨
+---
+
+### 轮次 1 - 再次请求项目分析（快速概览）
+
+#### 用户提问要点
+再次请求：分析 `libs/code` 项目（deepagents-code）。
+
+#### 结论/方案（相对上次的增量与校准）
+
+**版本状态更新**
+- `pyproject.toml` 中当前 `version = "0.0.11"`（上次快照为 `0.0.4`）
+- SDK pin 已更新为 `deepagents==0.7.0a7`（上次为 `0.7.0a3`）
+- 依赖新增/收紧：`langchain>=1.3.13,<2.0.0`、`langgraph-runtime-inmem>=0.31.0`、`textual>=8.2.7,<9.0.0`（含 `_textual_patches.py` 上游 workaround）、`langchain-quickjs>=0.3.2,<0.4.0`、`deepagents-acp>=0.0.8`
+- 保持 3.11–3.14 Python 支持、hatchling 构建、uv 管理
+
+**顶层目录（校准后）**
+```
+libs/code/
+├── deepagents_code/          # 主包源码
+├── examples/
+├── doc/                      # 项目文档（含本文档）
+├── images/                   # README 图
+├── scripts/
+├── pyproject.toml
+├── Makefile
+├── ARCHITECTURE.md / DEVELOPMENT.md / COMMANDS.md
+├── AGENTS.md / CHANGELOG.md
+├── bump-version.py / hatch_build.py
+├── run-*.sh, run-*.ps1, dcode-dev.ps1
+```
+
+**运行时架构（沿用 ARCHITECTURE.md）**
+- Terminal Client（Textual TUI 或 headless）↔ Agent Server（LangGraph graph）
+- 两进程分离；client 只负责渲染/输入/审批，server 负责模型 + tools + memory + skills + sandbox
+- 通过 langgraph-sdk streaming 协议通信，用 LangGraph 的 checkpoint（sqlite）实现 resume
+
+**`deepagents_code/` 关键模块分组（本次汇总）**
+
+| 分组 | 文件 |
+|---|---|
+| CLI 入口 & 运行 | `main.py`（≈3956 行）、`__main__.py`、`app.py`、`app.tcss` |
+| Agent 组装 | `agent.py`、`server_graph.py`、`_server_config.py`、`subagents.py`、`hooks.py` |
+| 客户端 | `client/`（含 `launch/`、`commands/`、`non_interactive.py`、`remote_client.py`） |
+| 命令 / 提示词 | `command_registry.py`（生成 `COMMANDS.md`）、`system_prompt.md`、`default_agent_prompt.md`、`todo_list_prompt.md` |
+| 模型 & 鉴权 | `model_config.py`、`configurable_model.py`、`auth_store.py`、`auth_display.py`、`reasoning_effort.py` |
+| Tools & 展示 | `tools.py`、`tool_catalog.py`、`tool_display.py`、`_tool_stream.py`、`managed_tools.py`、`file_ops.py`、`editor.py` |
+| MCP 集成 | `mcp_config.py`、`mcp_tools.py`、`mcp_auth.py`、`mcp_login_service.py`、`mcp_oauth_ui.py`、`mcp_trust.py`、`mcp_disabled.py`、`mcp_providers/` |
+| Skills | `skills/`、`built_in_skills/`（内置 `remember`、`skill-creator`） |
+| Sandbox 集成 | `integrations/`（`sandbox_config.py`、`sandbox_factory.py`、`sandbox_provider.py`、`sandbox_registry.py`、`openai_codex.py`） |
+| 会话 & 恢复 | `sessions.py`、`resume_state.py`、`state_migration.py`、`_session_stats.py` |
+| 审批 / HITL | `approval_mode.py`、`ask_user.py`、`_ask_user_types.py` |
+| 目标 / rubric | `goal_rubric.py`、`goal_tools.py`、`reliable_rubric.py` |
+| UI 组件 | `tui/`、`widgets/`、`ui.py`、`output.py`、`input.py`、`paste_collapse.py`、`formatting.py`、`theme.py`、`iterm_cursor_guide.py`、`notifications.py`、`clipboard.py`、`media_utils.py` |
+| 终端能力 & 安全 | `terminal_capabilities.py`、`terminal_escape.py`、`unicode_security.py`、`memory_guard.py` |
+| 环境 / 配置 | `_env_vars.py`、`_paths.py`、`_constants.py`、`config.py`、`config_manifest.py`、`local_context.py`、`project_utils.py`、`extras_info.py`、`onboarding.py`、`doctor.py`、`update_check.py` |
+| 内部工具 | `_git.py`、`_debug.py`、`_debug_buffer.py`、`_startup_error.py`、`_testing_models.py`、`_fake_models.py`、`_textual_patches.py`、`_tool_stream.py`、`offload.py`、`event_bus.py`、`_cli_context.py` |
+
+**特性能力（沿用 README，无变化）**
+交互 TUI + streaming、会话 resume、Tavily web search、远程 sandbox（LangSmith / AgentCore / Daytona / Modal / Runloop / Vercel / QuickJS）、持久 memory、自定义 skills（progressive disclosure）、headless 模式、HITL 审批、MCP 集成、ACP 适配。
+
+**安全模型（沿用 THREAT_MODEL.md 与 README）**
+默认信任 CWD；HITL 只拦模型请求的 tool call；不信任仓库建议搭配远程 sandbox。
+
+**开发工具链**
+- `uv` + `Makefile`：`test / lint / format / bench / commands-catalog / commands-catalog-check` 等
+- `pre-commit`：conventional commit、lockfile、SDK-pin、命令目录再生成、Textual patch 测试
+- 独立版本，`release-please` 驱动 changelog / release
+- 测试：`tests/unit_tests/`（无网络）+ `tests/integration_tests/`
+
+#### 关键操作或文件改动
+仅新增本文档追加，未改动源码。
+
+#### 后续 TODO
+- 需要时可深入 `main.py` 的启动流程、`server_graph.py` 中间件组装、`integrations/` 沙箱注册机制或 `client/launch/` 客户端拉起流程
+

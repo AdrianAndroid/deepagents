@@ -657,7 +657,7 @@ class TestReleaseRequiresPrereleases:
             ),
         ) as get_mock:
             assert release_requires_prereleases("1.1.0") is True
-        assert get_mock.call_args.args[0].endswith("/deepagents-code/1.1.0/json")
+        assert get_mock.call_args.args[0].endswith("/zjcode/1.1.0/json")
         data = json.loads(cache_file.read_text())
         assert data["release_requires_prereleases"]["1.1.0"] is True
 
@@ -1525,14 +1525,14 @@ class TestDetectShadowedDcode:
         """Non-uv installs cannot describe an 'upgraded shim' location."""
         uv_bin = tmp_path / "bin"
         uv_bin.mkdir()
-        (uv_bin / "dcode").write_text("")
+        (uv_bin / "zjcode").write_text("")
         with (
             patch(
                 "deepagents_code.update_check.detect_install_method",
                 return_value="brew",
             ),
             patch.dict(os.environ, {"UV_TOOL_BIN_DIR": str(uv_bin)}),
-            patch("shutil.which", return_value=str(uv_bin / "dcode")),
+            patch("shutil.which", return_value=str(uv_bin / "zjcode")),
         ):
             assert detect_shadowed_dcode() is None
 
@@ -1540,7 +1540,7 @@ class TestDetectShadowedDcode:
         """The happy path: PATH points at the directory uv installs into."""
         uv_bin = tmp_path / "bin"
         uv_bin.mkdir()
-        shim = uv_bin / "dcode"
+        shim = uv_bin / "zjcode"
         shim.write_text("")
         with (
             patch(
@@ -1553,43 +1553,14 @@ class TestDetectShadowedDcode:
             assert detect_shadowed_dcode() is None
 
     def test_checks_deepagents_code_when_dcode_is_healthy(self, tmp_path) -> None:
-        """A healthy `dcode` must not hide a shadowed `deepagents-code`."""
-        uv_bin = tmp_path / "uv-bin"
-        uv_bin.mkdir()
-        (uv_bin / "dcode").write_text("")
-        (uv_bin / "deepagents-code").write_text("")
-        stale_bin = tmp_path / "stale-bin"
-        stale_bin.mkdir()
-        stale = stale_bin / "deepagents-code"
-        stale.write_text("")
-
-        def _which(name: str) -> str | None:
-            if name == "dcode":
-                return str(uv_bin / "dcode")
-            if name == "deepagents-code":
-                return str(stale)
-            return None
-
-        with (
-            patch(
-                "deepagents_code.update_check.detect_install_method",
-                return_value="uv",
-            ),
-            patch.dict(os.environ, {"UV_TOOL_BIN_DIR": str(uv_bin)}),
-            patch("shutil.which", side_effect=_which),
-        ):
-            shadow = detect_shadowed_dcode()
-
-        assert shadow == ShadowedDcode(
-            shadowing_bin=stale,
-            upgraded_bin_dir=uv_bin.resolve(),
-        )
+        """Removed: single-binary CLI has no fallback name to check."""
+        pytest.skip("collapsed to single-binary shadow detection")
 
     def test_returns_none_for_uv_symlink_shim(self, tmp_path) -> None:
         """A uv-style symlink shim under the user bin dir is NOT a shadow.
 
         On a healthy uv tool install, `~/.local/bin/dcode` is a symlink to
-        `~/.local/share/uv/tools/deepagents-code/bin/dcode`. If we followed
+        `~/.local/share/uv/tools/zjcode/bin/dcode`. If we followed
         that symlink the parent would be the tool venv's internal bin dir,
         which differs from uv's user-facing bin dir and would make every
         healthy install look shadowed. The detector must compare the
@@ -1597,11 +1568,11 @@ class TestDetectShadowedDcode:
         """
         uv_bin = tmp_path / "uv-bin"
         uv_bin.mkdir()
-        tool_internal_bin = tmp_path / "tools" / "deepagents-code" / "bin"
+        tool_internal_bin = tmp_path / "tools" / "zjcode" / "bin"
         tool_internal_bin.mkdir(parents=True)
-        real_entry_point = tool_internal_bin / "dcode"
+        real_entry_point = tool_internal_bin / "zjcode"
         real_entry_point.write_text("")
-        shim = uv_bin / "dcode"
+        shim = uv_bin / "zjcode"
         shim.symlink_to(real_entry_point)
 
         with (
@@ -1625,14 +1596,14 @@ class TestDetectShadowedDcode:
         """
         uv_bin = tmp_path / "uv-bin"
         uv_bin.mkdir()
-        (uv_bin / "dcode").write_text("")  # the upgraded shim uv would install
+        (uv_bin / "zjcode").write_text("")  # the upgraded shim uv would install
         stale_bin = tmp_path / "stale-bin"
         stale_bin.mkdir()
-        stale = stale_bin / "dcode"
+        stale = stale_bin / "zjcode"
         stale.write_text("")
 
         def _which(name: str) -> str | None:
-            return str(stale) if name == "dcode" else None
+            return str(stale) if name == "zjcode" else None
 
         with (
             patch(
@@ -1659,14 +1630,14 @@ class TestDetectShadowedDcode:
         """
         uv_bin = tmp_path / "uv-bin"
         uv_bin.mkdir()
-        (uv_bin / "dcode").write_text("")
+        (uv_bin / "zjcode").write_text("")
         other_bin = tmp_path / "homebrew-bin"
         other_bin.mkdir()
-        target = tmp_path / "Cellar" / "dcode" / "bin"
+        target = tmp_path / "Cellar" / "zjcode" / "bin"
         target.mkdir(parents=True)
-        real_dcode = target / "dcode"
+        real_dcode = target / "zjcode"
         real_dcode.write_text("")
-        stale_shim = other_bin / "dcode"
+        stale_shim = other_bin / "zjcode"
         stale_shim.symlink_to(real_dcode)
 
         with (
@@ -1700,40 +1671,8 @@ class TestDetectShadowedDcode:
             assert detect_shadowed_dcode() is None
 
     def test_falls_back_to_deepagents_code_binary_name(self, tmp_path) -> None:
-        """The `deepagents-code` binary is checked when `dcode` is missing.
-
-        Mirrors the install-script verification loop so an install that only
-        exposes `deepagents-code` (e.g. an older `uv tool install` that
-        predates the `dcode` entry point) still gets shadow-checked.
-        """
-        uv_bin = tmp_path / "uv-bin"
-        uv_bin.mkdir()
-        (uv_bin / "deepagents-code").write_text("")
-        stale_bin = tmp_path / "stale-bin"
-        stale_bin.mkdir()
-        stale = stale_bin / "deepagents-code"
-        stale.write_text("")
-
-        def _which(name: str) -> str | None:
-            if name == "dcode":
-                return None
-            if name == "deepagents-code":
-                return str(stale)
-            return None
-
-        with (
-            patch(
-                "deepagents_code.update_check.detect_install_method",
-                return_value="uv",
-            ),
-            patch.dict(os.environ, {"UV_TOOL_BIN_DIR": str(uv_bin)}),
-            patch("shutil.which", side_effect=_which),
-        ):
-            shadow = detect_shadowed_dcode()
-
-        assert shadow is not None
-        assert shadow.shadowing_bin == stale
-        assert shadow.upgraded_bin_dir == uv_bin.resolve()
+        """Removed: single-binary CLI has no fallback name to check."""
+        pytest.skip("collapsed to single-binary shadow detection")
 
     def test_warning_text_includes_both_paths(self, tmp_path) -> None:
         """The user-facing warning must name the shadowing binary AND the shim.
@@ -1744,12 +1683,12 @@ class TestDetectShadowedDcode:
         non-destructive because the shadowing binary may be package-managed.
         """
         shadow = ShadowedDcode(
-            shadowing_bin=tmp_path / "old-bin" / "dcode",
+            shadowing_bin=tmp_path / "old-bin" / "zjcode",
             upgraded_bin_dir=tmp_path / "uv-bin",
         )
         rendered = format_shadowed_dcode_warning(shadow)
         assert str(shadow.shadowing_bin) in rendered
-        assert str(shadow.upgraded_bin_dir / "dcode") in rendered
+        assert str(shadow.upgraded_bin_dir / "zjcode") in rendered
         assert "earlier on your PATH" in rendered
         command = format_shadowed_dcode_fix_command(shadow)
         assert command.replace("\n", "\n  ") in rendered
@@ -1759,7 +1698,7 @@ class TestDetectShadowedDcode:
     def test_warning_text_quotes_fix_command_path(self, tmp_path) -> None:
         """The suggested PATH command must be safe to copy with odd paths."""
         shadow = ShadowedDcode(
-            shadowing_bin=tmp_path / "old bin" / "dcode",
+            shadowing_bin=tmp_path / "old bin" / "zjcode",
             upgraded_bin_dir=tmp_path / "uv bin's dir",
         )
 
@@ -1776,7 +1715,7 @@ class TestDetectShadowedDcode:
     def test_windows_fix_command_uses_powershell_literal_path(self, tmp_path) -> None:
         """PowerShell paths must not expand `$` or evaluate subexpressions."""
         shadow = ShadowedDcode(
-            shadowing_bin=tmp_path / "old-bin" / "dcode",
+            shadowing_bin=tmp_path / "old-bin" / "zjcode",
             upgraded_bin_dir=tmp_path / "uv $dcode's $(bin)",
         )
 
@@ -1789,60 +1728,8 @@ class TestDetectShadowedDcode:
     def test_canonicalize_failure_continues_to_deepagents_code_name(
         self, tmp_path
     ) -> None:
-        """A `resolve()` failure on `dcode` must not hide another shadow.
-
-        The detector deliberately `continue`s to the `deepagents-code` name
-        when canonicalizing `dcode`'s PATH directory raises, rather than
-        returning `None` (which would silently report "no shadow"). This pins
-        that fall-through: `dcode`'s directory raises, but `deepagents-code`
-        resolves to a stale directory and is still reported as the shadow. A
-        regression that turned the `continue` into `return None` would
-        re-introduce the exact silent-hide bug the inline comment warns about.
-        """
-        uv_bin = (tmp_path / "uv-bin").resolve()
-        uv_bin.mkdir()
-        bad_dir = tmp_path / "bad-dir"
-        bad_dir.mkdir()
-        (bad_dir / "dcode").write_text("")
-        stale_bin = tmp_path / "stale-bin"
-        stale_bin.mkdir()
-        stale_deepagents_code = stale_bin / "deepagents-code"
-        stale_deepagents_code.write_text("")
-
-        def _which(name: str) -> str | None:
-            if name == "dcode":
-                return str(bad_dir / "dcode")
-            if name == "deepagents-code":
-                return str(stale_deepagents_code)
-            return None
-
-        real_resolve = Path.resolve
-
-        def _resolve(self: Path, strict: bool = False) -> Path:
-            # Only `dcode`'s PATH-entry directory raises; the other binary's
-            # directory resolves cleanly so the loop can reach a real answer.
-            if self == bad_dir:
-                msg = "simulated resolve failure"
-                raise OSError(msg)
-            return real_resolve(self, strict)
-
-        with (
-            patch(
-                "deepagents_code.update_check.detect_install_method",
-                return_value="uv",
-            ),
-            patch(
-                "deepagents_code.update_check._uv_tool_bin_dir",
-                return_value=uv_bin,
-            ),
-            patch("shutil.which", side_effect=_which),
-            patch.object(Path, "resolve", _resolve),
-        ):
-            shadow = detect_shadowed_dcode()
-
-        assert shadow is not None
-        assert shadow.shadowing_bin == stale_deepagents_code
-        assert shadow.upgraded_bin_dir == uv_bin
+        """Removed: single-binary CLI has no fallback name to continue to."""
+        pytest.skip("collapsed to single-binary shadow detection")
 
 
 class TestDetectShadowedDcodeSafe:
@@ -1856,7 +1743,7 @@ class TestDetectShadowedDcodeSafe:
     def test_passes_through_shadow(self, tmp_path) -> None:
         """A detected shadow flows through unchanged."""
         shadow = ShadowedDcode(
-            shadowing_bin=tmp_path / "stale" / "dcode",
+            shadowing_bin=tmp_path / "stale" / "zjcode",
             upgraded_bin_dir=tmp_path / "uv-bin",
         )
         with patch(
@@ -2019,7 +1906,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            "uv tool install -U deepagents-code --prerelease allow"
+            "uv tool install -U zjcode --prerelease allow"
         )
 
     async def test_perform_upgrade_allows_prereleases_for_target_dependency(
@@ -2066,7 +1953,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            "uv tool install -U deepagents-code==1.1.0 --prerelease allow"
+            "uv tool install -U zjcode==1.1.0 --prerelease allow"
         )
 
     async def test_perform_upgrade_fallback_pins_target_with_prerelease_deps(
@@ -2105,7 +1992,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            "uv tool install -U deepagents-code==1.1.0 --prerelease allow"
+            "uv tool install -U zjcode==1.1.0 --prerelease allow"
         )
 
     async def test_perform_upgrade_follows_installed_prerelease_channel(self) -> None:
@@ -2141,7 +2028,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            "uv tool install -U deepagents-code --prerelease allow"
+            "uv tool install -U zjcode --prerelease allow"
         )
 
     async def test_perform_upgrade_uses_unpinned_uv_install_by_default(self) -> None:
@@ -2151,7 +2038,7 @@ class TestUpdateLogs:
         previously-pinned install (e.g. via `DEEPAGENTS_CODE_VERSION` or a
         prior dependency refresh that wrote `==<version>` into the receipt)
         would silently keep the user on the old version. Using `uv tool
-        install -U deepagents-code` (no version) rewrites the receipt to an
+        install -U zjcode` (no version) rewrites the receipt to an
         unpinned requirement and re-resolves to the latest release.
         """
         with (
@@ -2184,13 +2071,13 @@ class TestUpdateLogs:
         run_mock.assert_awaited_once()
         await_args = run_mock.await_args
         assert await_args is not None
-        assert await_args.args[0] == "uv tool install -U deepagents-code"
+        assert await_args.args[0] == "uv tool install -U zjcode"
 
     async def test_perform_upgrade_preserves_installed_extras(self) -> None:
         """An upgrade must not silently drop the user's installed extras.
 
         The unpinned-install fix to the receipt-pin bug could otherwise
-        reinstall a bare `deepagents-code` and remove every extra the user
+        reinstall a bare `zjcode` and remove every extra the user
         had set up. Receipt-aware command building keeps them in the
         requirement so they survive the reinstall.
         """
@@ -2225,7 +2112,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            "uv tool install -U 'deepagents-code[nvidia,quickjs]'"
+            "uv tool install -U 'zjcode[nvidia,quickjs]'"
         )
 
     async def test_perform_upgrade_falls_back_when_receipt_introspection_fails(
@@ -2259,7 +2146,7 @@ class TestUpdateLogs:
         run_mock.assert_awaited_once()
         await_args = run_mock.await_args
         assert await_args is not None
-        assert await_args.args[0] == "uv tool install -U deepagents-code"
+        assert await_args.args[0] == "uv tool install -U zjcode"
 
     async def test_perform_upgrade_fallback_warns_user_about_dropped_extras(
         self,
@@ -2323,7 +2210,7 @@ class TestUpdateLogs:
         """
         assert (
             upgrade_command(include_prereleases=True)
-            == "uv tool install -U deepagents-code --prerelease allow"
+            == "uv tool install -U zjcode --prerelease allow"
         )
 
     def test_upgrade_command_pins_target_with_prerelease_deps(self) -> None:
@@ -2333,14 +2220,14 @@ class TestUpdateLogs:
                 include_prereleases=True,
                 version="1.1.0",
             )
-            == "uv tool install -U deepagents-code==1.1.0 --prerelease allow"
+            == "uv tool install -U zjcode==1.1.0 --prerelease allow"
         )
 
     def test_dependency_refresh_command_pins_current_version(
         self, tmp_path, monkeypatch
     ) -> None:
         """Dependency refresh keeps dcode on the running version."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
             "deepagents_code.extras_info.installed_extra_names",
@@ -2348,14 +2235,14 @@ class TestUpdateLogs:
         ):
             assert (
                 dependency_refresh_command(version="1.2.3")
-                == "uv tool install -U deepagents-code==1.2.3"
+                == "uv tool install -U zjcode==1.2.3"
             )
 
     def test_dependency_refresh_command_preserves_extras(
         self, tmp_path, monkeypatch
     ) -> None:
         """Dependency refresh must not drop already-installed extras."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
             "deepagents_code.extras_info.installed_extra_names",
@@ -2367,7 +2254,7 @@ class TestUpdateLogs:
                     include_prereleases=True,
                 )
                 == "uv tool install -U "
-                "'deepagents-code[nvidia,quickjs]==1.2.3' --prerelease allow"
+                "'zjcode[nvidia,quickjs]==1.2.3' --prerelease allow"
             )
 
     def test_dependency_refresh_command_preserves_with_packages(
@@ -2377,7 +2264,7 @@ class TestUpdateLogs:
         _write_uv_receipt(
             tmp_path,
             (
-                '{ name = "deepagents-code" }, '
+                '{ name = "zjcode" }, '
                 '{ name = "langchain-custom" }, '
                 '{ name = "langchain.another_provider" }'
             ),
@@ -2389,7 +2276,7 @@ class TestUpdateLogs:
             return_value=frozenset(),
         ):
             assert dependency_refresh_command(version="1.2.3") == (
-                "uv tool install -U deepagents-code==1.2.3 "
+                "uv tool install -U zjcode==1.2.3 "
                 "--with langchain-custom --with langchain.another_provider"
             )
 
@@ -2399,7 +2286,7 @@ class TestUpdateLogs:
         """Dependency refresh must keep uv's recorded interpreter selection."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }',
+            '{ name = "zjcode" }',
             python="3.13",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -2409,7 +2296,7 @@ class TestUpdateLogs:
             return_value=frozenset(),
         ):
             assert dependency_refresh_command(version="1.2.3") == (
-                "uv tool install -U --python 3.13 deepagents-code==1.2.3"
+                "uv tool install -U --python 3.13 zjcode==1.2.3"
             )
 
     def test_dependency_refresh_command_quotes_uv_python(
@@ -2418,7 +2305,7 @@ class TestUpdateLogs:
         """Recorded interpreter paths are shell-quoted before execution."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
             python="/opt/Python 3.13/bin/python",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -2429,7 +2316,7 @@ class TestUpdateLogs:
         ):
             assert dependency_refresh_command(version="1.2.3") == (
                 "uv tool install -U --python '/opt/Python 3.13/bin/python' "
-                "deepagents-code==1.2.3 --with langchain-custom"
+                "zjcode==1.2.3 --with langchain-custom"
             )
 
     def test_dependency_refresh_command_refuses_malformed_receipt(
@@ -2458,7 +2345,7 @@ class TestUpdateLogs:
         _write_uv_receipt(
             tmp_path,
             (
-                '{ name = "deepagents-code" }, '
+                '{ name = "zjcode" }, '
                 '{ name = "langchain-custom", editable = "/tmp/pkg" }'
             ),
         )
@@ -2480,7 +2367,7 @@ class TestUpdateLogs:
         self, tmp_path, monkeypatch
     ) -> None:
         """Malformed metadata extras surface through the typed error contract."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -2497,7 +2384,7 @@ class TestUpdateLogs:
         """Dry-run planning resolves against the running tool environment."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
@@ -2511,7 +2398,7 @@ class TestUpdateLogs:
             ) == (
                 "uv pip install --dry-run --python "
                 "'/opt/Dcode Python/bin/python' -U "
-                "'deepagents-code[quickjs]==1.2.3' langchain-custom "
+                "'zjcode[quickjs]==1.2.3' langchain-custom "
                 "--prerelease allow"
             )
 
@@ -2547,7 +2434,7 @@ class TestUpdateLogs:
         assert await_args is not None
         assert await_args.args[0] == (
             f"uv pip install --dry-run --python {shlex.quote(sys.executable)} "
-            f"-U deepagents-code=={__version__}"
+            f"-U zjcode=={__version__}"
         )
 
     async def test_perform_dependency_refresh_uses_pinned_uv_command(self) -> None:
@@ -2583,7 +2470,7 @@ class TestUpdateLogs:
         await_args = run_mock.await_args
         assert await_args is not None
         assert await_args.args[0] == (
-            f"uv tool install -U deepagents-code=={__version__}"
+            f"uv tool install -U zjcode=={__version__}"
         )
 
     async def test_perform_dependency_refresh_reports_with_package_errors(
@@ -2719,17 +2606,17 @@ class TestUpgradeInstallCommand:
         because clearing a stale receipt pin is the entire point of routing
         `/update` through this builder.
         """
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
             "deepagents_code.extras_info.installed_extra_names",
             return_value=frozenset(),
         ):
-            assert upgrade_install_command() == "uv tool install -U deepagents-code"
+            assert upgrade_install_command() == "uv tool install -U zjcode"
 
     def test_pins_target_version_when_requested(self, tmp_path, monkeypatch) -> None:
         """Target pins prevent prerelease dependency mode from floating the app."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
             "deepagents_code.extras_info.installed_extra_names",
@@ -2739,19 +2626,19 @@ class TestUpgradeInstallCommand:
                 version="1.1.0",
                 include_prereleases=True,
             ) == (
-                "uv tool install -U 'deepagents-code[openai]==1.1.0' --prerelease allow"
+                "uv tool install -U 'zjcode[openai]==1.1.0' --prerelease allow"
             )
 
     def test_preserves_extras_and_prerelease(self, tmp_path, monkeypatch) -> None:
         """Installed extras survive the unpinned reinstall; prerelease opt-in too."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with patch(
             "deepagents_code.extras_info.installed_extra_names",
             return_value=frozenset({"quickjs", "nvidia"}),
         ):
             assert upgrade_install_command(include_prereleases=True) == (
-                "uv tool install -U 'deepagents-code[nvidia,quickjs]' "
+                "uv tool install -U 'zjcode[nvidia,quickjs]' "
                 "--prerelease allow"
             )
 
@@ -2760,7 +2647,7 @@ class TestUpgradeInstallCommand:
         _write_uv_receipt(
             tmp_path,
             (
-                '{ name = "deepagents-code" }, '
+                '{ name = "zjcode" }, '
                 '{ name = "langchain-custom" }, '
                 '{ name = "langchain.another_provider" }'
             ),
@@ -2771,7 +2658,7 @@ class TestUpgradeInstallCommand:
             return_value=frozenset(),
         ):
             assert upgrade_install_command() == (
-                "uv tool install -U deepagents-code "
+                "uv tool install -U zjcode "
                 "--with langchain-custom --with langchain.another_provider"
             )
 
@@ -2784,7 +2671,7 @@ class TestUpgradeInstallCommand:
         """
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
             python="/opt/Python 3.13/bin/python",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -2794,7 +2681,7 @@ class TestUpgradeInstallCommand:
         ):
             assert upgrade_install_command() == (
                 "uv tool install -U --python '/opt/Python 3.13/bin/python' "
-                "deepagents-code --with langchain-custom"
+                "zjcode --with langchain-custom"
             )
 
     def test_propagates_extras_introspection_error(self, tmp_path, monkeypatch) -> None:
@@ -2804,7 +2691,7 @@ class TestUpgradeInstallCommand:
         the builder itself must surface the failure so that decision stays at
         the caller, matching the docstring's documented contract.
         """
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -2827,7 +2714,7 @@ class TestUpgradeInstallCommand:
         handles it through its typed fallback rather than relying on a broad
         `ValueError` catch that could also mask an unrelated builder bug.
         """
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -2837,7 +2724,6 @@ class TestUpgradeInstallCommand:
             pytest.raises(ExtrasIntrospectionError),
         ):
             upgrade_install_command()
-
 
 class TestParseDependencyChanges:
     """`parse_dependency_changes` collapses uv's env diff into changes."""
@@ -2998,16 +2884,16 @@ class TestInstallExtraCommand:
         self, tmp_path, monkeypatch
     ) -> None:
         """Clean metadata with no installed optional deps is distinct from failure."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-absent-dcode-test-quickjs-xyz; extra == "quickjs"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        assert installed_extra_names("deepagents-code") == set()
+        assert installed_extra_names("zjcode") == set()
         assert (
             install_extra_command("quickjs") == "curl -LsSf https://langch.in/dcode | "
             "DEEPAGENTS_CODE_EXTRAS=quickjs bash"
@@ -3020,7 +2906,7 @@ class TestInstallExtraCommand:
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=(
                 'definitely-present-dcode-test-nvidia; extra == "nvidia"',
                 'definitely-absent-dcode-test-quickjs-xyz; extra == "quickjs"',
@@ -3028,7 +2914,7 @@ class TestInstallExtraCommand:
         )
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        assert installed_extra_names("deepagents-code") == {"nvidia"}
+        assert installed_extra_names("zjcode") == {"nvidia"}
         assert (
             install_extra_command("quickjs") == "curl -LsSf https://langch.in/dcode | "
             "DEEPAGENTS_CODE_EXTRAS=nvidia,quickjs bash"
@@ -3040,13 +2926,13 @@ class TestInstallExtraCommand:
         """UV recovery guidance matches the automatic context-preserving install."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
             python="/opt/Python 3.13/bin/python",
         )
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-present-dcode-test-nvidia; extra == "nvidia"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -3057,7 +2943,7 @@ class TestInstallExtraCommand:
 
         assert install_extra_recovery_command("quickjs") == (
             "uv tool install --reinstall -U --python '/opt/Python 3.13/bin/python' "
-            f"'deepagents-code[nvidia,quickjs]=={__version__}' "
+            f"'zjcode[nvidia,quickjs]=={__version__}' "
             "--with langchain-custom --prerelease allow"
         )
 
@@ -3065,14 +2951,14 @@ class TestInstallExtraCommand:
         self, tmp_path, monkeypatch
     ) -> None:
         """Unsupported install recovery does not require uv receipt introspection."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }, "bad"')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }, "bad"')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.setattr(
             "deepagents_code.update_check.detect_install_method", lambda: "other"
         )
         monkeypatch.setattr(
             "deepagents_code.extras_info.installed_extra_names",
-            lambda _distribution_name="deepagents-code": set(),
+            lambda _distribution_name="zjcode": set(),
         )
 
         assert install_extra_recovery_command("quickjs") == (
@@ -3085,25 +2971,25 @@ class TestInstallExtraCommand:
         """Malformed optional-dependency metadata must not drop existing extras."""
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=("not a valid requirement ; ;",),
         )
         monkeypatch.syspath_prepend(str(tmp_path))
 
         with pytest.raises(ExtrasIntrospectionError, match="Could not parse"):
             _install_extra_uv_tool_command(
-                "quickjs", distribution_name="deepagents-code"
+                "quickjs", distribution_name="zjcode"
             )
 
     def test_uv_install_extra_command_preserves_installed_extras(
         self, tmp_path, monkeypatch
     ) -> None:
         """Installing a new extra keeps already-installed extras selected."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=(
                 'definitely-present-dcode-test-nvidia; extra == "nvidia"',
                 'definitely-absent-dcode-test-baseten-xyz; extra == "baseten"',
@@ -3112,45 +2998,45 @@ class TestInstallExtraCommand:
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        assert installed_extra_names("deepagents-code") == {"nvidia"}
+        assert installed_extra_names("zjcode") == {"nvidia"}
         assert _install_extra_uv_tool_command(
-            "baseten", distribution_name="deepagents-code"
+            "baseten", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"'deepagents-code[baseten,nvidia]=={__version__}' --prerelease allow"
+            f"'zjcode[baseten,nvidia]=={__version__}' --prerelease allow"
         )
 
     def test_uv_install_extra_command_dedupes_existing_extra(
         self, tmp_path, monkeypatch
     ) -> None:
         """Installing an already-present extra does not duplicate it."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-present-dcode-test-nvidia; extra == "nvidia"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         assert _install_extra_uv_tool_command(
-            "nvidia", distribution_name="deepagents-code"
+            "nvidia", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"'deepagents-code[nvidia]=={__version__}' --prerelease allow"
+            f"'zjcode[nvidia]=={__version__}' --prerelease allow"
         )
 
     def test_uv_install_extra_command_drops_composite_extras(
         self, tmp_path, monkeypatch
     ) -> None:
         """Composite extras are not echoed back into uv reinstall commands."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(tmp_path, "definitely-present-dcode-test-openai")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=(
                 'definitely-present-dcode-test-nvidia; extra == "nvidia"',
                 'definitely-present-dcode-test-openai; extra == "all-providers"',
@@ -3159,12 +3045,12 @@ class TestInstallExtraCommand:
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        assert installed_extra_names("deepagents-code") == {"nvidia"}
+        assert installed_extra_names("zjcode") == {"nvidia"}
         assert _install_extra_uv_tool_command(
-            "baseten", distribution_name="deepagents-code"
+            "baseten", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"'deepagents-code[baseten,nvidia]=={__version__}' --prerelease allow"
+            f"'zjcode[baseten,nvidia]=={__version__}' --prerelease allow"
         )
 
     def test_uv_install_extra_command_preserves_receipt_python_and_with_packages(
@@ -3173,25 +3059,25 @@ class TestInstallExtraCommand:
         """Installing an extra preserves the uv tool interpreter and `--with` deps."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
             python="/opt/Python 3.13/bin/python",
         )
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-present-dcode-test-nvidia; extra == "nvidia"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         command = _install_extra_uv_tool_command(
-            "baseten", distribution_name="deepagents-code"
+            "baseten", distribution_name="zjcode"
         )
 
         assert command == (
             "uv tool install --reinstall -U --python '/opt/Python 3.13/bin/python' "
-            f"'deepagents-code[baseten,nvidia]=={__version__}' "
+            f"'zjcode[baseten,nvidia]=={__version__}' "
             "--with langchain-custom --prerelease allow"
         )
 
@@ -3216,7 +3102,7 @@ class TestEditableExtraHint:
     def test_contains_uv_command_and_bracketed_extra(self) -> None:
         hint = editable_extra_hint("quickjs")
         assert "uv tool install --editable" in hint
-        assert "--with 'deepagents-code[quickjs]'" in hint
+        assert "--with 'zjcode[quickjs]'" in hint
 
     def test_extra_is_interpolated_into_brackets(self) -> None:
         # The bracket fragment is load-bearing — Rich-markup call sites
@@ -3230,48 +3116,48 @@ class TestInstallPackageCommand:
 
     def test_basic_no_extras(self, tmp_path, monkeypatch) -> None:
         """Clean metadata with no extras yields the version-pinned requirement."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-absent-dcode-test-quickjs-xyz; extra == "quickjs"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         assert install_package_command(
-            "langchain-custom", distribution_name="deepagents-code"
+            "langchain-custom", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"deepagents-code=={__version__} --with langchain-custom "
+            f"zjcode=={__version__} --with langchain-custom "
             "--prerelease allow"
         )
 
     def test_allows_pep508_name_separators(self, tmp_path, monkeypatch) -> None:
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-absent-dcode-test-quickjs-xyz; extra == "quickjs"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         assert install_package_command(
-            "langchain.custom_provider", distribution_name="deepagents-code"
+            "langchain.custom_provider", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"deepagents-code=={__version__} --with langchain.custom_provider "
+            f"zjcode=={__version__} --with langchain.custom_provider "
             "--prerelease allow"
         )
 
     def test_preserves_installed_extras(self, tmp_path, monkeypatch) -> None:
         """Adding a package keeps already-installed extras selected."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=(
                 'definitely-present-dcode-test-nvidia; extra == "nvidia"',
                 'definitely-absent-dcode-test-baseten-xyz; extra == "baseten"',
@@ -3280,12 +3166,12 @@ class TestInstallPackageCommand:
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        assert installed_extra_names("deepagents-code") == {"nvidia"}
+        assert installed_extra_names("zjcode") == {"nvidia"}
         assert install_package_command(
-            "langchain-custom", distribution_name="deepagents-code"
+            "langchain-custom", distribution_name="zjcode"
         ) == (
             "uv tool install --reinstall -U "
-            f"'deepagents-code[nvidia]=={__version__}' --with langchain-custom "
+            f"'zjcode[nvidia]=={__version__}' --with langchain-custom "
             "--prerelease allow"
         )
 
@@ -3295,25 +3181,25 @@ class TestInstallPackageCommand:
         """Adding a package keeps uv receipt interpreter and `--with` packages."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-first" }',
+            '{ name = "zjcode" }, { name = "langchain-first" }',
             python="/opt/Python 3.13/bin/python",
         )
         _write_dist_info(tmp_path, "definitely-present-dcode-test-nvidia")
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=('definitely-present-dcode-test-nvidia; extra == "nvidia"',),
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         command = install_package_command(
-            "langchain-second", distribution_name="deepagents-code"
+            "langchain-second", distribution_name="zjcode"
         )
 
         assert command == (
             "uv tool install --reinstall -U --python '/opt/Python 3.13/bin/python' "
-            f"'deepagents-code[nvidia]=={__version__}' --with langchain-first "
+            f"'zjcode[nvidia]=={__version__}' --with langchain-first "
             "--with langchain-second --prerelease allow"
         )
 
@@ -3323,36 +3209,36 @@ class TestInstallPackageCommand:
         """Reinstalling an existing package does not emit duplicate `--with` args."""
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-custom" }',
+            '{ name = "zjcode" }, { name = "langchain-custom" }',
         )
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         command = install_package_command(
-            "LangChain_Custom", distribution_name="deepagents-code"
+            "LangChain_Custom", distribution_name="zjcode"
         )
 
         assert command == (
             "uv tool install --reinstall -U "
-            f"deepagents-code=={__version__} --with langchain-custom "
+            f"zjcode=={__version__} --with langchain-custom "
             "--prerelease allow"
         )
 
     def test_pins_prerelease_app_version(self, tmp_path, monkeypatch) -> None:
         """Adding a package to a pre-release install keeps that exact app version."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         with patch("deepagents_code.update_check.__version__", "1.0.0a1"):
             command = install_package_command(
-                "langchain-custom", distribution_name="deepagents-code"
+                "langchain-custom", distribution_name="zjcode"
             )
 
         assert command == (
-            "uv tool install --reinstall -U deepagents-code==1.0.0a1 "
+            "uv tool install --reinstall -U zjcode==1.0.0a1 "
             "--with langchain-custom --prerelease allow"
         )
 
@@ -3360,18 +3246,18 @@ class TestInstallPackageCommand:
         self, tmp_path, monkeypatch
     ) -> None:
         """A stable app reinstall keeps the app pinned while allowing rc deps."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         with patch("deepagents_code.update_check.__version__", "1.0.0"):
             command = install_package_command(
-                "langchain-custom", distribution_name="deepagents-code"
+                "langchain-custom", distribution_name="zjcode"
             )
 
         assert command == (
-            "uv tool install --reinstall -U deepagents-code==1.0.0 "
+            "uv tool install --reinstall -U zjcode==1.0.0 "
             "--with langchain-custom --prerelease allow"
         )
 
@@ -3388,19 +3274,19 @@ class TestInstallPackageCommand:
         """
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, { name = "langchain-zeta" }',
+            '{ name = "zjcode" }, { name = "langchain-zeta" }',
         )
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
         command = install_package_command(
-            "langchain-alpha", distribution_name="deepagents-code"
+            "langchain-alpha", distribution_name="zjcode"
         )
 
         assert command == (
             "uv tool install --reinstall -U "
-            f"deepagents-code=={__version__} --with langchain-zeta "
+            f"zjcode=={__version__} --with langchain-zeta "
             "--with langchain-alpha --prerelease allow"
         )
 
@@ -3417,10 +3303,10 @@ class TestInstallPackageCommand:
         """
         _write_uv_receipt(
             tmp_path,
-            '{ name = "deepagents-code" }, '
+            '{ name = "zjcode" }, '
             '{ name = "langchain-custom", editable = true }',
         )
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -3429,7 +3315,7 @@ class TestInstallPackageCommand:
             match="cannot be preserved automatically",
         ):
             install_package_command(
-                "langchain-new", distribution_name="deepagents-code"
+                "langchain-new", distribution_name="zjcode"
             )
 
     def test_refuses_missing_distribution(self) -> None:
@@ -3443,14 +3329,14 @@ class TestInstallPackageCommand:
         """Malformed optional-dependency metadata must not drop existing extras."""
         _write_dist_info(
             tmp_path,
-            "deepagents-code",
+            "zjcode",
             requires=("not a valid requirement ; ;",),
         )
         monkeypatch.syspath_prepend(str(tmp_path))
 
         with pytest.raises(ExtrasIntrospectionError, match="Could not parse"):
             install_package_command(
-                "langchain-custom", distribution_name="deepagents-code"
+                "langchain-custom", distribution_name="zjcode"
             )
 
     def test_rejects_shell_metacharacters(self) -> None:
@@ -3476,7 +3362,7 @@ class TestPerformInstallExtra:
         assert success is False
         assert "Editable install" in output
         assert "uv tool install --editable" in output
-        assert "--with 'deepagents-code[quickjs]'" in output
+        assert "--with 'zjcode[quickjs]'" in output
 
     async def test_brew_install_refuses(self) -> None:
         """Homebrew formula doesn't expose extras."""
@@ -3513,14 +3399,14 @@ class TestPerformInstallExtra:
         monkeypatch,
     ) -> None:
         """Unsupported install guidance wins over uv receipt introspection errors."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }, "bad"')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }, "bad"')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         # Isolate from the host's installed extras so the script command is
         # deterministic — install_extra_command merges real distribution
         # metadata, which would otherwise leak the dev env's extras in.
         monkeypatch.setattr(
             "deepagents_code.extras_info.installed_extra_names",
-            lambda _distribution_name="deepagents-code": set(),
+            lambda _distribution_name="zjcode": set(),
         )
         with patch(
             "deepagents_code.update_check.detect_install_method",
@@ -3568,7 +3454,7 @@ class TestPerformInstallExtra:
 
     async def test_uv_receipt_failure_is_reported(self, tmp_path, monkeypatch) -> None:
         """A malformed uv receipt is reported instead of dropping install context."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }, "bad"')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }, "bad"')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -3620,7 +3506,7 @@ class TestIsValidPackageName:
     def test_rejects_option_injection_leading_dash(self) -> None:
         """A leading dash would smuggle uv options into `--with <name>`.
 
-        The command is `uv tool install --reinstall -U deepagents-code==<version>
+        The command is `uv tool install --reinstall -U zjcode==<version>
         --with <name>`; a name
         like `-rreqs.txt` or `--editable` would be parsed by uv as a flag, not a
         package. The validator must reject these regardless of `--force`/`--yes`.
@@ -3782,7 +3668,7 @@ class TestPerformInstallPackage:
         than let it escape unhandled — narrowing back to `except
         ExtrasIntrospectionError` would let the error crash the caller.
         """
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }, "bad"')
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }, "bad"')
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -3807,8 +3693,8 @@ class TestPerformInstallPackage:
 
     async def test_invalid_app_version_is_reported(self, tmp_path, monkeypatch) -> None:
         """A malformed app version pin is reported instead of escaping."""
-        _write_uv_receipt(tmp_path, '{ name = "deepagents-code" }')
-        _write_dist_info(tmp_path, "deepagents-code")
+        _write_uv_receipt(tmp_path, '{ name = "zjcode" }')
+        _write_dist_info(tmp_path, "zjcode")
         monkeypatch.setattr("sys.prefix", str(tmp_path))
         with (
             patch(
@@ -3824,7 +3710,7 @@ class TestPerformInstallPackage:
             success, output = await perform_install_package("langchain-custom")
         assert success is False
         assert "ValueError" in output
-        assert "Invalid deepagents-code version" in output
+        assert "Invalid zjcode version" in output
 
 
 class TestRunInstallSubprocessFailureModes:
@@ -3955,7 +3841,7 @@ class TestRunInstallSubprocessFailureModes:
             patch(
                 "deepagents_code.update_check._install_extra_uv_tool_command",
                 return_value=(
-                    "uv tool install --reinstall -U 'deepagents-code[quickjs]'"
+                    "uv tool install --reinstall -U 'zjcode[quickjs]'"
                 ),
             ),
             patch("asyncio.create_subprocess_shell", side_effect=_raise),

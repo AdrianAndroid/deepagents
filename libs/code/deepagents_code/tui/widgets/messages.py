@@ -1566,6 +1566,15 @@ class ToolCallMessage(Vertical):
         )
         # Strip redundant success trailer — the UI already conveys success
         self._output = _strip_success_exit_line(result)
+        # Only successful `edit_file` is force-expanded so the applied diff is
+        # visible. `read_file` / `grep` / `glob` (in `_COLLAPSE_OUTPUT_BY_DEFAULT`)
+        # stay collapsed by default — the header already carries the file path
+        # or pattern, and hiding the body keeps the log compact. Users can
+        # Ctrl+O to expand.
+        if self._tool_name == "edit_file" and not self._is_search_no_result_output(
+            self._output
+        ):
+            self._expanded = True
         if self._duration is not None:
             self._show_timed_success_status(self._duration)
         else:
@@ -3163,10 +3172,13 @@ class ToolGroupSummary(Static):
 
     _SPINNER_INTERVAL: ClassVar[float] = 0.1
 
-    # Default to expanded so each tool call (e.g. `grep(...)`) is visible
-    # inline instead of hiding behind a one-line "Searched for N patterns"
-    # summary. Users can still click / Ctrl+O to collapse.
     _collapsed: var[bool] = var(False)
+    """User preference: default the group to expanded so every tool call in
+    the run (`read_file(...)`, `grep(...)`, ...) is visible from the moment
+    it mounts. The per-tool result body still honors its own collapse rules
+    (`_COLLAPSE_OUTPUT_BY_DEFAULT`), so verbose output stays folded. Click the
+    header or press Ctrl+O to re-collapse the whole group.
+    """
 
     def __init__(
         self,

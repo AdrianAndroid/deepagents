@@ -57,12 +57,12 @@ def test_real_distribution_groups_entries_by_extra() -> None:
 
 
 def test_real_distribution_skips_self_references() -> None:
-    # Composite extras like `all-providers` list `deepagents-code[...]`
+    # Composite extras like `all-providers` list `zjcode[...]`
     # entries; those should never surface as packages themselves.
     extras = get_extras_status()
     for pkgs in extras.values():
         for pkg_name, _version in pkgs:
-            assert pkg_name.lower() != "deepagents-code"
+            assert pkg_name.lower() != "zjcode"
 
 
 def test_missing_packages_are_omitted() -> None:
@@ -153,7 +153,7 @@ def test_extra_for_package_returns_declaring_known_extra() -> None:
     mock_dist = MagicMock()
     mock_dist.requires = [
         "langchain-google-vertexai>=3.2.3,<4.0.0 ; extra == 'vertex'",
-        "deepagents-code[anthropic,baseten] ; extra == 'all-providers'",
+        "zjcode[anthropic,baseten] ; extra == 'all-providers'",
     ]
 
     with patch("deepagents_code.extras_info.distribution", return_value=mock_dist):
@@ -173,7 +173,7 @@ def test_extra_for_package_returns_none_for_unknown_package() -> None:
 def test_skips_composite_self_referencing_extras() -> None:
     mock_dist = MagicMock()
     mock_dist.requires = [
-        "deepagents-code[anthropic,baseten] ; extra == 'some-bundle'",
+        "zjcode[anthropic,baseten] ; extra == 'some-bundle'",
         "langchain-anthropic>=1.0.0 ; extra == 'anthropic'",
     ]
 

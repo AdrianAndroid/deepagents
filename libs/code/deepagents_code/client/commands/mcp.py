@@ -195,12 +195,12 @@ def run_mcp_config() -> int:
     from deepagents_code.ui import console
 
     found = {str(p.resolve()) for p in discover_mcp_configs()}
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     project_root = _resolve_project_config_base(None)
 
     rows: list[tuple[str, str, bool]] = []
     for display, label, resolved in (
-        ("~/.deepagents/.mcp.json", "user-level", user_dir / ".mcp.json"),
+        ("~/.zjcode/.mcp.json", "user-level", user_dir / ".mcp.json"),
         (
             "<project-root>/.deepagents/.mcp.json",
             "project subdir",
