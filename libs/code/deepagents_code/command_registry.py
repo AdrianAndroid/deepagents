@@ -113,6 +113,13 @@ COMMANDS: tuple[SlashCommand, ...] = (
         hidden_keywords="image clipboard",
     ),
     SlashCommand(
+        name="/paste-image",
+        description="Paste an image from the system clipboard at cursor position",
+        bypass_tier=BypassTier.QUEUED,
+        hidden_keywords="image clipboard paste",
+        aliases=("/paste-img",),
+    ),
+    SlashCommand(
         name="/force-clear",
         description="Stop active work, clear the chat, and start a new thread",
         bypass_tier=BypassTier.ALWAYS,
