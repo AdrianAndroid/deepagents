@@ -215,6 +215,60 @@ def _get_executable(name: str) -> str | None:
     return shutil.which(name)
 
 
+def _set_macos_clipboard_image(image_bytes: bytes) -> bool:
+    """Write image bytes to macOS clipboard using osascript.
+
+    Args:
+        image_bytes: Raw image bytes (PNG format recommended).
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    osascript_path = _get_executable("osascript")
+    if not osascript_path:
+        logger.debug("osascript not found for setting clipboard image")
+        return False
+
+    # Create temp file for the image
+    fd, temp_path = tempfile.mkstemp(suffix=".png")
+    os.close(fd)
+
+    try:
+        pathlib.Path(temp_path).write_bytes(image_bytes)
+
+        # AppleScript to set clipboard image from file
+        # Use quoted form of path to handle spaces and special characters
+        set_script = f"""
+        set the clipboard to (read (POSIX file "{temp_path}") as «class PNGf»)
+        """
+
+        result = subprocess.run(  # noqa: S603
+            [osascript_path, "-e", set_script],
+            capture_output=True,
+            check=False,
+            timeout=5,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            logger.debug(
+                "Failed to set clipboard image via osascript: %s",
+                result.stderr or result.stdout,
+            )
+            return False
+        return True
+
+    except subprocess.TimeoutExpired:
+        logger.debug("osascript timed out while setting clipboard image")
+        return False
+    except OSError as e:
+        logger.debug("OSError setting clipboard image via osascript: %s", e)
+        return False
+    finally:
+        if pathlib.Path(temp_path).exists():
+            pathlib.Path(temp_path).unlink()
+
+
 @dataclass
 class ImageData:
     """Represents a pasted image with its base64 encoding."""
@@ -862,3 +916,27 @@ def create_multimodal_content(
         content_blocks.extend(video.to_message_content() for video in videos)
 
     return content_blocks
+
+
+def copy_image_to_clipboard(image_data: ImageData) -> bool:
+    """Copy an ImageData object to the system clipboard.
+
+    Currently supports macOS only (uses osascript). On other platforms
+    this function logs a debug message and returns False.
+
+    Args:
+        image_data: ImageData object containing base64-encoded image data.
+
+    Returns:
+        True if the image was successfully copied to clipboard, False otherwise.
+    """
+    if sys.platform != "darwin":
+        logger.debug("copy_image_to_clipboard is only supported on macOS")
+        return False
+
+    try:
+        image_bytes = base64.b64decode(image_data.base64_data)
+        return _set_macos_clipboard_image(image_bytes)
+    except (ValueError, OSError) as e:
+        logger.debug("Failed to decode image data for clipboard copy: %s", e)
+        return False
