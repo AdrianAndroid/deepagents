@@ -177,21 +177,25 @@ def resolve_mcp_config(
             used_paths.append(path)
 
     if project_paths:
-        from deepagents_code.mcp_trust import (
-            compute_config_fingerprint,
-            is_project_mcp_trusted,
-        )
-        from deepagents_code.project_utils import find_project_root
+        try:
+            from zjcode import (
+                compute_config_fingerprint,
+                is_project_mcp_trusted,
+            )
+            from deepagents_code.project_utils import find_project_root
 
-        project_root = str((find_project_root() or Path.cwd()).resolve())
-        fingerprint = compute_config_fingerprint(project_paths)
-        if is_project_mcp_trusted(project_root, fingerprint):
-            for path in project_paths:
-                loaded = load_mcp_config_lenient(path)
-                if loaded is not None:
-                    configs.append(loaded)
-                    used_paths.append(path)
-        else:
+            project_root = str((find_project_root() or Path.cwd()).resolve())
+            fingerprint = compute_config_fingerprint(project_paths)
+            if is_project_mcp_trusted(project_root, fingerprint):
+                for path in project_paths:
+                    loaded = load_mcp_config_lenient(path)
+                    if loaded is not None:
+                        configs.append(loaded)
+                        used_paths.append(path)
+            else:
+                untrusted = tuple(project_paths)
+        except ImportError:
+            # 上游没有 MCP 信任功能，跳过项目 MCP 配置
             untrusted = tuple(project_paths)
 
     if not configs:

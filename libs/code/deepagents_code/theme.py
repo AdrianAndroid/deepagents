@@ -562,7 +562,7 @@ def _load_user_themes(
     """
     if config_path is None:
         try:
-            config_path = Path.home() / ".zjcode" / "config.toml"
+            config_path = Path.home() / ".deepagents" / "config.toml"
         except RuntimeError:
             logger.debug("Cannot determine home directory; skipping user theme loading")
             return

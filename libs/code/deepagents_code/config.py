@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 from urllib.parse import unquote, urlparse
 
-from deepagents_code._constants import FIREWORKS_PROVIDER_ID_PREFIX, PROJECT_DOTDIR
+from deepagents_code._constants import FIREWORKS_PROVIDER_ID_PREFIX
 from deepagents_code._env_vars import (
     DISABLED_PROJECT_MCP_SERVERS,
     ENABLED_PROJECT_MCP_SERVERS,
@@ -27,7 +27,7 @@ from deepagents_code._env_vars import (
     is_env_truthy,
 )
 from deepagents_code._git import resolve_git_branch
-from deepagents_code._version import DISTRIBUTION_NAME, __version__
+from deepagents_code._version import __version__
 from deepagents_code.config_manifest import (
     INTERPRETER_ENABLE_DEFAULT,
     INTERPRETER_MAX_PTC_CALLS_DEFAULT,
@@ -211,9 +211,9 @@ def _find_dotenv_from_start_path(start_path: Path) -> Path | None:
 
 # Global user-level .env (~/.deepagents/.env); sentinel when Path.home() fails.
 try:
-    _GLOBAL_DOTENV_PATH = Path.home() / ".zjcode" / ".env"
+    _GLOBAL_DOTENV_PATH = Path.home() / ".deepagents" / ".env"
 except RuntimeError:
-    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.zjcode/.env")
+    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.deepagents/.env")
 
 
 def _preview_dotenv_environ(*, start_path: Path | None = None) -> dict[str, str]:
@@ -1014,7 +1014,6 @@ if TYPE_CHECKING:
     from rich.console import Console
 
     from deepagents_code._git import RepositoryMetadata
-    from deepagents_code.model_config import ModelConfig
 
     # Static type stubs for lazy module attributes resolved by __getattr__.
     # At runtime these are created on first access by _get_settings() /
@@ -1259,7 +1258,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
     path: str | None = None
 
     try:
-        dist = distribution(DISTRIBUTION_NAME)
+        dist = distribution("deepagents-code")
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)
@@ -1393,30 +1392,36 @@ def newline_shortcut() -> str:
 
 
 _UNICODE_BANNER = f"""
-        ▀██                         ██  ██
-▄▄▄▄▄▄   ██ ▄▄    ▄▄▄▄     ▄▄▄     ▄▄▄ ▄▄▄   ▄▄▄▄   ▄▄ ▄▄▄
-▀  ▄█▀   ██▀ ██  ▀▀ ▄██  ▄█  ▀█▄    ██  ██  ▀▀ ▄██   ██  ██
- ▄█▀     ██  ██  ▄█▀ ██  ██   ██    ██  ██  ▄█▀ ██   ██  ██
-██▄▄▄▄█ ▄██▄ ██▄ ▀█▄▄▀█▀  ▀█▄▄█▀    ██ ▄██▄ ▀█▄▄▀█▀ ▄██▄ ██▄
-                                 ▄▄ █▀
-                                  ▀▀
-██████████████████████████████████████████
-█████████   ███████████████████████████ ██
-██     ██   ██████   ██   ████   █████████
-█   █████     ████   ██   ██   ██   ██   █
-███    ██   ██  ██   ██   █   ███   ██   █
-█████   █  ███   █   ██   █   ███   ██   █
-█      ██  ███   ███      ███   █    █   █
-██████████████████████████████████████████ v{__version__}
+██████╗  ███████╗ ███████╗ ██████╗    ▄▓▓▄
+██╔══██╗ ██╔════╝ ██╔════╝ ██╔══██╗  ▓•███▙
+██║  ██║ █████╗   █████╗   ██████╔╝  ░▀▀████▙▖
+██║  ██║ ██╔══╝   ██╔══╝   ██╔═══╝      █▓████▙▖
+██████╔╝ ███████╗ ███████╗ ██║          ▝█▓█████▙
+╚═════╝  ╚══════╝ ╚══════╝ ╚═╝           ░▜█▓████▙
+                                          ░█▀█▛▀▀▜▙▄
+                                        ░▀░▀▒▛░░  ▝▀▘
+
+ █████╗   ██████╗  ███████╗ ███╗   ██╗ ████████╗ ███████╗
+██╔══██╗ ██╔════╝  ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██╔════╝
+███████║ ██║  ███╗ █████╗   ██╔██╗ ██║    ██║    ███████╗
+██╔══██║ ██║   ██║ ██╔══╝   ██║╚██╗██║    ██║    ╚════██║
+██║  ██║ ╚██████╔╝ ███████╗ ██║ ╚████║    ██║    ███████║
+╚═╝  ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚══════╝
+                                                  v{__version__}
 """
-_ASCII_BANNER = rf"""
-     _
-  __| | ___  ___ _ __   __ _  __ _  ___ _ __ | |_ ___
- / _` |/ _ \/ _ \ '_ \ / _` |/ _` |/ _ \ '_ \| __/ __|
-| (_| |  __/  __/ |_) | (_| | (_| |  __/ | | | |_\__ \
- \__,_|\___|\___| .__/ \__,_|\__, |\___|_| |_|\__|___/
-                |_|          |___/
-============================================== v{__version__}
+_ASCII_BANNER = f"""
+ ____  ____  ____  ____
+|  _ \\| ___|| ___||  _ \\
+| | | | |_  | |_  | |_) |
+| |_| |  _| |  _| |  __/
+|____/|____||____||_|
+
+    _    ____  ____  _   _  _____  ____
+   / \\  / ___|| ___|| \\ | ||_   _|/ ___|
+  / _ \\| |  _ | |_  |  \\| |  | |  \\___ \\
+ / ___ \\ |_| ||  _| | |\\  |  | |   ___) |
+/_/   \\_\\____||____||_| \\_|  |_|  |____/
+                                  v{__version__}
 """
 
 
@@ -2629,7 +2634,7 @@ class Settings:
         Returns:
             Path to `~/.deepagents`
         """
-        return Path.home() / ".zjcode"
+        return Path.home() / ".deepagents"
 
     @staticmethod
     def get_user_agent_md_path(agent_name: str) -> Path:
@@ -2643,15 +2648,15 @@ class Settings:
         Returns:
             Path to ~/.deepagents/{agent_name}/AGENTS.md
         """
-        return Path.home() / ".zjcode" / agent_name / "AGENTS.md"
+        return Path.home() / ".deepagents" / agent_name / "AGENTS.md"
 
     def get_project_agent_md_path(self) -> list[Path]:
         """Get project-level AGENTS.md paths.
 
-        Checks both `{project_root}/.zjcode/AGENTS.md` and
+        Checks both `{project_root}/.deepagents/AGENTS.md` and
         `{project_root}/AGENTS.md`, returning all that exist. If both are
         present, both are loaded and their instructions are combined, with
-        `.zjcode/AGENTS.md` first.
+        `.deepagents/AGENTS.md` first.
 
         Returns:
             Existing AGENTS.md paths.
@@ -2696,7 +2701,7 @@ class Settings:
                 "contain letters, numbers, hyphens, underscores, and spaces."
             )
             raise ValueError(msg)
-        return Path.home() / ".zjcode" / agent_name
+        return Path.home() / ".deepagents" / agent_name
 
     def ensure_agent_dir(self, agent_name: str) -> Path:
         """Ensure the global agent directory exists and return its path.
@@ -2748,17 +2753,17 @@ class Settings:
         """Get project-level skills directory path.
 
         Returns:
-            Path to {project_root}/.zjcode/skills/, or None if not in a project
+            Path to {project_root}/.deepagents/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / PROJECT_DOTDIR / "skills"
+        return self.project_root / ".deepagents" / "skills"
 
     def ensure_project_skills_dir(self) -> Path | None:
         """Ensure project-level skills directory exists and return its path.
 
         Returns:
-            Path to {project_root}/.zjcode/skills/, or None if not in a project
+            Path to {project_root}/.deepagents/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
@@ -2783,11 +2788,11 @@ class Settings:
         """Get project-level agents directory path for custom subagent definitions.
 
         Returns:
-            Path to {project_root}/.zjcode/agents/, or None if not in a project
+            Path to {project_root}/.deepagents/agents/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / PROJECT_DOTDIR / "agents"
+        return self.project_root / ".deepagents" / "agents"
 
     @property
     def user_agents_dir(self) -> Path:
@@ -3909,54 +3914,14 @@ def detect_provider(model_name: str) -> str | None:
     return None
 
 
-def _format_provider_default_model_spec(provider: str, model: object) -> str | None:
-    from deepagents_code.model_config import ModelSpec
-
-    if not isinstance(model, str):
-        return None
-    stripped = model.strip()
-    if not stripped:
-        return None
-    if ModelSpec.try_parse(stripped):
-        return stripped
-    return f"{provider}:{stripped}"
-
-
-def _get_configured_provider_default_model(config: ModelConfig) -> str | None:
-    from deepagents_code.model_config import get_provider_auth_status
-
-    for provider, provider_config in config.providers.items():
-        if not config.is_provider_enabled(provider):
-            continue
-        spec = _format_provider_default_model_spec(
-            provider,
-            provider_config.get("default_model"),
-        )
-        if spec is None:
-            continue
-        if get_provider_auth_status(provider).as_legacy_bool() is not False:
-            return spec
-    return None
-
-
-def _model_spec_auth_is_usable(model_spec: str) -> bool:
-    from deepagents_code.model_config import ModelSpec, get_provider_auth_status
-
-    parsed = ModelSpec.try_parse(model_spec)
-    if not parsed:
-        return True
-    return get_provider_auth_status(parsed.provider).as_legacy_bool() is not False
-
-
 def _get_default_model_spec() -> str:
     """Get default model specification based on available credentials.
 
     Checks in order:
 
     1. `[models].default` in config file (user's intentional preference).
-    2. Provider-level `default_model` entries for configured providers.
-    3. `[models].recent` in config file (last `/model` switch).
-    4. Auto-detection based on available API credentials.
+    2. `[models].recent` in config file (last `/model` switch).
+    3. Auto-detection based on available API credentials.
 
     Returns:
         Model specification in `provider:model` format.
@@ -3976,13 +3941,16 @@ def _get_default_model_spec() -> str:
     if config.default_model:
         return config.default_model
 
-    provider_default = _get_configured_provider_default_model(config)
-    if provider_default:
-        return provider_default
-
-    if config.recent_model and _model_spec_auth_is_usable(config.recent_model):
+    if config.recent_model:
         return config.recent_model
 
+    # `is True` deliberately excludes `ProviderAuthState.UNKNOWN` (which maps
+    # to `as_legacy_bool() -> None`). For the three explicit-credential
+    # providers below, an UNKNOWN result means we cannot prove auth works, so
+    # we fall through rather than pick an unverifiable default. If an
+    # implicit-auth provider (e.g., Vertex ADC) is added to this fallback
+    # list, switch to checking `state` against the relevant
+    # `ProviderAuthState` members directly.
     if get_provider_auth_status("openai").as_legacy_bool() is True:
         return "openai:gpt-5.5"
     if get_provider_auth_status("anthropic").as_legacy_bool() is True:
@@ -4139,20 +4107,6 @@ def _get_provider_kwargs(
     retry_kwargs = _resolve_retry_kwargs(retry_section, provider)
     for key, value in retry_kwargs.items():
         result.setdefault(key, value)
-
-    # For OpenAI-compatible providers (built-in `openai` or any custom provider
-    # whose `class_path` targets `langchain_openai:ChatOpenAI` / a subclass),
-    # default `stream_usage=True` so the final stream chunk carries
-    # `usage_metadata`. Without this the `stream_options.include_usage` flag is
-    # not sent and third-party gateways (Volcengine ark, DeepSeek, SiliconFlow,
-    # …) drop token counts, which makes the per-call info line show only
-    # `model / finish / elapsed`. `setdefault` lets users override via
-    # `params.stream_usage = false` in `config.toml` or `--model-params`.
-    class_path = config.get_class_path(provider) if provider else None
-    if provider == "openai" or (
-        isinstance(class_path, str) and class_path.endswith(":ChatOpenAI")
-    ):
-        result.setdefault("stream_usage", True)
 
     return result
 

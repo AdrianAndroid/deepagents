@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+# =============================================================================
+# zjcode 品牌定制钩子
+# 这是我们唯一修改的上游文件，只有 3 行，冲突概率极低
+# =============================================================================
+try:
+    from zjcode import apply_all_patches
+
+    apply_all_patches()
+except ImportError:
+    pass  # 上游构建时没有 zjcode 目录，正常运行
+# =============================================================================
+
 import logging
 from typing import TYPE_CHECKING
 

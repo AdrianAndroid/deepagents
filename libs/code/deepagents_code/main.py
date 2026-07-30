@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # Suppress Pydantic v1 compatibility warnings from langchain on Python 3.14+
 warnings.filterwarnings("ignore", message=".*Pydantic V1.*", category=UserWarning)
 
-from deepagents_code._version import DISTRIBUTION_NAME, __version__
+from deepagents_code._version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -65,15 +65,6 @@ def _handle_termination_signal(signum: int, _frame: object) -> NoReturn:
         `BaseException` like `SystemExit`), and the app's cleanup `finally` block
         re-invokes `stop()` as the exception unwinds, resuming the teardown.
     """
-    # Tag the shutdown as interrupted before we raise. `SystemExit` bypasses
-    # `sys.excepthook`, so this is the only place we can attribute a signal to
-    # the reason classifier used by `session_end_summary._finalize`.
-    try:
-        from deepagents_code import session_end_summary
-
-        session_end_summary.mark_signal(signum)
-    except Exception:
-        pass
     raise SystemExit(128 + signum)
 
 
@@ -109,7 +100,7 @@ def build_version_text() -> str:
     sdk_version_value, status = resolve_sdk_version()
     sdk_version = sdk_version_value if status == "resolved" else "unknown"
 
-    text = f"{DISTRIBUTION_NAME} {__version__}\ndeepagents (SDK) {sdk_version}"
+    text = f"deepagents-code {__version__}\ndeepagents (SDK) {sdk_version}"
 
     editable = False
     try:
@@ -827,7 +818,7 @@ def _recent_agent_is_valid(name: str) -> bool:
     from pathlib import Path as _Path
 
     try:
-        return (_Path.home() / ".zjcode" / name).is_dir()
+        return (_Path.home() / ".deepagents" / name).is_dir()
     except OSError:
         logger.warning(
             "Could not validate recent agent %r; falling back to default",
@@ -861,7 +852,7 @@ def check_cli_dependencies() -> None:
         print("\nReinstall dcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
         print("  curl -LsSf https://langch.in/dcode | bash")  # noqa: T201  # CLI output for missing dependencies
         print("\nOr install the tool directly via uv:")  # noqa: T201  # CLI output for missing dependencies
-        print(f"  uv tool install -U {DISTRIBUTION_NAME}")  # noqa: T201  # CLI output for missing dependencies
+        print("  uv tool install -U deepagents-code")  # noqa: T201  # CLI output for missing dependencies
         sys.exit(1)
 
 
@@ -1850,14 +1841,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run as an ACP server over stdio instead of launching the Textual UI",
     )
-    parser.add_argument(
-        "--no-mouse",
-        action="store_true",
-        help=(
-            "Disable Textual mouse tracking. Use for web terminals (1Panel, "
-            "ttyd, wetty) that leak garbled mouse-report sequences into input."
-        ),
-    )
 
     # `parse_args` runs on every invocation; keep the import-heavy metadata
     # scan off the hot path unless the user explicitly asked for --version.
@@ -1867,7 +1850,7 @@ def parse_args() -> argparse.Namespace:
         # Never surfaced: argparse only emits `version=` when the flag is
         # actually passed, which takes the `build_version_text()` branch above.
         # This placeholder only exists because `version=` requires a value.
-        version_text = f"{DISTRIBUTION_NAME} {__version__}"
+        version_text = f"deepagents-code {__version__}"
     parser.add_argument(
         "-v",
         "--version",
@@ -1993,7 +1976,6 @@ async def run_textual_cli_async(
     interpreter_arg: bool | None = None,
     interpreter_ptc: str | list[str] | None = None,
     interpreter_ptc_acknowledge_unsafe: bool = False,
-    mouse: bool = True,
 ) -> "AppResult":
     """Run the Textual TUI interface (async version).
 
@@ -2052,9 +2034,6 @@ async def run_textual_cli_async(
             for `js_eval`).
         interpreter_ptc_acknowledge_unsafe: Explicit acknowledgement for
             `interpreter_ptc="all"` outside of `auto_approve`.
-        mouse: Whether to enable Textual mouse tracking. Set to `False` for web
-            terminals (1Panel, ttyd, wetty) that leak garbled mouse-report
-            sequences into input.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
@@ -2163,7 +2142,6 @@ async def run_textual_cli_async(
             model_explicitly_set=model_name is not None,
             interpreter_arg=interpreter_arg,
             defer_server_start=defer_server_start,
-            mouse=mouse,
         )
     except Exception as e:
         logger.debug("App error", exc_info=True)
@@ -2508,28 +2486,6 @@ def _debug_mcp_project_trust_enabled() -> bool:
     return is_env_truthy(DEBUG_MCP_PROJECT_TRUST)
 
 
-def _resolve_no_mouse(args: argparse.Namespace) -> bool:
-    """Return whether Textual mouse tracking should be disabled.
-
-    True when the user passed `--no-mouse` on the command line, or set
-    `DEEPAGENTS_CODE_NO_MOUSE` to a truthy value. Web-based terminals
-    (1Panel, ttyd, wetty) commonly need this because they forward mouse
-    events but strip the ESC prefix from SGR mouse-report sequences,
-    causing garbled input like `[<35;36;33M...` to leak into the input.
-
-    Args:
-        args: Parsed argparse namespace.
-
-    Returns:
-        `True` when mouse tracking should be disabled.
-    """
-    from deepagents_code._env_vars import NO_MOUSE, is_env_truthy
-
-    if getattr(args, "no_mouse", False):
-        return True
-    return is_env_truthy(NO_MOUSE)
-
-
 def _check_mcp_project_trust(*, trust_flag: bool = False) -> bool | None:
     """Check whether project-level MCP servers should be trusted.
 
@@ -2581,7 +2537,7 @@ def _check_mcp_project_trust(*, trust_flag: bool = False) -> bool | None:
 
     # Merge configs by server name (last wins, matching the loader) so that
     # a server defined in multiple project configs (for example,
-    # `.zjcode/.mcp.json` and higher-precedence `.mcp.json`) only shows
+    # `.deepagents/.mcp.json` and higher-precedence `.mcp.json`) only shows
     # up once in the prompt.
     loaded_configs = [
         cfg
@@ -2762,18 +2718,6 @@ def cli_main() -> None:
         print(build_version_text())  # noqa: T201  # Version output
         sys.exit(0)
 
-    # Arm session-end summary AFTER the trivial --version fast path so a
-    # `dcode --version` invocation prints only the version. All heavier
-    # sessions (headless run, interactive TUI, doctor, deploy, etc.) get the
-    # exit-reason + duration summary at shutdown. Kept in a try so a bug in
-    # the summary module can never break startup.
-    try:
-        from deepagents_code import session_end_summary
-
-        session_end_summary.install()
-    except Exception:
-        logger.debug("Failed to install session_end_summary", exc_info=True)
-
     # ACP mode does not require Textual, so skip UI dependency checks when
     # the flag is present in raw argv.
     if "--acp" not in sys.argv[1:]:
@@ -2898,7 +2842,7 @@ def cli_main() -> None:
             except ImportError as exc:
                 msg = (
                     f"ACP dependencies not available: {exc}\n"
-                    f"Install with: uv tool install --reinstall -U {DISTRIBUTION_NAME} "
+                    "Install with: uv tool install --reinstall -U deepagents-code "
                     "--with deepagents-acp\n"
                 )
                 sys.stderr.write(msg)
@@ -3893,7 +3837,6 @@ def cli_main() -> None:
                         enable_interpreter=enable_interpreter,
                         interpreter_arg=args.interpreter,
                         interpreter_ptc=interpreter_ptc,
-                        mouse=not _resolve_no_mouse(args),
                     )
                 )
                 return_code = result.return_code
@@ -3966,14 +3909,6 @@ def cli_main() -> None:
     except KeyboardInterrupt:
         # Clean exit on Ctrl+C — suppress ugly traceback.
         # `console` may not be bound if Ctrl+C arrives during config import.
-        try:
-            from deepagents_code import session_end_summary
-
-            session_end_summary.mark_reason(
-                session_end_summary.REASON_INTERRUPTED, "KeyboardInterrupt"
-            )
-        except Exception:
-            pass
         try:
             console.print("\n\n[yellow]Interrupted[/yellow]")
         except NameError:

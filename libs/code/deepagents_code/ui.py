@@ -231,10 +231,6 @@ def show_help() -> None:
     )
     console.print("  --yes                      Skip --install confirmation prompts")
     console.print("  --acp                      Run as an ACP server over stdio")
-    console.print(
-        "  --no-mouse                 Disable mouse tracking (for web terminals "
-        "like 1Panel/ttyd)"
-    )
     console.print("  -v, --version              Show dcode and SDK versions")
     console.print("  -h, --help                 Show this help message and exit")
     console.print()
@@ -378,9 +374,9 @@ def show_skills_help() -> None:
     )
     console.print(
         "  1. .agents/skills/                 project skills\n"
-        "  2. .zjcode/skills/                 project skills (alias)\n"
+        "  2. .deepagents/skills/             project skills (alias)\n"
         "  3. ~/.agents/skills/               user skills\n"
-        "  4. ~/.zjcode/<agent>/skills/       user skills (alias)\n"
+        "  4. ~/.deepagents/<agent>/skills/   user skills (alias)\n"
         "  5. <package>/built_in_skills/      built-in skills",
     )
     console.print()

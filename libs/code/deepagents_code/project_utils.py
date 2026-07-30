@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from deepagents_code._constants import PROJECT_DOTDIR
 from deepagents_code._env_vars import SERVER_ENV_PREFIX
 from deepagents_code._git import find_git_root
 
@@ -81,16 +80,16 @@ class ProjectContext:
         return find_project_agent_md(self.project_root)
 
     def project_skills_dir(self) -> Path | None:
-        """Return the project `.zjcode/skills` directory, if any."""
+        """Return the project `.deepagents/skills` directory, if any."""
         if self.project_root is None:
             return None
-        return self.project_root / PROJECT_DOTDIR / "skills"
+        return self.project_root / ".deepagents" / "skills"
 
     def project_agents_dir(self) -> Path | None:
-        """Return the project `.zjcode/agents` directory, if any."""
+        """Return the project `.deepagents/agents` directory, if any."""
         if self.project_root is None:
             return None
-        return self.project_root / PROJECT_DOTDIR / "agents"
+        return self.project_root / ".deepagents" / "agents"
 
     def project_agent_skills_dir(self) -> Path | None:
         """Return the project `.agents/skills` directory, if any."""
@@ -152,7 +151,7 @@ def find_project_agent_md(project_root: Path) -> list[Path]:
     """Find project-specific AGENTS.md file(s).
 
     Checks two locations and returns ALL that exist:
-    1. project_root/.zjcode/AGENTS.md
+    1. project_root/.deepagents/AGENTS.md
     2. project_root/AGENTS.md
 
     Both files will be loaded and combined if both exist.
@@ -186,7 +185,7 @@ def find_project_agent_md(project_root: Path) -> list[Path]:
     # `/var` -> `/private/var`, or a path with symlinked ancestors).
     project_root_resolved = project_root.resolve()
     candidates = [
-        project_root_resolved / PROJECT_DOTDIR / "AGENTS.md",
+        project_root_resolved / ".deepagents" / "AGENTS.md",
         project_root_resolved / "AGENTS.md",
     ]
     paths: list[Path] = []

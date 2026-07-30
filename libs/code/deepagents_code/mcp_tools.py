@@ -2276,16 +2276,20 @@ async def resolve_and_load_mcp_tools(
             config_trusted = False
         else:
             if project_trusted is None:
-                from deepagents_code.mcp_trust import (
-                    compute_config_fingerprint,
-                    is_project_mcp_trusted,
-                )
+                try:
+                    from zjcode import (
+                        compute_config_fingerprint,
+                        is_project_mcp_trusted,
+                    )
 
-                project_root = str(
-                    _resolve_project_config_base(project_context).resolve()
-                )
-                fingerprint = compute_config_fingerprint(project_configs)
-                project_trusted = is_project_mcp_trusted(project_root, fingerprint)
+                    project_root = str(
+                        _resolve_project_config_base(project_context).resolve()
+                    )
+                    fingerprint = compute_config_fingerprint(project_configs)
+                    project_trusted = is_project_mcp_trusted(project_root, fingerprint)
+                except ImportError:
+                    # 上游没有 MCP 信任功能，默认不信任
+                    project_trusted = False
             config_trusted = project_trusted
 
         # The allow/deny lists are sourced only from the user's own config (home

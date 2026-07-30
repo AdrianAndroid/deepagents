@@ -62,7 +62,7 @@ from deepagents_code._session_stats import (
 # All config imports — settings, create_model, detect_provider, is_ascii_mode,
 # etc. — are deferred to local imports at their call sites since they are only
 # accessed after user interaction begins.
-from deepagents_code._version import CHANGELOG_URL, DISTRIBUTION_NAME, DOCS_URL
+from deepagents_code._version import CHANGELOG_URL, DOCS_URL
 from deepagents_code.formatting import format_message_timestamp
 from deepagents_code.iterm_cursor_guide import restore_iterm_cursor_guide
 from deepagents_code.notifications import (
@@ -90,7 +90,6 @@ from deepagents_code.tui.widgets.messages import (
     ErrorMessage,
     QueuedUserMessage,
     RubricResultMessage,
-    SessionSeparator,
     SkillMessage,
     ToolCallMessage,
     ToolGroupSummary,
@@ -1614,6 +1613,7 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
             ModelConfig,
             get_credential_env_var,
             resolve_env_var,
+            resolved_env_var_name,
         )
 
         base_url = ModelConfig.load().get_base_url(provider)
@@ -1623,10 +1623,6 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
         if not key_env:
             return None
         key = resolve_env_var(key_env)
-        resolved_key_env = key_env
-        prefixed_key_env = f"DEEPAGENTS_CODE_{key_env}"
-        if os.environ.get(prefixed_key_env) == key:
-            resolved_key_env = prefixed_key_env
     except Exception:
         # The wrapped config/credential reads are not expected to raise (they
         # degrade to empty/None internally), so reaching here signals API drift
@@ -1636,7 +1632,7 @@ def _langsmith_gateway_key_mismatch(provider: str | None) -> str | None:
         return None
     if not key or key.startswith(_LANGSMITH_KEY_PREFIX):
         return None
-    return resolved_key_env
+    return resolved_env_var_name(key_env)
 
 
 def _build_agent_error_body(
@@ -1665,18 +1661,7 @@ def _build_agent_error_body(
     """
     from deepagents_code.client.remote_client import agent_error_type
 
-    err_type = agent_error_type(exc)
-
-    if err_type == "BadRequestError":
-        return (
-            f"{text}\n\n"
-            "The request was rejected by the model provider. If you pasted an "
-            "image, it may be too large or in an unsupported format. The "
-            "failed message has been removed from the conversation so you can "
-            "continue. Try a smaller image or use `/clear` to start fresh."
-        )
-
-    if err_type != "PermissionDeniedError":
+    if agent_error_type(exc) != "PermissionDeniedError":
         return text
     if key_env:
         detail = (
@@ -5056,7 +5041,7 @@ class DeepAgentsApp(App):
                 dep_changes = [
                     change
                     for change in parse_dependency_changes(output)
-                    if change.name != DISTRIBUTION_NAME
+                    if change.name != "deepagents-code"
                 ]
                 if dep_changes:
                     await self._mount_message(
@@ -5141,15 +5126,15 @@ class DeepAgentsApp(App):
                 "format may have drifted.",
             )
         self_changes = [
-            change for change in changes if change.name == DISTRIBUTION_NAME
+            change for change in changes if change.name == "deepagents-code"
         ]
-        dep_changes = [change for change in changes if change.name != DISTRIBUTION_NAME]
+        dep_changes = [change for change in changes if change.name != "deepagents-code"]
         if not dep_changes and not self_changes:
             if app_update_version is not None:
                 await self._mount_message(
                     AppMessage(
                         "Dependencies are already up to date. "
-                        f"A {DISTRIBUTION_NAME} update is available: "
+                        "A deepagents-code update is available: "
                         f"v{app_update_version}.",
                     ),
                 )
@@ -5162,7 +5147,7 @@ class DeepAgentsApp(App):
         message_parts: list[str] = []
         if self_changes:
             message_parts.append(
-                f"Updated {DISTRIBUTION_NAME}:\n{format_dependency_changes(self_changes)}"
+                f"Updated deepagents-code:\n{format_dependency_changes(self_changes)}"
             )
         if dep_changes:
             message_parts.append(
@@ -5170,7 +5155,7 @@ class DeepAgentsApp(App):
             )
         if app_update_version is not None:
             message_parts.append(
-                f"A {DISTRIBUTION_NAME} update is available: v{app_update_version}."
+                f"A deepagents-code update is available: v{app_update_version}."
             )
         await self._mount_message(
             AppMessage(
@@ -5714,22 +5699,17 @@ class DeepAgentsApp(App):
         """
         lines: list[str] = []
         try:
-            from deepagents_code._version import (
-                DISTRIBUTION_NAME as cli_distribution_name,
-                __version__ as cli_version,
-            )
+            from deepagents_code._version import __version__ as cli_version
             from deepagents_code.update_check import format_age_suffix
 
             age_suffix = await asyncio.to_thread(format_age_suffix, cli_version)
-            lines.append(
-                f"{cli_distribution_name} version: {cli_version}{age_suffix}"
-            )
+            lines.append(f"deepagents-code version: {cli_version}{age_suffix}")
         except ImportError:
             logger.debug("deepagents_code._version module not found")
-            lines.append("zjcode version: unknown")
+            lines.append("deepagents-code version: unknown")
         except Exception:
             logger.warning("Unexpected error looking up app version", exc_info=True)
-            lines.append("zjcode version: unknown")
+            lines.append("deepagents-code version: unknown")
 
         from deepagents_code.extras_info import resolve_sdk_version
 
@@ -8637,6 +8617,8 @@ class DeepAgentsApp(App):
             collect_tools_from_agent,
         )
 
+        await self._mount_message(UserMessage(command))
+
         server_info = self._mcp_server_info_for_tools()
 
         built_in = []
@@ -10618,14 +10600,6 @@ class DeepAgentsApp(App):
 
         cmd = command.lower().strip()
 
-        # Commands that report state via toast/notification rather than a
-        # chat message; skip the top-level UserMessage echo so the toggle
-        # feedback doesn't scroll the chat.
-        _no_echo_cmds = {"/scrollbar", "/timestamps", "/editor"}
-        if cmd not in _no_echo_cmds:
-            # Echo the command to the chat history first
-            await self._mount_message(UserMessage(command))
-
         if cmd in {"/quit", "/q"}:
             self.exit()
         elif cmd == "/help":
@@ -10633,7 +10607,7 @@ class DeepAgentsApp(App):
             help_body = (
                 "Commands: /quit, /agents, /auth, /clear, /force-clear, "
                 "/copy, /goal, /offload, /editor, /effort, "
-                "/add-provider, /mcp, /model [--model-params JSON] [--default], "
+                "/mcp, /model [--model-params JSON] [--default], "
                 "/notifications, /reload, /restart, /rubric, "
                 "/skill:<name>, /remember, "
                 "/skill-creator, /theme, /scrollbar, /timestamps, /tokens, "
@@ -10796,62 +10770,6 @@ class DeepAgentsApp(App):
                     else "Failed to copy latest assistant message to clipboard."
                 )
                 await self._mount_message(AppMessage(fail_msg))
-        elif cmd == "/copy-image":
-            await self._mount_message(UserMessage(command))
-            if not self._image_tracker.images:
-                await self._mount_message(
-                    AppMessage("No images have been pasted yet."),
-                )
-                return
-
-            from deepagents_code.clipboard import copy_image_to_clipboard
-
-            # Copy the most recently pasted image
-            latest_image = self._image_tracker.images[-1]
-            success, error = copy_image_to_clipboard(latest_image)
-
-            if success:
-                await self._mount_message(
-                    AppMessage("Copied latest image to clipboard."),
-                )
-            else:
-                fail_msg = (
-                    f"Failed to copy image to clipboard: {error}"
-                    if error
-                    else "Failed to copy image to clipboard."
-                )
-                await self._mount_message(AppMessage(fail_msg))
-        elif cmd == "/paste-image":
-            await self._mount_message(UserMessage(command))
-
-            from deepagents_code.media_utils import (
-                get_clipboard_image,
-                save_pasted_media,
-            )
-            import asyncio
-
-            image = await asyncio.to_thread(get_clipboard_image)
-            if image is None:
-                await self._mount_message(
-                    AppMessage("No image found in clipboard."),
-                )
-                return
-
-            chat_input = self.query_one(ChatInput)
-            existing_text = chat_input.value
-            placeholder = self._image_tracker.add_image(
-                image, existing_text=existing_text
-            )
-            stem = placeholder.strip("[]")
-
-            await asyncio.to_thread(
-                save_pasted_media, image.base64_data, stem, image.format
-            )
-
-            chat_input._text_area.insert(placeholder)
-            await self._mount_message(
-                AppMessage(f"Pasted image from clipboard: {placeholder}"),
-            )
         elif cmd == "/editor":
             await self.action_open_editor()
         elif cmd in {"/offload", "/compact"}:
@@ -11014,104 +10932,6 @@ class DeepAgentsApp(App):
                 await self._switch_model(model_arg, extra_kwargs=extra_kwargs)
             else:
                 await self._show_model_selector(extra_kwargs=extra_kwargs)
-        elif cmd == "/add-provider" or cmd.startswith("/add-provider "):
-            await self._mount_message(UserMessage(command))
-            from deepagents_code.model_config import save_custom_provider
-
-            if not cmd.startswith("/add-provider "):
-                # Show usage
-                await self._mount_message(
-                    AppMessage(
-                        'Usage: /add-provider <provider-id> "<display-name>"'
-                        ' <base-url> "<model1,model2>"'
-                        ' [class-path] [api-key-env] [max-input-tokens]\n'
-                        "Example:\n"
-                        '  /add-provider mygateway "My Gateway"'
-                        ' https://api.example.com/v1 "model-a,model-b"'
-                        ' langchain_openai:ChatOpenAI OPENAI_API_KEY 131072',
-                    )
-                )
-                return
-
-            # Parse arguments
-            import shlex
-            args = shlex.split(command.strip()[len("/add-provider ") :].strip())
-
-            if len(args) < 4:  # noqa: PLR2004  # minimum positional args
-                await self._mount_message(
-                    ErrorMessage(
-                        "Missing required arguments. Run /add-provider without "
-                        "arguments to see usage."
-                    )
-                )
-                return
-
-            provider_id = args[0]
-            display_name = args[1]
-            base_url = args[2]
-            models_str = args[3]
-            class_path = (
-                args[4] if len(args) >= 5 else "langchain_openai:ChatOpenAI"  # noqa: PLR2004
-            )
-            api_key_env = args[5] if len(args) >= 6 else None  # noqa: PLR2004
-            max_input_tokens: int | None = None
-            if len(args) >= 7:  # noqa: PLR2004  # positional arg index for max-input-tokens
-                try:
-                    max_input_tokens = int(args[6])
-                except ValueError:
-                    await self._mount_message(
-                        ErrorMessage(
-                            f"Invalid max-input-tokens '{args[6]}': "
-                            "expected a positive integer."
-                        )
-                    )
-                    return
-                if max_input_tokens <= 0:
-                    await self._mount_message(
-                        ErrorMessage(
-                            "max-input-tokens must be a positive integer."
-                        )
-                    )
-                    return
-
-            # Parse models list
-            models = [m.strip() for m in models_str.split(",") if m.strip()]
-
-            if not models:
-                await self._mount_message(
-                    ErrorMessage("Models list cannot be empty.")
-                )
-                return
-
-            # Save provider
-            success = await asyncio.to_thread(
-                save_custom_provider,
-                provider_id=provider_id,
-                display_name=display_name,
-                base_url=base_url,
-                models=models,
-                class_path=class_path,
-                api_key_env=api_key_env,
-                max_input_tokens=max_input_tokens,
-            )
-
-            if success:
-                await self._mount_message(
-                    AppMessage(
-                        f"✅ Provider '{provider_id}' saved successfully!\n"
-                        f"Run /model to see your new provider in the list, "
-                        f"or /auth to set its API key.\n"
-                        f"To use immediately: /model {provider_id}:{models[0]}"
-                    )
-                )
-            else:
-                await self._mount_message(
-                    ErrorMessage(
-                        f"Failed to save provider '{provider_id}'. "
-                        f"Check logs for details."
-                    )
-                )
-            return
         elif cmd == "/reload":
             await self._mount_message(UserMessage(command))
 
@@ -11735,7 +11555,6 @@ class DeepAgentsApp(App):
         Args:
             message: The user's message
         """
-        await self._mount_message(SessionSeparator())
         # Mount the user message, tracking it so it can be dimmed on interrupt.
         media_snapshot = self._image_tracker.snapshot()
         user_message = UserMessage(message, media_snapshot=media_snapshot)
@@ -12139,15 +11958,6 @@ class DeepAgentsApp(App):
             # when streaming aborts before tool results arrive.
             if self._ui_adapter:
                 self._ui_adapter.finalize_pending_tools_with_error(error_text)
-
-            # Rollback the poisoned user message from the checkpoint so the
-            # thread is not permanently bricked. durability="exit" persists
-            # the user message before the model call, so a BadRequestError
-            # (e.g. from an oversized image) leaves a message that will fail
-            # on every subsequent turn. RemoveMessage deletes it so the user
-            # can continue the conversation without /clear.
-            await self._rollback_last_user_message()
-
             # Enrich the error body in its own guard so a bug here can never
             # swallow the underlying error — the user must always see
             # `error_text`. Gateway/key detection reads config + the credential
@@ -12456,66 +12266,6 @@ class DeepAgentsApp(App):
             result[idx].tool_status = ToolStatus.REJECTED
 
         return result
-
-    async def _rollback_last_user_message(self) -> bool:
-        """Remove the last user message from the thread checkpoint.
-
-        When `agent.astream()` fails (e.g. `BadRequestError` from an oversized
-        image), the user message is already persisted in the checkpoint via
-        `durability="exit"`. Without rollback, every subsequent turn re-sends
-        the same poisoned message to the provider and fails identically,
-        effectively bricking the session. This method uses `RemoveMessage` to
-        delete the last `HumanMessage` from the thread state so the user can
-        continue the conversation.
-
-        Returns:
-            `True` if a message was removed, `False` otherwise.
-        """
-        if not self._agent or not self._lc_thread_id:
-            return False
-
-        try:
-            from langchain_core.messages import HumanMessage, RemoveMessage
-
-            config: RunnableConfig = {
-                "configurable": {"thread_id": self._lc_thread_id}
-            }
-            state = await self._agent.aget_state(config)
-            if not state or not state.values:
-                return False
-
-            messages = state.values.get("messages", [])
-            if not messages:
-                return False
-
-            # Find the last HumanMessage - that's the one that triggered the
-            # error and is poisoning the thread.
-            last_user_msg_id: str | None = None
-            for msg in reversed(messages):
-                if isinstance(msg, HumanMessage):
-                    last_user_msg_id = getattr(msg, "id", None)
-                    break
-
-            if not last_user_msg_id:
-                return False
-
-            await self._agent.aupdate_state(
-                config,
-                {"messages": [RemoveMessage(id=last_user_msg_id)]},
-            )
-            logger.info(
-                "Removed poisoned user message %s from thread %s after "
-                "agent error",
-                last_user_msg_id,
-                self._lc_thread_id,
-            )
-            return True  # noqa: TRY300  # single follow-up statement, else block hurts readability
-        except Exception:
-            logger.warning(
-                "Failed to rollback last user message from checkpoint",
-                exc_info=True,
-            )
-            return False
 
     async def _get_thread_state_values(self, thread_id: str) -> dict[str, Any]:
         """Fetch thread state values for a thread.
@@ -14098,16 +13848,6 @@ class DeepAgentsApp(App):
             drain_pending_hooks,
             has_pending_hooks,
         )
-
-        # Register the thread id with session_end_summary so the atexit-driven
-        # summary can attribute the exit to this session. Kept next to the
-        # existing session.end dispatch to minimize merge friction.
-        try:
-            from deepagents_code import session_end_summary
-
-            session_end_summary.set_thread_id(getattr(self, "_lc_thread_id", ""))
-        except Exception:
-            logger.debug("session_end_summary.set_thread_id failed", exc_info=True)
 
         hooks = _load_hooks()
         if hooks:
@@ -19183,7 +18923,6 @@ async def run_textual_app(
     defer_server_start: bool = False,
     title: str | None = None,
     sub_title: str | None = None,
-    mouse: bool = True,
 ) -> AppResult:
     """Run the Textual application.
 
@@ -19245,10 +18984,6 @@ async def run_textual_app(
             `"Deep Agents"` is used.
         sub_title: Override the Textual `App.sub_title` shown in the optional
             header bar.
-        mouse: Whether to enable Textual mouse tracking. Set to `False` for web
-            terminals (e.g. 1Panel, ttyd, wetty) that forward mouse events but
-            strip the ESC prefix from SGR mouse-report sequences, causing
-            garbled input like `[<35;36;33M...` to leak into the input field.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
@@ -19279,7 +19014,7 @@ async def run_textual_app(
         sub_title=sub_title,
     )
     try:
-        await app.run_async(mouse=mouse)
+        await app.run_async()
     finally:
         # Guarantee server cleanup regardless of how the app exits.
         # Covers both the pre-started server_proc path and the deferred

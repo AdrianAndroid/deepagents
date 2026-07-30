@@ -926,7 +926,15 @@ def get_system_prompt(
     template = (prompt_dir / "system_prompt.md").read_text()
     todo_list_section = ""
     if not is_env_truthy(EXPERIMENTAL):
-        todo_list_section = (prompt_dir / "todo_list_prompt.md").read_text().rstrip()
+        # 优先从 zjcode 品牌目录加载 todo 提示词（zjcode 定制功能）
+        try:
+            import zjcode
+
+            todo_prompt_path = Path(zjcode.__file__).parent / "todo_list_prompt.md"
+            todo_list_section = todo_prompt_path.read_text().rstrip()
+        except ImportError:
+            # 回退到上游默认路径
+            todo_list_section = (prompt_dir / "todo_list_prompt.md").read_text().rstrip()
 
     skills_path = f"~/{CONFIG_DOTDIR}/{assistant_id}/skills"
 

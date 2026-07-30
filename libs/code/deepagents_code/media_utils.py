@@ -52,44 +52,6 @@ VIDEO_EXTENSIONS: frozenset[str] = frozenset(
 MAX_MEDIA_BYTES: int = 20 * 1024 * 1024
 """Maximum media file size (20 MB). Keeps base64 payload under ~27 MB."""
 
-PASTED_MEDIA_DIR: pathlib.Path = pathlib.Path.home() / ".zjcode" / "pasted"
-"""Directory where pasted media is archived for local reference.
-
-Images pasted into the TUI are decoded and written here so the user can inspect
-or forward the original file later. The base64 payload is still what gets sent
-to the model; this local copy is purely an archive of what was pasted.
-"""
-
-
-def save_pasted_media(base64_data: str, stem: str, image_format: str) -> pathlib.Path | None:
-    """Persist a pasted media payload to `PASTED_MEDIA_DIR` as `<stem>.<ext>`.
-
-    Failures are logged and swallowed: the local archive is a convenience, not
-    a hard requirement. The caller keeps the in-memory base64 blob regardless.
-
-    Args:
-        base64_data: Base64-encoded media bytes (no data-URL prefix).
-        stem: File stem (typically the placeholder id such as
-            ``img_20250115143022``). Callers guarantee uniqueness within the
-            current draft.
-        image_format: Image format label (e.g. ``"png"``, ``"jpeg"``); used to
-            derive the file extension.
-
-    Returns:
-        The absolute path written on success, ``None`` when the write failed.
-    """
-    try:
-        PASTED_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-        extension = image_format.lower() or "png"
-        if extension == "jpeg":
-            extension = "jpg"
-        target = PASTED_MEDIA_DIR / f"{stem}.{extension}"
-        target.write_bytes(base64.b64decode(base64_data))
-    except (OSError, ValueError) as exc:
-        logger.warning("Failed to archive pasted media to %s: %s", PASTED_MEDIA_DIR, exc)
-        return None
-    return target
-
 
 def strip_media_placeholders(
     text: str,
@@ -99,7 +61,7 @@ def strip_media_placeholders(
 ) -> str:
     """Remove display-only media placeholders from user text.
 
-    Placeholders like `[img_20250115143022]` are inserted into the terminal input purely for
+    Placeholders like `[image 1]` are inserted into the terminal input purely for
     display; the actual media travels as structured content blocks. They must not
     leak into the canonical model-facing message or LangSmith trace as if the user
     typed them.
@@ -112,7 +74,7 @@ def strip_media_placeholders(
     Args:
         text: Raw user text that may contain media placeholders.
         placeholders: Exact placeholder tokens for the media actually attached to
-            this message (e.g. ``["[img_20250115143022]", "[vid_20250115143022]"]``).
+            this message (e.g. ``["[image 1]", "[video 1]"]``).
         placeholder_spans: Exact `(start, end)` spans for tracked display tokens
             in `text`, when known.
 
@@ -156,7 +118,7 @@ def strip_media_placeholders(
 
     # Only strip spaces/tabs (not newlines) so code indentation on lines after a
     # removed placeholder is preserved. A full .strip() would collapse
-    # "[img_20250115143022]\n    def foo():" to "def foo():", losing the leading indent.
+    # "[image 1]\n    def foo():" to "def foo():", losing the leading indent.
     cleaned = text
     for start, end in sorted(spans, reverse=True):
         cleaned = cleaned[:start] + cleaned[end:]
@@ -215,67 +177,13 @@ def _get_executable(name: str) -> str | None:
     return shutil.which(name)
 
 
-def _set_macos_clipboard_image(image_bytes: bytes) -> bool:
-    """Write image bytes to macOS clipboard using osascript.
-
-    Args:
-        image_bytes: Raw image bytes (PNG format recommended).
-
-    Returns:
-        True if successful, False otherwise.
-    """
-    osascript_path = _get_executable("osascript")
-    if not osascript_path:
-        logger.debug("osascript not found for setting clipboard image")
-        return False
-
-    # Create temp file for the image
-    fd, temp_path = tempfile.mkstemp(suffix=".png")
-    os.close(fd)
-
-    try:
-        pathlib.Path(temp_path).write_bytes(image_bytes)
-
-        # AppleScript to set clipboard image from file
-        # Use quoted form of path to handle spaces and special characters
-        set_script = f"""
-        set the clipboard to (read (POSIX file "{temp_path}") as «class PNGf»)
-        """
-
-        result = subprocess.run(  # noqa: S603
-            [osascript_path, "-e", set_script],
-            capture_output=True,
-            check=False,
-            timeout=5,
-            text=True,
-        )
-
-        if result.returncode != 0:
-            logger.debug(
-                "Failed to set clipboard image via osascript: %s",
-                result.stderr or result.stdout,
-            )
-            return False
-        return True
-
-    except subprocess.TimeoutExpired:
-        logger.debug("osascript timed out while setting clipboard image")
-        return False
-    except OSError as e:
-        logger.debug("OSError setting clipboard image via osascript: %s", e)
-        return False
-    finally:
-        if pathlib.Path(temp_path).exists():
-            pathlib.Path(temp_path).unlink()
-
-
 @dataclass
 class ImageData:
     """Represents a pasted image with its base64 encoding."""
 
     base64_data: str
     format: str  # "png", "jpeg", etc.
-    placeholder: str  # Display text like "[img_20250115143022]"
+    placeholder: str  # Display text like "[image 1]"
     placeholder_span: tuple[int, int] | None = None
 
     def to_message_content(self) -> dict:
@@ -296,7 +204,7 @@ class VideoData:
 
     base64_data: str
     format: str  # "mp4", "quicktime", etc.
-    placeholder: str  # Display text like "[vid_20250115143022]"
+    placeholder: str  # Display text like "[video 1]"
     placeholder_span: tuple[int, int] | None = None
 
     def to_message_content(self) -> "VideoContentBlock":
@@ -313,212 +221,19 @@ class VideoData:
         )
 
 
-def _get_windows_clipboard_image() -> ImageData | None:
-    """Get clipboard image on Windows using PowerShell.
-
-    Returns:
-        ImageData if an image is found, None otherwise.
-    """
-    from PIL import Image, UnidentifiedImageError
-
-    powershell_path = _get_executable("powershell")
-    if not powershell_path:
-        return None
-
-    # Create temp file for image
-    fd, temp_path = tempfile.mkstemp(suffix=".png")
-    os.close(fd)
-
-    try:
-        # PowerShell script to get clipboard image and save to file
-        script = f"""
-        Add-Type -AssemblyName System.Windows.Forms
-        if ([System.Windows.Forms.Clipboard]::ContainsImage()) {{
-            $image = [System.Windows.Forms.Clipboard]::GetImage()
-            $image.Save('{temp_path}', [System.Drawing.Imaging.ImageFormat]::Png)
-            Write-Output "success"
-        }}
-        """
-
-        try:
-            result = subprocess.run(  # noqa: S603
-                [powershell_path, "-Command", script],
-                capture_output=True,
-                check=False,
-                timeout=5,
-                text=True,
-            )
-        except FileNotFoundError:
-            logger.debug("powershell not found for clipboard image paste")
-            return None
-        except subprocess.TimeoutExpired:
-            logger.debug("powershell clipboard read timed out")
-            return None
-
-        if result.returncode != 0 or "success" not in result.stdout:
-            return None
-
-        # Read the image file
-        temp_file = pathlib.Path(temp_path)
-        if temp_file.exists() and temp_file.stat().st_size > 0:
-            image_bytes = temp_file.read_bytes()
-            # Reject oversized images before encoding to avoid provider
-            # BadRequestError and subsequent thread checkpoint poisoning.
-            if len(image_bytes) > MAX_MEDIA_BYTES:
-                logger.warning(
-                    "Clipboard image from Windows is too large "
-                    "(%d MB, max %d MB)",
-                    len(image_bytes) // (1024 * 1024),
-                    MAX_MEDIA_BYTES // (1024 * 1024),
-                )
-                return None
-            try:
-                Image.open(io.BytesIO(image_bytes))
-                base64_data = base64.b64encode(image_bytes).decode("utf-8")
-                return ImageData(
-                    base64_data=base64_data,
-                    format="png",
-                    placeholder="[image]",
-                )
-            except (UnidentifiedImageError, OSError) as e:
-                logger.debug(
-                    "Invalid image data from Windows clipboard: %s",
-                    e,
-                    exc_info=True,
-                )
-        return None
-    finally:
-        # Clean up temp file
-        if pathlib.Path(temp_path).exists():
-            pathlib.Path(temp_path).unlink()
-
-
-def _get_linux_clipboard_image() -> ImageData | None:
-    """Get clipboard image on Linux using xclip (X11) or wl-paste (Wayland).
-
-    Returns:
-        ImageData if an image is found, None otherwise.
-    """
-    from PIL import Image, UnidentifiedImageError
-
-    # Try wl-paste first (Wayland)
-    wl_paste_path = _get_executable("wl-paste")
-    if wl_paste_path:
-        try:
-            # Check if clipboard has image
-            check_result = subprocess.run(  # noqa: S603
-                [wl_paste_path, "-l"],
-                capture_output=True,
-                check=False,
-                timeout=2,
-                text=True,
-            )
-            if check_result.returncode == 0 and "image/" in check_result.stdout:
-                # Get image data
-                result = subprocess.run(  # noqa: S603
-                    [wl_paste_path, "-t", "image/png"],
-                    capture_output=True,
-                    check=False,
-                    timeout=3,
-                )
-                if result.returncode == 0 and result.stdout:
-                    # Reject oversized images before encoding to avoid provider
-                    # BadRequestError and subsequent thread checkpoint poisoning.
-                    if len(result.stdout) > MAX_MEDIA_BYTES:
-                        logger.warning(
-                            "Clipboard image from wl-paste is too large "
-                            "(%d MB, max %d MB)",
-                            len(result.stdout) // (1024 * 1024),
-                            MAX_MEDIA_BYTES // (1024 * 1024),
-                        )
-                        return None
-                    try:
-                        Image.open(io.BytesIO(result.stdout))
-                        base64_data = base64.b64encode(result.stdout).decode("utf-8")
-                        return ImageData(
-                            base64_data=base64_data,
-                            format="png",
-                            placeholder="[image]",
-                        )
-                    except (UnidentifiedImageError, OSError) as e:
-                        logger.debug(
-                            "Invalid image data from wl-paste: %s",
-                            e,
-                            exc_info=True,
-                        )
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
-    # Fall back to xclip (X11)
-    xclip_path = _get_executable("xclip")
-    if xclip_path:
-        try:
-            # Check if clipboard has image
-            check_result = subprocess.run(  # noqa: S603
-                [xclip_path, "-selection", "clipboard", "-t", "TARGETS", "-o"],
-                capture_output=True,
-                check=False,
-                timeout=2,
-                text=True,
-            )
-            if check_result.returncode == 0 and "image/png" in check_result.stdout:
-                # Get image data
-                result = subprocess.run(  # noqa: S603
-                    [xclip_path, "-selection", "clipboard", "-t", "image/png", "-o"],
-                    capture_output=True,
-                    check=False,
-                    timeout=3,
-                )
-                if result.returncode == 0 and result.stdout:
-                    # Reject oversized images before encoding to avoid provider
-                    # BadRequestError and subsequent thread checkpoint poisoning.
-                    if len(result.stdout) > MAX_MEDIA_BYTES:
-                        logger.warning(
-                            "Clipboard image from xclip is too large "
-                            "(%d MB, max %d MB)",
-                            len(result.stdout) // (1024 * 1024),
-                            MAX_MEDIA_BYTES // (1024 * 1024),
-                        )
-                        return None
-                    try:
-                        Image.open(io.BytesIO(result.stdout))
-                        base64_data = base64.b64encode(result.stdout).decode("utf-8")
-                        return ImageData(
-                            base64_data=base64_data,
-                            format="png",
-                            placeholder="[image]",
-                        )
-                    except (UnidentifiedImageError, OSError) as e:
-                        logger.debug(
-                            "Invalid image data from xclip: %s",
-                            e,
-                            exc_info=True,
-                        )
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
-    return None
-
-
 def get_clipboard_image() -> ImageData | None:
     """Attempt to read an image from the system clipboard.
 
-    Supports:
-    - macOS via `pngpaste` or `osascript`
-    - Windows via PowerShell
-    - Linux via `wl-paste` (Wayland) or `xclip` (X11)
+    Supports macOS via `pngpaste` or `osascript`.
 
     Returns:
         ImageData if an image is found, None otherwise.
     """
     if sys.platform == "darwin":
         return _get_macos_clipboard_image()
-    if sys.platform == "win32":
-        return _get_windows_clipboard_image()
-    if sys.platform.startswith("linux"):
-        return _get_linux_clipboard_image()
     logger.warning(
         "Clipboard image paste is not supported on %s. "
+        "Only macOS is currently supported. "
         "You can still attach images by dragging and dropping file paths.",
         sys.platform,
     )
@@ -696,16 +411,6 @@ def _get_macos_clipboard_image() -> ImageData | None:
                 timeout=2,
             )
             if result.returncode == 0 and result.stdout:
-                # Reject oversized images before encoding to avoid provider
-                # BadRequestError and subsequent thread checkpoint poisoning.
-                if len(result.stdout) > MAX_MEDIA_BYTES:
-                    logger.warning(
-                        "Clipboard image from pngpaste is too large "
-                        "(%d MB, max %d MB)",
-                        len(result.stdout) // (1024 * 1024),
-                        MAX_MEDIA_BYTES // (1024 * 1024),
-                    )
-                    return None
                 # Successfully got PNG data - validate it's a real image
                 try:
                     Image.open(io.BytesIO(result.stdout))
@@ -812,17 +517,6 @@ def _get_clipboard_via_osascript() -> ImageData | None:
         # Read and validate the image
         image_data = pathlib.Path(temp_path).read_bytes()
 
-        # Reject oversized images before encoding to avoid provider
-        # BadRequestError and subsequent thread checkpoint poisoning.
-        if len(image_data) > MAX_MEDIA_BYTES:
-            logger.warning(
-                "Clipboard image from osascript is too large "
-                "(%d MB, max %d MB)",
-                len(image_data) // (1024 * 1024),
-                MAX_MEDIA_BYTES // (1024 * 1024),
-            )
-            return None
-
         try:
             image = Image.open(io.BytesIO(image_data))
             # Convert to PNG if it's not already (e.g., if we got TIFF)
@@ -888,7 +582,7 @@ def create_multimodal_content(
     content_blocks = []
 
     # Add text block. Strip only the display-only placeholders bound to the media
-    # actually attached here (e.g. "[img_20250115143022]") so the canonical/model-facing text
+    # actually attached here (e.g. "[image 1]") so the canonical/model-facing text
     # never contains fake user-authored placeholder text. When a span is known,
     # text that merely resembles the schema is preserved exactly; without a span
     # `strip_media_placeholders` falls back to removing one occurrence per item,
@@ -916,27 +610,3 @@ def create_multimodal_content(
         content_blocks.extend(video.to_message_content() for video in videos)
 
     return content_blocks
-
-
-def copy_image_to_clipboard(image_data: ImageData) -> bool:
-    """Copy an ImageData object to the system clipboard.
-
-    Currently supports macOS only (uses osascript). On other platforms
-    this function logs a debug message and returns False.
-
-    Args:
-        image_data: ImageData object containing base64-encoded image data.
-
-    Returns:
-        True if the image was successfully copied to clipboard, False otherwise.
-    """
-    if sys.platform != "darwin":
-        logger.debug("copy_image_to_clipboard is only supported on macOS")
-        return False
-
-    try:
-        image_bytes = base64.b64decode(image_data.base64_data)
-        return _set_macos_clipboard_image(image_bytes)
-    except (ValueError, OSError) as e:
-        logger.debug("Failed to decode image data for clipboard copy: %s", e)
-        return False
