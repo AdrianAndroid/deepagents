@@ -2801,7 +2801,7 @@ class TestCheckMcpProjectTrustDedupe:
     """Regression tests for the project MCP approval prompt deduplication.
 
     When the same server name appears in multiple project-level configs
-    (e.g. both `.mcp.json` and `.deepagents/.mcp.json`), the approval
+    (e.g. both `.mcp.json` and `.zjcode/.mcp.json`), the approval
     prompt must list it once — not once per file.
     """
 
@@ -2841,7 +2841,7 @@ class TestCheckMcpProjectTrustDedupe:
             }
         }
         self._write_config(tmp_path / ".mcp.json", server)
-        self._write_config(tmp_path / ".deepagents" / ".mcp.json", server)
+        self._write_config(tmp_path / ".zjcode" / ".mcp.json", server)
 
         self._deny_project_mcp(tmp_path, monkeypatch)
 
@@ -2861,7 +2861,7 @@ class TestCheckMcpProjectTrustDedupe:
         from deepagents_code.main import _check_mcp_project_trust
 
         self._write_config(
-            tmp_path / ".deepagents" / ".mcp.json",
+            tmp_path / ".zjcode" / ".mcp.json",
             {"fs": {"command": "npx", "args": ["subdir-server", "/subdir"]}},
         )
         self._write_config(
@@ -2889,7 +2889,7 @@ class TestCheckMcpProjectTrustDedupe:
         from deepagents_code.main import _check_mcp_project_trust
 
         self._write_config(
-            tmp_path / ".deepagents" / ".mcp.json",
+            tmp_path / ".zjcode" / ".mcp.json",
             {
                 "remote": {
                     "type": "http",
@@ -2926,7 +2926,7 @@ class TestCheckMcpProjectTrustDedupe:
         """Malformed project configs are skipped while valid configs still prompt."""
         from deepagents_code.main import _check_mcp_project_trust
 
-        invalid = tmp_path / ".deepagents" / ".mcp.json"
+        invalid = tmp_path / ".zjcode" / ".mcp.json"
         invalid.parent.mkdir(parents=True, exist_ok=True)
         invalid.write_text("{not json", encoding="utf-8")
         self._write_config(
@@ -2957,7 +2957,7 @@ class TestCheckMcpProjectTrustDedupe:
             {"alpha": {"command": "uvx", "args": ["alpha"]}},
         )
         self._write_config(
-            tmp_path / ".deepagents" / ".mcp.json",
+            tmp_path / ".zjcode" / ".mcp.json",
             {"beta": {"command": "uvx", "args": ["beta"]}},
         )
 

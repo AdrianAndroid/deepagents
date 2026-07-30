@@ -29,6 +29,7 @@ from langchain.agents.middleware.types import (
     PrivateStateAttr,
 )
 
+from deepagents_code._constants import PROJECT_DOTDIR
 from deepagents_code.unicode_security import sanitize_control_chars
 
 if TYPE_CHECKING:
@@ -471,7 +472,7 @@ EXCL='node_modules|__pycache__|\.pytest_cache'
 EXCL="${EXCL}|\.mypy_cache|\.ruff_cache|\.tox"
 EXCL="${EXCL}|\.coverage|\.eggs|dist|build"
 FILES=$(
-  { ls -1 2>/dev/null; [ -e .deepagents ] && echo .deepagents; } |
+  { ls -1 2>/dev/null; [ -e __PROJECT_DOTDIR__ ] && echo __PROJECT_DOTDIR__; } |
   grep -vE "^(${EXCL})$" |
   sort -u
 )
@@ -492,7 +493,7 @@ if [ -n "$FILES" ]; then
     fi
   done
   echo ""
-fi"""
+fi""".replace("__PROJECT_DOTDIR__", PROJECT_DOTDIR)
 
 
 def _section_tree() -> str:

@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 import tomli_w
 
-from deepagents_code import _env_vars, auth_store
+from deepagents_code import _constants, _env_vars, auth_store
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -500,7 +500,7 @@ class ProviderConfig(TypedDict, total=False):
     """
 
 
-DEFAULT_CONFIG_DIR = Path.home() / ".zjcode"
+DEFAULT_CONFIG_DIR = Path.home() / _constants.CONFIG_DOTDIR
 """Directory for user-level Deep Agents configuration (`~/.zjcode`).
 
 Renamed from `~/.deepagents` for the private-branded `zjcode` build so

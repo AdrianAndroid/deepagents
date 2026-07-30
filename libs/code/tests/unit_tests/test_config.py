@@ -288,15 +288,15 @@ class TestProjectContext:
 class TestProjectAgentMdFinding:
     """Test finding project-specific AGENTS.md files."""
 
-    def test_find_agent_md_in_deepagents_dir(self, tmp_path: Path) -> None:
-        """Test finding AGENTS.md in .deepagents/ directory."""
+    def test_find_agent_md_in_zjcode_dir(self, tmp_path: Path) -> None:
+        """Test finding AGENTS.md in .zjcode/ directory."""
         project_root = tmp_path / "project"
         project_root.mkdir()
 
-        # Create .deepagents/AGENTS.md
-        deepagents_dir = project_root / ".deepagents"
-        deepagents_dir.mkdir()
-        agent_md = deepagents_dir / "AGENTS.md"
+        # Create .zjcode/AGENTS.md
+        zjcode_dir = project_root / ".zjcode"
+        zjcode_dir.mkdir()
+        agent_md = zjcode_dir / "AGENTS.md"
         agent_md.write_text("Project instructions")
 
         result = _find_project_agent_md(project_root)
@@ -322,18 +322,18 @@ class TestProjectAgentMdFinding:
         project_root.mkdir()
 
         # Create both locations
-        deepagents_dir = project_root / ".deepagents"
-        deepagents_dir.mkdir()
-        deepagents_md = deepagents_dir / "AGENTS.md"
-        deepagents_md.write_text("In .deepagents/")
+        zjcode_dir = project_root / ".zjcode"
+        zjcode_dir.mkdir()
+        zjcode_md = zjcode_dir / "AGENTS.md"
+        zjcode_md.write_text("In .zjcode/")
 
         root_md = project_root / "AGENTS.md"
         root_md.write_text("In root")
 
-        # Should return both, with .deepagents/ first
+        # Should return both, with .zjcode/ first
         result = _find_project_agent_md(project_root)
         assert len(result) == 2
-        assert result[0] == deepagents_md
+        assert result[0] == zjcode_md
         assert result[1] == root_md
 
     def test_find_agent_md_not_found(self, tmp_path: Path) -> None:
@@ -355,7 +355,7 @@ class TestProjectAgentMdFinding:
         original_resolve = Path.resolve
 
         def patched_resolve(self: Path, *args: object, **kwargs: object) -> Path:
-            if self.name == "AGENTS.md" and ".deepagents" in str(self):
+            if self.name == "AGENTS.md" and ".zjcode" in str(self):
                 msg = "Permission denied"
                 raise PermissionError(msg)
             return original_resolve(self, *args, **kwargs)  # ty: ignore
@@ -417,7 +417,7 @@ class TestProjectAgentMdFinding:
         outside_agent_md = outside / "AGENTS.md"
         outside_agent_md.write_text("attacker-controlled")
 
-        (project_root / ".deepagents").symlink_to(outside, target_is_directory=True)
+        (project_root / ".zjcode").symlink_to(outside, target_is_directory=True)
 
         with caplog.at_level(logging.WARNING, logger="deepagents_code.project_utils"):
             result = _find_project_agent_md(project_root)
@@ -511,10 +511,10 @@ class TestSettingsGetProjectAgentMdPath:
 
     def test_returns_existing_paths(self, tmp_path: Path) -> None:
         """Should return existing AGENTS.md paths from project root."""
-        deepagents_dir = tmp_path / ".deepagents"
-        deepagents_dir.mkdir()
-        deepagents_md = deepagents_dir / "AGENTS.md"
-        deepagents_md.write_text("inner")
+        zjcode_dir = tmp_path / ".zjcode"
+        zjcode_dir.mkdir()
+        zjcode_md = zjcode_dir / "AGENTS.md"
+        zjcode_md.write_text("inner")
 
         root_md = tmp_path / "AGENTS.md"
         root_md.write_text("root")
@@ -523,7 +523,7 @@ class TestSettingsGetProjectAgentMdPath:
         s.project_root = tmp_path
 
         result = s.get_project_agent_md_path()
-        assert result == [deepagents_md, root_md]
+        assert result == [zjcode_md, root_md]
 
     def test_returns_empty_when_no_agents_md_files(self, tmp_path: Path) -> None:
         """Should return [] when project exists but has no AGENTS.md."""

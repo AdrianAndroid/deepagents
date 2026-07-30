@@ -640,8 +640,8 @@ class TestDiscoverMcpConfigs:
         project = tmp_path / "proj"
         (home / ".zjcode").mkdir(parents=True)
         (home / ".zjcode" / ".mcp.json").write_text("{}")
-        (project / ".deepagents").mkdir(parents=True)
-        (project / ".deepagents" / ".mcp.json").write_text("{}")
+        (project / ".zjcode").mkdir(parents=True)
+        (project / ".zjcode" / ".mcp.json").write_text("{}")
         (project / ".mcp.json").write_text("{}")
         monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
         monkeypatch.setattr(
@@ -673,13 +673,13 @@ class TestDiscoverMcpConfigs:
         home = tmp_path / "home"
         home.mkdir()
         project = tmp_path / "p"
-        (project / ".deepagents").mkdir(parents=True)
-        (project / ".deepagents" / ".mcp.json").write_text("{}")
+        (project / ".zjcode").mkdir(parents=True)
+        (project / ".zjcode" / ".mcp.json").write_text("{}")
         monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
 
         ctx = ProjectContext(user_cwd=project, project_root=project)
         paths = discover_mcp_configs(project_context=ctx)
-        assert any(".deepagents" in str(p) for p in paths)
+        assert any(".zjcode" in str(p) for p in paths)
 
 
 class TestLoadMcpConfigLenient:

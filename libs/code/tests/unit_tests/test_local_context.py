@@ -1260,10 +1260,10 @@ class TestSectionFiles:
         assert "__pycache__" not in out
         assert "keep.py" in out
 
-    def test_includes_deepagents(self, tmp_path: Path) -> None:
-        (tmp_path / ".deepagents").mkdir()
+    def test_includes_zjcode(self, tmp_path: Path) -> None:
+        (tmp_path / ".zjcode").mkdir()
         out = _run_section(_section_files(), tmp_path)
-        assert ".deepagents" in out
+        assert ".zjcode" in out
 
 
 class TestSectionTree:

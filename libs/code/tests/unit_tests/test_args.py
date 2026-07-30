@@ -604,7 +604,7 @@ class TestMcpCommandDispatch:
         assert exc_info.value.code == 0
         out = capsys.readouterr().out
         assert "~/.zjcode/.mcp.json" in out
-        assert "<project-root>/.deepagents/.mcp.json" in out
+        assert "<project-root>/.zjcode/.mcp.json" in out
         assert "<project-root>/.mcp.json" in out
 
     def test_mcp_login_subcommand_mcp_config_only(self) -> None:
@@ -719,12 +719,12 @@ class TestMcpCommandDispatch:
             line
             for line in out.splitlines()
             if "<project-root>/.mcp.json" in line
-            and "<project-root>/.deepagents" not in line
+            and "<project-root>/.zjcode" not in line
         )
         project_subdir_line = next(
             line
             for line in out.splitlines()
-            if "<project-root>/.deepagents/.mcp.json" in line
+            if "<project-root>/.zjcode/.mcp.json" in line
         )
         assert "found" in user_line
         assert "missing" in project_root_line

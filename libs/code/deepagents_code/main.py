@@ -2581,7 +2581,7 @@ def _check_mcp_project_trust(*, trust_flag: bool = False) -> bool | None:
 
     # Merge configs by server name (last wins, matching the loader) so that
     # a server defined in multiple project configs (for example,
-    # `.deepagents/.mcp.json` and higher-precedence `.mcp.json`) only shows
+    # `.zjcode/.mcp.json` and higher-precedence `.mcp.json`) only shows
     # up once in the prompt.
     loaded_configs = [
         cfg

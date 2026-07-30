@@ -65,7 +65,7 @@ from langchain_core.tools import StructuredTool, tool
 
 from deepagents_code import theme
 from deepagents_code._cli_context import CLIContextSchema
-from deepagents_code._constants import DEFAULT_AGENT_NAME
+from deepagents_code._constants import CONFIG_DOTDIR, DEFAULT_AGENT_NAME
 from deepagents_code._env_vars import EXPERIMENTAL, is_env_truthy
 from deepagents_code.config import (
     _INHERITED_PYTHONPATH_ENV,
@@ -928,7 +928,7 @@ def get_system_prompt(
     if not is_env_truthy(EXPERIMENTAL):
         todo_list_section = (prompt_dir / "todo_list_prompt.md").read_text().rstrip()
 
-    skills_path = f"~/.deepagents/{assistant_id}/skills"
+    skills_path = f"~/{CONFIG_DOTDIR}/{assistant_id}/skills"
 
     if interactive:
         mode_description = "an interactive TUI on the user's computer"

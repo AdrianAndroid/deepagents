@@ -1835,11 +1835,11 @@ class TestCreateCliAgentProjectContext:
         user_cwd = project_root / "src"
         user_cwd.mkdir()
 
-        project_skills_dir = project_root / ".deepagents" / "skills"
+        project_skills_dir = project_root / ".zjcode" / "skills"
         project_skills_dir.mkdir(parents=True)
         project_agent_skills_dir = project_root / ".agents" / "skills"
         project_agent_skills_dir.mkdir(parents=True)
-        project_agents_dir = project_root / ".deepagents" / "agents"
+        project_agents_dir = project_root / ".zjcode" / "agents"
         project_agents_dir.mkdir(parents=True)
         project_context = ProjectContext.from_user_cwd(user_cwd)
 
@@ -1920,7 +1920,7 @@ class TestCreateCliAgentProjectContext:
         user_cwd = project_root / "src"
         user_cwd.mkdir()
 
-        deepagents_md = project_root / ".deepagents" / "AGENTS.md"
+        deepagents_md = project_root / ".zjcode" / "AGENTS.md"
         deepagents_md.parent.mkdir(parents=True)
         deepagents_md.write_text("deepagents instructions")
         root_md = project_root / "AGENTS.md"

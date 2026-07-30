@@ -238,9 +238,9 @@ def _list(
                 "[dim]Skills are loaded from these directories "
                 "(highest precedence first):\n"
                 "  1. .agents/skills/                 project skills\n"
-                "  2. .deepagents/skills/             project skills (alias)\n"
+                "  2. .zjcode/skills/                 project skills (alias)\n"
                 "  3. ~/.agents/skills/               user skills\n"
-                "  4. ~/.deepagents/<agent>/skills/   user skills (alias)\n"
+                "  4. ~/.zjcode/<agent>/skills/       user skills (alias)\n"
                 "  5. <package>/built_in_skills/      built-in skills[/dim]",
                 style=theme.MUTED,
             )
@@ -1059,9 +1059,9 @@ def setup_skills_parser(
         description=(
             "Create a new skill with a template SKILL.md file. "
             "By default, skills are created in "
-            "~/.deepagents/<agent>/skills/. "
+            "~/.zjcode/<agent>/skills/. "
             "Use --project to create in the project's "
-            ".deepagents/skills/ directory."
+            ".zjcode/skills/ directory."
         ),
         add_help=False,
         parents=help_parent(_lazy_help("show_skills_create_help")),

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast, overload
 
+from deepagents_code._constants import PROJECT_DOTDIR
 from deepagents_code.mcp_config import resolve_mcp_server_env
 
 if TYPE_CHECKING:
@@ -877,7 +878,7 @@ def _resolve_project_config_base(project_context: ProjectContext | None) -> Path
 
 MCP_CONFIG_DISCOVERY_PATHS: tuple[tuple[str, str], ...] = (
     ("~/.zjcode/.mcp.json", "user-level"),
-    ("<project-root>/.deepagents/.mcp.json", "project subdir"),
+    ("<project-root>/.zjcode/.mcp.json", "project subdir"),
     ("<project-root>/.mcp.json", "project root"),
 )
 """Display strings for the auto-discovered MCP config paths.
@@ -909,7 +910,7 @@ def discover_mcp_configs(
 
     candidates = [
         user_dir / ".mcp.json",
-        project_root / ".deepagents" / ".mcp.json",
+        project_root / PROJECT_DOTDIR / ".mcp.json",
         project_root / ".mcp.json",
     ]
 

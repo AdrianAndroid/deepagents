@@ -63,7 +63,7 @@ def list_skills(
     0. `built_in_skills_dir` (`<package>/built_in_skills/`)
     1. `user_skills_dir` (`~/.deepagents/{agent}/skills/`)
     2. `user_agent_skills_dir` (`~/.agents/skills/`)
-    3. `project_skills_dir` (`.deepagents/skills/`)
+    3. `project_skills_dir` (`.zjcode/skills/`)
     4. `project_agent_skills_dir` (`.agents/skills/`)
     5. `user_claude_skills_dir` (`~/.claude/skills/`, experimental)
     6. `project_claude_skills_dir` (`.claude/skills/`, experimental)
@@ -73,7 +73,7 @@ def list_skills(
     Args:
         built_in_skills_dir: Path to built-in skills shipped with the package.
         user_skills_dir: Path to `~/.deepagents/{agent}/skills/`.
-        project_skills_dir: Path to `.deepagents/skills/`.
+        project_skills_dir: Path to `.zjcode/skills/`.
         user_agent_skills_dir: Path to `~/.agents/skills/` (alias).
         project_agent_skills_dir: Path to `.agents/skills/` (alias).
         user_claude_skills_dir: Path to `~/.claude/skills/` (experimental).

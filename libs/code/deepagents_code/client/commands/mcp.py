@@ -188,6 +188,7 @@ def run_mcp_config() -> int:
     """
     from pathlib import Path
 
+    from deepagents_code._constants import PROJECT_DOTDIR
     from deepagents_code.mcp_tools import (
         _resolve_project_config_base,
         discover_mcp_configs,
@@ -202,9 +203,9 @@ def run_mcp_config() -> int:
     for display, label, resolved in (
         ("~/.zjcode/.mcp.json", "user-level", user_dir / ".mcp.json"),
         (
-            "<project-root>/.deepagents/.mcp.json",
+            f"<project-root>/{PROJECT_DOTDIR}/.mcp.json",
             "project subdir",
-            project_root / ".deepagents" / ".mcp.json",
+            project_root / PROJECT_DOTDIR / ".mcp.json",
         ),
         ("<project-root>/.mcp.json", "project root", project_root / ".mcp.json"),
     ):

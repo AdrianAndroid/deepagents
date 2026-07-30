@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 from urllib.parse import unquote, urlparse
 
-from deepagents_code._constants import FIREWORKS_PROVIDER_ID_PREFIX
+from deepagents_code._constants import FIREWORKS_PROVIDER_ID_PREFIX, PROJECT_DOTDIR
 from deepagents_code._env_vars import (
     DISABLED_PROJECT_MCP_SERVERS,
     ENABLED_PROJECT_MCP_SERVERS,
@@ -2648,10 +2648,10 @@ class Settings:
     def get_project_agent_md_path(self) -> list[Path]:
         """Get project-level AGENTS.md paths.
 
-        Checks both `{project_root}/.deepagents/AGENTS.md` and
+        Checks both `{project_root}/.zjcode/AGENTS.md` and
         `{project_root}/AGENTS.md`, returning all that exist. If both are
         present, both are loaded and their instructions are combined, with
-        `.deepagents/AGENTS.md` first.
+        `.zjcode/AGENTS.md` first.
 
         Returns:
             Existing AGENTS.md paths.
@@ -2748,17 +2748,17 @@ class Settings:
         """Get project-level skills directory path.
 
         Returns:
-            Path to {project_root}/.deepagents/skills/, or None if not in a project
+            Path to {project_root}/.zjcode/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "skills"
+        return self.project_root / PROJECT_DOTDIR / "skills"
 
     def ensure_project_skills_dir(self) -> Path | None:
         """Ensure project-level skills directory exists and return its path.
 
         Returns:
-            Path to {project_root}/.deepagents/skills/, or None if not in a project
+            Path to {project_root}/.zjcode/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
@@ -2783,11 +2783,11 @@ class Settings:
         """Get project-level agents directory path for custom subagent definitions.
 
         Returns:
-            Path to {project_root}/.deepagents/agents/, or None if not in a project
+            Path to {project_root}/.zjcode/agents/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "agents"
+        return self.project_root / PROJECT_DOTDIR / "agents"
 
     @property
     def user_agents_dir(self) -> Path:
