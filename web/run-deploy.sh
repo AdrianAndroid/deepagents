@@ -3,7 +3,7 @@
 set -euo pipefail
 
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)/"
-REMOTE="root@8.152.204.58:/opt/1panel/www/sites/8.152.204.58/index/"
+REMOTE="root@8.152.204.58:/opt/1panel/www/sites/zjcode.zhaojian.xin/index/"
 SSH_PORT="${SSH_PORT:-22}"
 
 RSYNC_OPTS=(-avz --delete
