@@ -127,10 +127,13 @@ class TestBuildServerEnv:
             "BASH_ENV",
             "BASHOPTS",
             "CDPATH",
+            "COMSPEC",
             "ENV",
             "GLOBIGNORE",
             "PYTHONPATH",
             "SHELLOPTS",
+            "SYSTEMROOT",
+            "WINDIR",
             _INHERITED_PYTHONPATH_ENV,
         ):
             assert key in _DOTENV_DENIED_ENV_KEYS
