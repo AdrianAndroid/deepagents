@@ -2,7 +2,7 @@
 
 # Keep the `x-release-please-version` annotation — release-please uses it to
 # bump `__version__` in sync with `pyproject.toml` on every release PR.
-__version__ = "0.0.7"  # x-release-please-version
+__version__ = "0.0.8"  # x-release-please-version
 
 DISTRIBUTION_NAME = "zjcode"
 """Distribution (wheel/PyPI) name for this private-branded build.
