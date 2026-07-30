@@ -12899,6 +12899,62 @@ class DeepAgentsApp(App):
                     else "Failed to copy latest assistant message to clipboard."
                 )
                 await self._mount_message(AppMessage(fail_msg))
+        elif cmd == "/copy-image":
+            await self._mount_message(UserMessage(command))
+            if not self._image_tracker.images:
+                await self._mount_message(
+                    AppMessage("No images have been pasted yet."),
+                )
+                return
+
+            from deepagents_code.clipboard import copy_image_to_clipboard
+
+            # Copy the most recently pasted image
+            latest_image = self._image_tracker.images[-1]
+            success, error = copy_image_to_clipboard(latest_image)
+
+            if success:
+                await self._mount_message(
+                    AppMessage("Copied latest image to clipboard."),
+                )
+            else:
+                fail_msg = (
+                    f"Failed to copy image to clipboard: {error}"
+                    if error
+                    else "Failed to copy image to clipboard."
+                )
+                await self._mount_message(AppMessage(fail_msg))
+        elif cmd == "/paste-image":
+            await self._mount_message(UserMessage(command))
+
+            from deepagents_code.media_utils import (
+                get_clipboard_image,
+                save_pasted_media,
+            )
+            import asyncio
+
+            image = await asyncio.to_thread(get_clipboard_image)
+            if image is None:
+                await self._mount_message(
+                    AppMessage("No image found in clipboard."),
+                )
+                return
+
+            chat_input = self.query_one(ChatInput)
+            existing_text = chat_input.value
+            placeholder = self._image_tracker.add_image(
+                image, existing_text=existing_text
+            )
+            stem = placeholder.strip("[]")
+
+            await asyncio.to_thread(
+                save_pasted_media, image.base64_data, stem, image.format
+            )
+
+            chat_input._text_area.insert(placeholder)
+            await self._mount_message(
+                AppMessage(f"Pasted image from clipboard: {placeholder}"),
+            )
         elif cmd == "/editor":
             await self.action_open_editor()
         elif cmd in {"/offload", "/compact"}:

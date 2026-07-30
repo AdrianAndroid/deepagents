@@ -245,6 +245,33 @@ The app no longer honors this value. It detects the old name so users receive a
 migration notice pointing to `DANGEROUSLY_ENABLE_PROJECT_MCP_SERVERS`.
 """
 
+NO_MOUSE = "DEEPAGENTS_CODE_NO_MOUSE"
+"""Disable Textual mouse support entirely when enabled."""
+
+ENABLED_PROJECT_MCP_SERVERS = "DEEPAGENTS_CODE_ENABLED_PROJECT_MCP_SERVERS"
+"""Comma-separated project MCP server names to pre-approve."""
+
+DISTRIBUTION_NAME = "zjcode"
+"""Distribution (wheel/PyPI) name for this private-branded build."""
+
+BRAND_NAME = "zjcode"
+"""Short user-visible command name."""
+
+PYPI_URL = "https://pypi.org/pypi/zjcode/json"
+"""PyPI JSON API endpoint for version checks."""
+
+SDK_PYPI_URL = "https://pypi.org/pypi/deepagents/json"
+"""PyPI JSON API endpoint for reading deepagents SDK release metadata."""
+
+DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
+"""Documentation URL."""
+
+CHANGELOG_URL = "https://github.com/langchain-ai/deepagents/blob/main/libs/code/CHANGELOG.md"
+"""Changelog URL."""
+
+USER_AGENT = "zjcode/0.0.8 update-check"
+"""User-Agent header sent with PyPI requests."""
+
 LOG_LEVEL = "DEEPAGENTS_CODE_LOG_LEVEL"
 """Minimum level for `deepagents_code` runtime logging.
 
@@ -472,3 +499,22 @@ def is_env_truthy(name: str, *, default: bool = False) -> bool:
         return default
     classified = classify_env_bool(raw)
     return default if classified is None else classified
+
+
+def is_env_truthy_with_empty_as_ignore(key: str) -> bool | None:
+    """Variant of `is_env_truthy()` where empty/unset value means "ignore."
+
+    A "recognized truthy" → `True`, "recognized falsy" → `False`, and
+    empty/unset/unrecognized → `None`. Callers interpret `None` as "fall
+    through to the persisted config value rather than forcing a default."
+
+    This is the behavior for env flags that can take an empty string to mean
+    "opt out without specifying a value" (e.g. an add-on feature that is on by
+    default, where `VAR=0` turns it off, `VAR=1` forces it on, and `VAR=` or
+    unrecognized opts out of the override and falls back to the config).
+    """
+    raw = os.environ.get(key)
+    if raw is None:
+        return None
+    return classify_env_bool(raw)
+

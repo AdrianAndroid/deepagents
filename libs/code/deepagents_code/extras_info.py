@@ -1166,7 +1166,7 @@ class InstallHint:
 
 def resolve_install_hint(
     package: str,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> InstallHint:
     """Resolve how to recover from a missing provider package.
 

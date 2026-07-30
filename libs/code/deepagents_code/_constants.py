@@ -13,25 +13,6 @@ from typing import Final
 DEFAULT_AGENT_NAME: Final[str] = "agent"
 """Default agent / assistant identifier when no `-a` flag is given."""
 
-CONFIG_DOTDIR: Final[str] = ".zjcode"
-"""User-level config directory name (the `.zjcode` in `~/.zjcode/`).
-
-Single source of truth for the private-brand directory name. `model_config`
-builds the absolute `DEFAULT_CONFIG_DIR` from it, and prompt/help text that
-needs a portable `~/...` form references the name directly. Keep it in
-lock-step with `PROJECT_DOTDIR` (the per-project `.zjcode/`) when rebranding.
-"""
-
-PROJECT_DOTDIR: Final[str] = ".zjcode"
-"""Per-project config directory name (e.g. `<project-root>/.zjcode/`).
-
-Holds project-scoped skills, agents, `AGENTS.md`, and `.mcp.json`. Named here
-so the private-branded `zjcode` build stays consistent with the user-level
-`~/.zjcode` directory (see `model_config.DEFAULT_CONFIG_DIR`) — both must move
-together when rebranding, otherwise project-level discovery silently points at
-the upstream `.deepagents` path and finds nothing.
-"""
-
 FS_TOOL_NAMES: Final[frozenset[str]] = frozenset(
     {"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep", "execute"}
 )
@@ -55,6 +36,25 @@ string would violate the startup-performance rule (see AGENTS.md). This is a
 hand-maintained duplicate that can rot if the SDK bumps its default, so
 `test_reliable_rubric.py::TestReliableRubricMiddleware::test_displayed_max_iterations_default_matches_sdk`
 is the drift guard that fails when the two diverge.
+"""
+
+CONFIG_DOTDIR: Final[str] = ".zjcode"
+"""User-level config directory name (the `.zjcode` in `~/.zjcode/`).
+
+Single source of truth for the private-brand directory name. `model_config`
+builds the absolute `DEFAULT_CONFIG_DIR` from it, and prompt/help text that
+needs a portable `~/...` form references the name directly. Keep it in
+lock-step with `PROJECT_DOTDIR` (the per-project `.zjcode/`) when rebranding.
+"""
+
+PROJECT_DOTDIR: Final[str] = ".zjcode"
+"""Per-project config directory name (e.g. `<project-root>/.zjcode/`).
+
+Holds project-scoped skills, agents, `AGENTS.md`, and `.mcp.json`. Named here
+so the private-branded `zjcode` build stays consistent with the user-level
+`~/.zjcode` directory (see `model_config.DEFAULT_CONFIG_DIR`) — both must move
+together when rebranding, otherwise project-level discovery silently points at
+the upstream `.deepagents` path and finds nothing.
 """
 
 FIREWORKS_PROVIDER_ID_PREFIX: Final[str] = "accounts/fireworks/"

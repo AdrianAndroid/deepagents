@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 # Suppress Pydantic v1 compatibility warnings from langchain on Python 3.14+
 warnings.filterwarnings("ignore", message=".*Pydantic V1.*", category=UserWarning)
 
-from deepagents_code._version import __version__
+from deepagents_code._version import DISTRIBUTION_NAME, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ def build_version_text() -> str:
         sdk_annotation = ""
 
     text = (
-        f"deepagents-code {__version__}{cli_annotation}\n"
+        f"{DISTRIBUTION_NAME} {__version__}{cli_annotation}\n"
         f"deepagents (SDK) {sdk_version}{sdk_annotation}"
     )
 
@@ -365,7 +365,7 @@ def _run_startup_auto_update(console: "Console") -> None:
     from rich.markup import escape
 
     from deepagents_code._env_vars import DEBUG_UPDATE, RESTARTED_AFTER_UPDATE
-    from deepagents_code._version import __version__ as cli_version
+    from deepagents_code._version import DISTRIBUTION_NAME, __version__ as cli_version
     from deepagents_code.config import _is_editable_install
     from deepagents_code.update_check import (
         clear_startup_auto_update_failure,
@@ -1086,7 +1086,7 @@ def _warn_if_interpreter_tools_without_interpreter(
 
 
 def _recent_agent_is_valid(name: str) -> bool:
-    """Return `True` when `~/.deepagents/<name>/` still exists on disk.
+    """Return `True` when `~/.zjcode/<name>/` still exists on disk.
 
     Used to guard against a stale `[agents].recent` entry pointing at an
     agent the user has since deleted — in that case we silently fall back
@@ -1098,13 +1098,13 @@ def _recent_agent_is_valid(name: str) -> bool:
     undo that deferral.
 
     `is_dir()` is wrapped in `try/except OSError` so permission errors on
-    `~/.deepagents` (symlink loops, EACCES) don't crash the launch — we
+    `~/.zjcode` (symlink loops, EACCES) don't crash the launch — we
     treat them the same as "not valid" and fall back to the default.
     """
     from pathlib import Path as _Path
 
     try:
-        return (_Path.home() / ".deepagents" / name).is_dir()
+        return (_Path.home() / ".zjcode" / name).is_dir()
     except OSError:
         logger.warning(
             "Could not validate recent agent %r; falling back to default",
@@ -1138,7 +1138,7 @@ def check_cli_dependencies() -> None:
         print("\nReinstall dcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
         print("  curl -LsSf https://langch.in/dcode | bash")  # noqa: T201  # CLI output for missing dependencies
         print("\nOr install the tool directly via uv:")  # noqa: T201  # CLI output for missing dependencies
-        print("  uv tool install -U deepagents-code")  # noqa: T201  # CLI output for missing dependencies
+        print(f"  uv tool install -U {DISTRIBUTION_NAME}")  # noqa: T201  # CLI output for missing dependencies
         sys.exit(1)
 
 
@@ -1222,7 +1222,7 @@ def check_optional_tools(*, config_path: Path | None = None) -> list[str]:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         List of missing tool names (e.g. `["ripgrep"]`).
@@ -2214,7 +2214,7 @@ def parse_args() -> argparse.Namespace:
         # Never surfaced: argparse only emits `version=` when the flag is
         # actually passed, which takes the `build_version_text()` branch above.
         # This placeholder only exists because `version=` requires a value.
-        version_text = f"deepagents-code {__version__}"
+        version_text = f"{DISTRIBUTION_NAME} {__version__}"
     parser.add_argument(
         "-v",
         "--version",
@@ -2284,7 +2284,7 @@ def _resolve_and_validate_sandbox(
         if not default:
             parser.error(
                 "--sandbox was given with no value but no [sandboxes].default "
-                "is configured in ~/.deepagents/config.toml. Pass a provider "
+                "is configured in ~/.zjcode/config.toml. Pass a provider "
                 "name explicitly or set [sandboxes].default." + _config_note()
             )
         args.sandbox = default
@@ -2298,7 +2298,7 @@ def _resolve_and_validate_sandbox(
             "publishes it and re-run:\n"
             "  /install <package-name> --package\n"
             f"or declare [sandboxes.providers.{args.sandbox}] in "
-            "~/.deepagents/config.toml." + _config_note()
+            "~/.zjcode/config.toml." + _config_note()
         )
 
     metadata = registry.get_metadata(args.sandbox)
@@ -3860,7 +3860,7 @@ def cli_main() -> None:
             except ImportError as exc:
                 msg = (
                     f"ACP dependencies not available: {exc}\n"
-                    "Install with: uv tool install --reinstall -U deepagents-code "
+                    f"Install with: uv tool install --reinstall -U {DISTRIBUTION_NAME} "
                     "--with deepagents-acp\n"
                 )
                 sys.stderr.write(msg)
@@ -4073,7 +4073,7 @@ def cli_main() -> None:
                 from rich.markup import escape
 
                 from deepagents_code._env_vars import DEBUG_UPDATE
-                from deepagents_code._version import __version__ as cli_version
+                from deepagents_code._version import DISTRIBUTION_NAME, __version__ as cli_version
                 from deepagents_code.config import _is_editable_install
                 from deepagents_code.update_check import (
                     _PRERELEASE_UNSUPPORTED_MESSAGE,
@@ -4717,7 +4717,7 @@ def cli_main() -> None:
             # Warn about available update on exit
             try:
                 if result.update_available[0]:
-                    from deepagents_code._version import __version__ as cli_version
+                    from deepagents_code._version import DISTRIBUTION_NAME, __version__ as cli_version
                     from deepagents_code.update_check import (
                         format_installed_age_suffix,
                         format_release_age_parenthetical,

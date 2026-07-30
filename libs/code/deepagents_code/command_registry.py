@@ -117,6 +117,18 @@ COMMANDS: tuple[SlashCommand, ...] = (
         bypass_tier=BypassTier.SIDE_EFFECT_FREE,
     ),
     SlashCommand(
+        name="/copy-image",
+        description="Copy the most recently pasted image to the system clipboard",
+        bypass_tier=BypassTier.SIDE_EFFECT_FREE,
+        hidden_keywords="image clipboard",
+    ),
+    SlashCommand(
+        name="/paste-image",
+        description="Paste an image from the system clipboard into the chat input",
+        bypass_tier=BypassTier.SIDE_EFFECT_FREE,
+        hidden_keywords="image clipboard",
+    ),
+    SlashCommand(
         name="/force-clear",
         description="Stop active work, clear the chat, and start a new thread",
         bypass_tier=BypassTier.ALWAYS,

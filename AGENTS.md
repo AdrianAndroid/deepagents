@@ -511,6 +511,25 @@ Everything else (REPL widgets, Textual app, MCP, skills, sandbox bootstrap, agen
 
 `libs/evals/tests/evals/tau2_airline/data/` contains vendored data from the upstream [tau-bench](https://github.com/sierra-research/tau-bench) project. These files must stay byte-identical to upstream. Pre-commit hooks (`end-of-file-fixer`, `trailing-whitespace`, `fix-smartquotes`, `fix-spaces`) are excluded from this directory in `.pre-commit-config.yaml`. Do not remove those exclusions or reformat files in this directory.
 
+### Common Git Merge Issues
+
+**Problem**: After merging upstream `main` into `learn` branch, running `zjcode` may fail with various import errors like:
+- `ModuleNotFoundError: No module named 'deepagents_code.mcp_trust'`
+- `AttributeError: module 'deepagents_code._env_vars' has no attribute 'NO_MOUSE'`
+- `AttributeError: module 'deepagents_code._env_vars' has no attribute 'PYPI_URL'`
+
+**Root Cause**: The upstream `main` branch may have different code structure than `learn`. When merging, files get deleted or moved, but imports in other files aren't updated accordingly. The branded build (`zjcode`) keeps files that upstream may have deleted or restructured.
+
+**Fixes Applied**:
+1. **`mcp_trust.py` missing**: Restore from commit before deletion (branded version still needs it)
+2. **`NO_MOUSE` missing in `_env_vars.py`**: Add the constant to `_env_vars.py`
+3. **`PYPI_URL`/`SDK_PYPI_URL` missing in `_env_vars.py`**: These moved to `_version.py`; update imports in `config_manifest.py`
+
+**Quick Recovery**: If the merge breaks things badly, reset to the last known good commit before the merge and redo changes more carefully:
+```bash
+git reset --hard HEAD~1  # Go back to before the problematic merge
+```
+
 ### Benchmarks
 
 Each package's `Makefile` defines `bench` (walltime) and `bench-memory` (heap) targets that are the **single source of truth for the bench invocation** — both local runs and the reusable CI workflow (`.github/workflows/_benchmark.yml`) call these targets. To change how benchmarks are invoked, edit the Makefile; CI inherits the change automatically.
