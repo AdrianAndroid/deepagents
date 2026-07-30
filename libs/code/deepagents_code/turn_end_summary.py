@@ -154,11 +154,15 @@ class _TurnState:
     reason: str = REASON_UNKNOWN_TRUNCATION
     detail: str = ""
     finish_reason_raw: str = ""
+    model_name: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
     finalized: bool = False
     started: bool = False
 
 
 _current: _TurnState = _TurnState()
+_last_thread_id: str = ""
 
 
 @dataclass
@@ -173,6 +177,9 @@ class TurnEndRecord:
     turn_id: str
     turn_number: int | None
     finish_reason_raw: str
+    model_name: str
+    input_tokens: int
+    output_tokens: int
     ended_at: float = field(default_factory=time.time)
 
 
@@ -186,9 +193,12 @@ def mark_turn_start(
     thread_id: str = "",
     turn_id: str | None = None,
     turn_number: int | None = None,
+    model_name: str = "",
+    input_tokens: int = 0,
+    output_tokens: int = 0,
 ) -> None:
     """Reset per-turn state and record the start time."""
-    global _current
+    global _current, _last_thread_id
     with _state_lock:
         _current = _TurnState()
         _current.started = True
@@ -196,6 +206,12 @@ def mark_turn_start(
         _current.thread_id = thread_id or ""
         _current.turn_id = turn_id or ""
         _current.turn_number = turn_number
+        _current.model_name = model_name or ""
+        _current.input_tokens = input_tokens
+        _current.output_tokens = output_tokens
+        if _last_thread_id and _last_thread_id != _current.thread_id:
+            _write_thread_separator(_current.thread_id)
+        _last_thread_id = _current.thread_id
 
 
 def classify_finish_reason(finish_reason: str | None) -> str | None:
@@ -231,6 +247,19 @@ def mark_turn_reason(reason: str, detail: str = "") -> None:
             _current.reason = reason
             if detail:
                 _current.detail = detail
+
+
+def observe_token_count(input_tokens: int, output_tokens: int) -> None:
+    """Record token usage for the current turn."""
+    with _state_lock:
+        _current.input_tokens = input_tokens
+        _current.output_tokens = output_tokens
+
+
+def observe_model_name(model_name: str) -> None:
+    """Record the model name used for the current turn."""
+    with _state_lock:
+        _current.model_name = model_name
 
 
 def classify_exception(exc: BaseException) -> tuple[str, str]:
@@ -323,6 +352,9 @@ def finalize_turn() -> TurnEndRecord | None:
         turn_id=turn_id,
         turn_number=turn_number,
         finish_reason_raw=finish_raw,
+        model_name=_current.model_name,
+        input_tokens=_current.input_tokens,
+        output_tokens=_current.output_tokens,
     )
 
     # Sink 2: JSONL audit log — always attempted.
@@ -349,19 +381,30 @@ def render_marker_text(record: TurnEndRecord) -> str:
     """Render the single-line human-readable marker.
 
     Format:
-      "⏹ 结束状态：<emoji> <label>[ (detail)] | ⏱ 总耗时：<pretty> | 🕒 结束时间：<ts>"
+      "⏹ 结束状态：<emoji> <label>[ (detail)] | 🤖 模型：<name> | 🔢 Tokens：<in>+<out>=<total> | ⏱ 总耗时：<pretty> | 🕒 结束时间：<ts>"
     """
     emoji = _REASON_EMOJI.get(record.reason, "\u2754")
     label = _REASON_LABEL.get(record.reason, record.reason)
     reason_part = f"{emoji} {label}"
     if record.detail:
         reason_part = f"{reason_part} ({record.detail})"
+    
+    parts = [f"\u23f9 \u7ed3\u675f\u72b6\u6001\uff1a{reason_part}"]
+    
+    if record.model_name:
+        parts.append(f"\U0001f916 \u6a21\u578b\uff1a{record.model_name}")
+    
+    if record.input_tokens or record.output_tokens:
+        total_tokens = record.input_tokens + record.output_tokens
+        token_part = f"\U0001f522 Tokens\uff1a{record.input_tokens}+{record.output_tokens}={total_tokens}"
+        parts.append(token_part)
+    
+    parts.append(f"\u23f1 \u603b\u8017\u65f6\uff1a{record.duration_pretty}")
+    
     ended_at = datetime.fromtimestamp(record.ended_at).strftime("%Y-%m-%d %H:%M:%S")
-    return (
-        f"\u23f9 \u7ed3\u675f\u72b6\u6001\uff1a{reason_part} | "
-        f"\u23f1 \u603b\u8017\u65f6\uff1a{record.duration_pretty} | "
-        f"\U0001f552 \u7ed3\u675f\u65f6\u95f4\uff1a{ended_at}"
-    )
+    parts.append(f"\U0001f552 \u7ed3\u675f\u65f6\u95f4\uff1a{ended_at}")
+    
+    return " | ".join(parts)
 
 
 def render_marker_line(record: TurnEndRecord) -> str:
@@ -394,10 +437,35 @@ def _append_jsonl(record: TurnEndRecord) -> None:
         "finish_reason_raw": record.finish_reason_raw,
         "duration_seconds": record.duration_seconds,
         "duration_pretty": record.duration_pretty,
+        "model_name": record.model_name,
+        "input_tokens": record.input_tokens,
+        "output_tokens": record.output_tokens,
     }
     # POSIX atomic append: one `write` on a small line stays below PIPE_BUF.
     with _log_path().open("a", encoding="utf-8") as fp:
         fp.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+THREAD_SEPARATOR = """---
+✨ ✨ ✨ ✨ ✨ ✨ 【 NEW SESSION 】 ✨ ✨ ✨ ✨ ✨ ✨
+---
+"""
+
+
+def _write_thread_separator(thread_id: str) -> None:
+    """Write the thread separator block to the doc file when thread changes."""
+    root = _find_project_root()
+    if root is None:
+        return
+    doc_dir = root / "doc"
+    target = _pick_today_doc(doc_dir)
+    if target is None:
+        return
+    try:
+        with target.open("a", encoding="utf-8") as fp:
+            fp.write("\n" + THREAD_SEPARATOR + "\n")
+    except Exception:
+        logger.debug("turn_end_summary thread separator write failed for %s", target, exc_info=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -517,6 +585,9 @@ def _snapshot_for_tests() -> _TurnState:
             reason=_current.reason,
             detail=_current.detail,
             finish_reason_raw=_current.finish_reason_raw,
+            model_name=_current.model_name,
+            input_tokens=_current.input_tokens,
+            output_tokens=_current.output_tokens,
             finalized=_current.finalized,
             started=_current.started,
         )

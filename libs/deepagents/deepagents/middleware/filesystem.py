@@ -2234,7 +2234,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             max_count: int | None = None,
         ) -> ToolMessage:
             """Synchronous wrapper for grep tool."""
-            resolved_backend = self._get_backend(runtime)
+            resolved_backend = self.backend
             if path is not None:
                 try:
                     path = validate_path(
@@ -2284,7 +2284,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             max_count: int | None = None,
         ) -> ToolMessage:
             """Asynchronous wrapper for grep tool."""
-            resolved_backend = self._get_backend(runtime)
+            resolved_backend = self.backend
             if path is not None:
                 try:
                     path = validate_path(
@@ -2305,7 +2305,6 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
                         tool_call_id=runtime.tool_call_id,
                         status="error",
                     )
-            resolved_backend = self.backend
             effective_max_count = max_count if max_count is not None else self._grep_max_count
             grep_result = await _agrep_backend(resolved_backend, pattern, path, glob, effective_max_count)
             matches = grep_result.matches or []
