@@ -1,11 +1,11 @@
-"""Version information and lightweight constants for `deepagents-code`."""
+"""Version information and lightweight constants for `zjcode`."""
 
 # Keep the `x-release-please-version` annotation — release-please uses it to
 # bump `__version__` in sync with `pyproject.toml` on every release PR.
-__version__ = "0.1.49"  # x-release-please-version
+__version__ = "0.0.8"  # x-release-please-version
 
 DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
-"""URL for `deepagents-code` documentation."""
+"""URL for `deepagents-code` documentation (upstream)."""
 
 PYPI_URL = "https://pypi.org/pypi/deepagents-code/json"
 """PyPI JSON API endpoint for version checks."""

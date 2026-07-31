@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from deepagents_code._constants import PROJECT_DOTDIR
 from deepagents_code._env_vars import SERVER_ENV_PREFIX
 from deepagents_code._git import find_git_root
 
@@ -83,13 +84,13 @@ class ProjectContext:
         """Return the project `.deepagents/skills` directory, if any."""
         if self.project_root is None:
             return None
-        return self.project_root / ".deepagents" / "skills"
+        return self.project_root / PROJECT_DOTDIR / "skills"
 
     def project_agents_dir(self) -> Path | None:
         """Return the project `.deepagents/agents` directory, if any."""
         if self.project_root is None:
             return None
-        return self.project_root / ".deepagents" / "agents"
+        return self.project_root / PROJECT_DOTDIR / "agents"
 
     def project_agent_skills_dir(self) -> Path | None:
         """Return the project `.agents/skills` directory, if any."""
@@ -185,7 +186,7 @@ def find_project_agent_md(project_root: Path) -> list[Path]:
     # `/var` -> `/private/var`, or a path with symlinked ancestors).
     project_root_resolved = project_root.resolve()
     candidates = [
-        project_root_resolved / ".deepagents" / "AGENTS.md",
+        project_root_resolved / PROJECT_DOTDIR / "AGENTS.md",
         project_root_resolved / "AGENTS.md",
     ]
     paths: list[Path] = []

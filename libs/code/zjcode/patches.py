@@ -40,8 +40,15 @@ def apply_brand_patches() -> None:
                         f"{old_value!r} → {value!r}"
                     )
 
-        except ImportError:
-            logger.warning(f"[zjcode] Module {module_path} not found, skipping patches")
+        except ImportError as e:
+            logger.warning(
+                f"[zjcode] Module {module_path} not found, skipping patches: {e}"
+            )
+            failed_count += len(patches)
+        except Exception as e:
+            logger.warning(
+                f"[zjcode] Failed to patch {module_path}: {e}"
+            )
             failed_count += len(patches)
 
     if applied_count > 0:
