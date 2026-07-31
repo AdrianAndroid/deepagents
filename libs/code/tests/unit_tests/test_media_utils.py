@@ -5,17 +5,13 @@ Covers clipboard detection, base64 encoding, and multimodal content.
 
 import base64
 import io
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from PIL import Image
 
-from deepagents_code import input as _input_module
 from deepagents_code.input import MediaTracker
 from deepagents_code.media_utils import (
-    MAX_MEDIA_BYTES,
     ImageData,
     VideoData,
     _detect_video_format,
@@ -24,41 +20,27 @@ from deepagents_code.media_utils import (
     get_clipboard_image,
     get_image_from_path,
     get_video_from_path,
+    is_media_path,
     strip_media_placeholders,
 )
 
 
-@pytest.fixture(autouse=True)
-def _deterministic_media_ids(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Replace `_generate_media_id` with a per-kind counter for stable tokens.
+class TestIsMediaPath:
+    """Tests for the extension-only media classifier."""
 
-    Tests use short literal placeholders like ``[img_001]`` / ``[vid_002]``.
-    The production id is a wall-clock timestamp, so tests would otherwise be
-    non-deterministic and change every run. Substituting a 14-digit counter
-    keeps every ``[image N]`` mapping to ``[img_00000000000000N]`` and every
-    ``[video N]`` to ``[vid_00000000000000N]``, so we can keep the tests
-    readable without giving up placeholder shape validation.
-    """
-    counters: dict[str, int] = {"image": 0, "video": 0}
+    def test_image_extension_is_media(self) -> None:
+        """Image extensions are recognized regardless of case."""
+        assert is_media_path(Path("/tmp/a.png"))
+        assert is_media_path(Path("/tmp/a.JPG"))
 
-    def fake_id(kind: str) -> str:
-        counters[kind] += 1
-        # 3-digit zero-padded id keeps the placeholder token 9 chars wide
-        # (matches the pre-timestamp `[image N]` layout so span offsets in
-        # existing tests stay valid without recomputing every literal).
-        return f"{counters[kind]:03d}"
+    def test_video_extension_is_media(self) -> None:
+        """Video extensions are recognized as media."""
+        assert is_media_path(Path("/tmp/clip.mp4"))
 
-    monkeypatch.setattr(_input_module, "_generate_media_id", fake_id)
-
-
-def _img_ph(n: int) -> str:
-    """Render the fake image placeholder for the ``n``-th add_image call."""
-    return f"[img_{n:03d}]"
-
-
-def _vid_ph(n: int) -> str:
-    """Render the fake video placeholder for the ``n``-th add_video call."""
-    return f"[vid_{n:03d}]"
+    def test_non_media_extension_is_not_media(self) -> None:
+        """Text and other files are not treated as media."""
+        assert not is_media_path(Path("/tmp/notes.txt"))
+        assert not is_media_path(Path("/tmp/no_extension"))
 
 
 class TestImageData:
@@ -69,7 +51,7 @@ class TestImageData:
         image = ImageData(
             base64_data="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
             format="png",
-            placeholder="[img_001]",
+            placeholder="[image 1]",
         )
         result = image.to_message_content()
 
@@ -82,7 +64,7 @@ class TestImageData:
         image = ImageData(
             base64_data="abc123",
             format="jpeg",
-            placeholder="[img_002]",
+            placeholder="[image 2]",
         )
         result = image.to_message_content()
 
@@ -103,10 +85,10 @@ class TestMediaTracker:
         placeholder1 = tracker.add_image(img1)
         placeholder2 = tracker.add_image(img2)
 
-        assert placeholder1 == "[img_001]"
-        assert placeholder2 == "[img_002]"
-        assert img1.placeholder == "[img_001]"
-        assert img2.placeholder == "[img_002]"
+        assert placeholder1 == "[image 1]"
+        assert placeholder2 == "[image 2]"
+        assert img1.placeholder == "[image 1]"
+        assert img2.placeholder == "[image 2]"
 
     def test_get_images_returns_copy(self) -> None:
         """Test that get_images returns a copy, not the original list."""
@@ -127,14 +109,16 @@ class TestMediaTracker:
         tracker.add_image(img)
         tracker.add_image(img)
 
+        assert tracker.next_image_id == 3
         assert len(tracker.images) == 2
 
         tracker.clear()
 
+        assert tracker.next_image_id == 1
         assert len(tracker.images) == 0
 
     def test_add_after_clear_starts_at_one(self) -> None:
-        """Adding after clear yields a fresh placeholder id from the generator."""
+        """Test that adding after clear starts from [image 1] again."""
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
 
@@ -145,35 +129,29 @@ class TestMediaTracker:
         new_img = ImageData(base64_data="xyz", format="png", placeholder="")
         placeholder = tracker.add_image(new_img)
 
-        # The tracker no longer maintains its own counter — placeholder ids come
-        # from `_generate_media_id`, which in tests is a per-kind counter. So
-        # after two prior add_image calls, the third returns id "3" and clear()
-        # does not rewind that. The important invariant is uniqueness, not
-        # "restart from 1".
-        assert placeholder == "[img_003]"
+        assert placeholder == "[image 1]"
 
     def test_add_image_skips_placeholder_already_in_text(self) -> None:
         """A literal placeholder in the draft is not rebound to new media."""
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
 
-        placeholder = tracker.add_image(img, existing_text="restore [img_001]")
+        placeholder = tracker.add_image(img, existing_text="restore [image 1]")
 
-        # Generator returns id "001", but that exact token already appears in
-        # the draft, so the tracker appends a "_2" suffix to keep the
-        # attachment token distinct from the user-typed literal.
-        assert placeholder == "[img_001_2]"
-        assert img.placeholder == "[img_001_2]"
+        assert placeholder == "[image 2]"
+        assert img.placeholder == "[image 2]"
+        assert tracker.next_image_id == 3
 
     def test_add_video_skips_placeholder_already_in_text(self) -> None:
         """Video attachment IDs skip literal placeholders in the draft."""
         tracker = MediaTracker()
         vid = VideoData(base64_data="abc", format="mp4", placeholder="")
 
-        placeholder = tracker.add_video(vid, existing_text="restore [vid_001]")
+        placeholder = tracker.add_video(vid, existing_text="restore [video 1]")
 
-        assert placeholder == "[vid_001_2]"
-        assert vid.placeholder == "[vid_001_2]"
+        assert placeholder == "[video 2]"
+        assert vid.placeholder == "[video 2]"
+        assert tracker.next_video_id == 3
 
     def test_sync_to_text_resets_when_placeholders_removed(self) -> None:
         """Removing placeholders from input should clear tracked images and IDs."""
@@ -185,6 +163,7 @@ class TestMediaTracker:
         tracker.sync_to_text("")
 
         assert tracker.images == []
+        assert tracker.next_image_id == 1
 
     def test_sync_to_text_keeps_referenced_images(self) -> None:
         """Sync should prune unreferenced images while preserving next ID order."""
@@ -194,20 +173,21 @@ class TestMediaTracker:
 
         tracker.add_image(img1)
         tracker.add_image(img2)
-        tracker.sync_to_text("keep [img_002] only")
+        tracker.sync_to_text("keep [image 2] only")
 
+        assert tracker.next_image_id == 3
         assert len(tracker.images) == 1
-        assert tracker.images[0].placeholder == "[img_002]"
+        assert tracker.images[0].placeholder == "[image 2]"
 
     def test_sync_to_text_tracks_duplicate_inserted_before_placeholder(self) -> None:
         """A typed duplicate before the display token does not steal the media span."""
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
+        tracker.sync_to_text("[image 1]")
 
-        text = "literal [img_001] then actual [img_001]"
-        tracker.sync_to_text(text, previous_text="[img_001]", cursor_offset=30)
+        text = "literal [image 1] then actual [image 1]"
+        tracker.sync_to_text(text, previous_text="[image 1]", cursor_offset=30)
 
         assert img.placeholder_span == (30, 39)
 
@@ -216,31 +196,31 @@ class TestMediaTracker:
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
+        tracker.sync_to_text("[image 1]")
 
-        previous_text = "literal [img_001] actual [img_001]"
+        previous_text = "literal [image 1] actual [image 1]"
         tracker.sync_to_text(
             previous_text,
-            previous_text="[img_001]",
+            previous_text="[image 1]",
             cursor_offset=25,
         )
 
-        text = "Xliteral [img_001] actual [img_001]"
+        text = "Xliteral [image 1] actual [image 1]"
         tracker.sync_to_text(text, previous_text=previous_text, cursor_offset=1)
         result = create_multimodal_content(text, tracker.images)
 
         assert img.placeholder_span == (26, 35)
-        assert result[0]["text"] == "Xliteral [img_001] actual"
+        assert result[0]["text"] == "Xliteral [image 1] actual"
 
     def test_sync_to_text_tracks_duplicate_inserted_after_placeholder(self) -> None:
         """A typed duplicate after the display token does not steal the media span."""
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
+        tracker.sync_to_text("[image 1]")
 
-        text = "[img_001] literal [img_001]"
-        tracker.sync_to_text(text, previous_text="[img_001]")
+        text = "[image 1] literal [image 1]"
+        tracker.sync_to_text(text, previous_text="[image 1]")
 
         assert img.placeholder_span == (0, 9)
 
@@ -251,13 +231,13 @@ class TestMediaTracker:
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
-        tracker.sync_to_text("[img_001] literal [img_001]", previous_text="[img_001]")
+        tracker.sync_to_text("[image 1]")
+        tracker.sync_to_text("[image 1] literal [image 1]", previous_text="[image 1]")
 
-        text = "[img_001] edited literal [img_001]"
+        text = "[image 1] edited literal [image 1]"
         tracker.sync_to_text(
             text,
-            previous_text="[img_001] literal [img_001]",
+            previous_text="[image 1] literal [image 1]",
             cursor_offset=17,
         )
 
@@ -277,40 +257,40 @@ class TestMediaTracker:
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
+        tracker.sync_to_text("[image 1]")
 
         # A literal duplicate precedes the real display token in the draft.
-        draft = "see [img_001] then real [img_001]"
-        tracker.sync_to_text(draft, previous_text="[img_001]", cursor_offset=24)
+        draft = "see [image 1] then real [image 1]"
+        tracker.sync_to_text(draft, previous_text="[image 1]", cursor_offset=24)
         assert img.placeholder_span == (24, 33)
 
         # Submit expands a paste before the token, shifting it right by 15 chars.
-        final = "EXPANDED PASTE see [img_001] then real [img_001]"
+        final = "EXPANDED PASTE see [image 1] then real [image 1]"
         tracker.remap_spans_to_text(final, previous_text=draft)
         assert img.placeholder_span == (39, 48)
 
         result = create_multimodal_content(final, tracker.get_images())
-        assert result[0]["text"] == "EXPANDED PASTE see [img_001] then real"
+        assert result[0]["text"] == "EXPANDED PASTE see [image 1] then real"
 
     def test_remap_spans_to_text_drops_span_when_token_edited(self) -> None:
         """A span whose token was edited in the transformed text becomes None."""
         tracker = MediaTracker()
         img = ImageData(base64_data="abc", format="png", placeholder="")
         tracker.add_image(img)
-        tracker.sync_to_text("[img_001]")
+        tracker.sync_to_text("[image 1]")
         assert img.placeholder_span == (0, 9)
 
         # The token characters themselves changed: cannot be cleanly mapped.
-        tracker.remap_spans_to_text("[img_002]", previous_text="[img_001]")
+        tracker.remap_spans_to_text("[image 2]", previous_text="[image 1]")
         assert img.placeholder_span is None
 
     def test_remap_spans_to_text_ignores_items_without_span(self) -> None:
         """Items with no captured span are left as None (token-fallback path)."""
         tracker = MediaTracker()
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
         tracker.images.append(img)  # attached but never span-synced
 
-        tracker.remap_spans_to_text("[img_001]", previous_text="[img_001]")
+        tracker.remap_spans_to_text("[image 1]", previous_text="[image 1]")
         assert img.placeholder_span is None
 
 
@@ -354,7 +334,7 @@ class TestCreateMultimodalContent:
 
     def test_text_and_one_image(self) -> None:
         """Test creating content with text and one image."""
-        img = ImageData(base64_data="abc123", format="png", placeholder="[img_001]")
+        img = ImageData(base64_data="abc123", format="png", placeholder="[image 1]")
         result = create_multimodal_content("Describe this:", [img])
 
         assert len(result) == 2
@@ -364,8 +344,8 @@ class TestCreateMultimodalContent:
 
     def test_text_and_multiple_images(self) -> None:
         """Test creating content with text and multiple images."""
-        img1 = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
-        img2 = ImageData(base64_data="def", format="png", placeholder="[img_002]")
+        img1 = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
+        img2 = ImageData(base64_data="def", format="png", placeholder="[image 2]")
         result = create_multimodal_content("Compare these:", [img1, img2])
 
         assert len(result) == 3
@@ -375,7 +355,7 @@ class TestCreateMultimodalContent:
 
     def test_empty_text_with_image(self) -> None:
         """Test that empty text is not included in content."""
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
         result = create_multimodal_content("", [img])
 
         # Should only have the image, no empty text block
@@ -384,7 +364,7 @@ class TestCreateMultimodalContent:
 
     def test_whitespace_only_text(self) -> None:
         """Test that whitespace-only text is not included."""
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
         result = create_multimodal_content("   \n\t  ", [img])
 
         assert len(result) == 1
@@ -396,13 +376,13 @@ class TestCreateMultimodalContent:
         Regression test: sending an image previously serialized the display
         placeholder as literal user-authored text in the traced/model message.
         """
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
-        result = create_multimodal_content("[img_001] what's in this image?", [img])
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
+        result = create_multimodal_content("[image 1] what's in this image?", [img])
 
         assert len(result) == 2
         assert result[0]["type"] == "text"
         # Placeholder is gone but the surrounding user text is preserved.
-        assert "[img_001]" not in result[0]["text"]
+        assert "[image 1]" not in result[0]["text"]
         assert result[0]["text"] == "what's in this image?"
         assert result[1]["type"] == "image_url"
 
@@ -411,17 +391,17 @@ class TestCreateMultimodalContent:
         img = ImageData(
             base64_data="abc",
             format="png",
-            placeholder="[img_001]",
+            placeholder="[image 1]",
             placeholder_span=(0, 9),
         )
         result = create_multimodal_content(
-            "[img_001] compare with literal [img_001]",
+            "[image 1] compare with literal [image 1]",
             [img],
         )
 
         assert len(result) == 2
         assert result[0]["type"] == "text"
-        assert result[0]["text"] == "compare with literal [img_001]"
+        assert result[0]["text"] == "compare with literal [image 1]"
         assert result[1]["type"] == "image_url"
 
     def test_literal_duplicate_before_placeholder_preserved_in_text_block(self) -> None:
@@ -429,47 +409,47 @@ class TestCreateMultimodalContent:
         img = ImageData(
             base64_data="abc",
             format="png",
-            placeholder="[img_001]",
+            placeholder="[image 1]",
             placeholder_span=(30, 39),
         )
         result = create_multimodal_content(
-            "literal [img_001] then actual [img_001]",
+            "literal [image 1] then actual [image 1]",
             [img],
         )
 
         assert len(result) == 2
         assert result[0]["type"] == "text"
-        assert result[0]["text"] == "literal [img_001] then actual"
+        assert result[0]["text"] == "literal [image 1] then actual"
         assert result[1]["type"] == "image_url"
 
     def test_placeholder_removed_when_only_placeholder(self) -> None:
         """A message that is only a placeholder yields no text block."""
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
-        result = create_multimodal_content("[img_001]", [img])
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
+        result = create_multimodal_content("[image 1]", [img])
 
         assert len(result) == 1
         assert result[0]["type"] == "image_url"
 
     def test_placeholders_removed_for_video(self) -> None:
         """Video placeholders are also stripped from model-facing text."""
-        vid = VideoData(base64_data="vid", format="mp4", placeholder="[vid_001]")
-        result = create_multimodal_content("summarize [vid_001] please", [], [vid])
+        vid = VideoData(base64_data="vid", format="mp4", placeholder="[video 1]")
+        result = create_multimodal_content("summarize [video 1] please", [], [vid])
 
         assert result[0]["type"] == "text"
-        assert "[vid_001]" not in result[0]["text"]
+        assert "[video 1]" not in result[0]["text"]
         assert result[0]["text"] == "summarize please"
 
     def test_multiple_placeholders_all_stripped(self) -> None:
         """All placeholders are removed while surrounding text is preserved."""
-        img1 = ImageData(base64_data="a", format="png", placeholder="[img_001]")
-        img2 = ImageData(base64_data="b", format="png", placeholder="[img_002]")
+        img1 = ImageData(base64_data="a", format="png", placeholder="[image 1]")
+        img2 = ImageData(base64_data="b", format="png", placeholder="[image 2]")
         result = create_multimodal_content(
-            "[img_001] and [img_002] differ how?", [img1, img2]
+            "[image 1] and [image 2] differ how?", [img1, img2]
         )
 
         assert result[0]["type"] == "text"
-        assert "[img_001]" not in result[0]["text"]
-        assert "[img_002]" not in result[0]["text"]
+        assert "[image 1]" not in result[0]["text"]
+        assert "[image 2]" not in result[0]["text"]
         assert result[0]["text"] == "and differ how?"
 
     def test_mixed_image_and_video_placeholders_stripped(self) -> None:
@@ -478,9 +458,9 @@ class TestCreateMultimodalContent:
         Exercises the combined `images + videos` placeholder assembly and the
         heterogeneous `|`-token strip together, which same-type cases miss.
         """
-        img = ImageData(base64_data="a", format="png", placeholder="[img_001]")
-        vid = VideoData(base64_data="v", format="mp4", placeholder="[vid_001]")
-        result = create_multimodal_content("[img_001] vs [vid_001]", [img], [vid])
+        img = ImageData(base64_data="a", format="png", placeholder="[image 1]")
+        vid = VideoData(base64_data="v", format="mp4", placeholder="[video 1]")
+        result = create_multimodal_content("[image 1] vs [video 1]", [img], [vid])
 
         assert result[0]["type"] == "text"
         assert result[0]["text"] == "vs"
@@ -492,24 +472,24 @@ class TestCreateMultimodalContent:
         """Placeholder-shaped text not bound to attached media is preserved.
 
         Regression test for false positives: a user attaches image 1 but their
-        prompt also literally mentions `[img_002]` (which is not attached). Only
-        the real `[img_001]` token is stripped; the literal `[img_002]` stays.
+        prompt also literally mentions `[image 2]` (which is not attached). Only
+        the real `[image 1]` token is stripped; the literal `[image 2]` stays.
         """
-        img = ImageData(base64_data="abc", format="png", placeholder="[img_001]")
+        img = ImageData(base64_data="abc", format="png", placeholder="[image 1]")
         result = create_multimodal_content(
-            "[img_001] see the note about [img_002] in the docs", [img]
+            "[image 1] see the note about [image 2] in the docs", [img]
         )
 
         assert result[0]["type"] == "text"
-        assert result[0]["text"] == "see the note about [img_002] in the docs"
+        assert result[0]["text"] == "see the note about [image 2] in the docs"
 
     def test_placeholder_like_text_without_attachment_untouched(self) -> None:
         """With no media attached, placeholder-shaped text is never stripped."""
-        result = create_multimodal_content("compare [img_001] vs [img_002]", [])
+        result = create_multimodal_content("compare [image 1] vs [image 2]", [])
 
         assert len(result) == 1
         assert result[0]["type"] == "text"
-        assert result[0]["text"] == "compare [img_001] vs [img_002]"
+        assert result[0]["text"] == "compare [image 1] vs [image 2]"
 
 
 class TestStripMediaPlaceholders:
@@ -517,12 +497,12 @@ class TestStripMediaPlaceholders:
 
     def test_leading_placeholder(self) -> None:
         """A leading placeholder is removed along with its trailing space."""
-        assert strip_media_placeholders("[img_001] hello", ["[img_001]"]) == "hello"
+        assert strip_media_placeholders("[image 1] hello", ["[image 1]"]) == "hello"
 
     def test_inline_placeholder_no_double_space(self) -> None:
         """An inline placeholder does not leave a double space behind."""
         assert (
-            strip_media_placeholders("before [img_001] after", ["[img_001]"])
+            strip_media_placeholders("before [image 1] after", ["[image 1]"])
             == "before after"
         )
 
@@ -530,30 +510,30 @@ class TestStripMediaPlaceholders:
         """Duplicate literal text is preserved when one matching media is attached."""
         assert (
             strip_media_placeholders(
-                "[img_001] describe literal [img_001]",
-                ["[img_001]"],
+                "[image 1] describe literal [image 1]",
+                ["[image 1]"],
                 placeholder_spans=[(0, 9)],
             )
-            == "describe literal [img_001]"
+            == "describe literal [image 1]"
         )
 
     def test_literal_duplicate_before_placeholder_preserved(self) -> None:
         """Span tracking strips the display token, not the first duplicate."""
         assert (
             strip_media_placeholders(
-                "literal [img_001] then actual [img_001]",
-                ["[img_001]"],
+                "literal [image 1] then actual [image 1]",
+                ["[image 1]"],
                 placeholder_spans=[(30, 39)],
             )
-            == "literal [img_001] then actual"
+            == "literal [image 1] then actual"
         )
 
     def test_only_bound_placeholders_removed(self) -> None:
         """Only tokens in the bound set are removed; look-alikes are preserved."""
         result = strip_media_placeholders(
-            "keep [img_002] drop [img_001]", ["[img_001]"]
+            "keep [image 2] drop [image 1]", ["[image 1]"]
         )
-        assert result == "keep [img_002] drop"
+        assert result == "keep [image 2] drop"
 
     def test_stale_span_is_discarded_and_falls_back_to_token(self) -> None:
         """A span whose slice no longer matches the token is ignored, not used.
@@ -563,8 +543,8 @@ class TestStripMediaPlaceholders:
         the token fallback removes the real occurrence instead.
         """
         result = strip_media_placeholders(
-            "hello [img_001] world",
-            ["[img_001]"],
+            "hello [image 1] world",
+            ["[image 1]"],
             placeholder_spans=[(0, 5)],  # points at "hello", not the token
         )
         assert result == "hello world"
@@ -572,37 +552,37 @@ class TestStripMediaPlaceholders:
     def test_ambiguous_fallback_strips_leading_occurrence(self) -> None:
         """With no span and duplicate tokens, the fallback strips the first one."""
         result = strip_media_placeholders(
-            "first [img_001] second [img_001]",
-            ["[img_001]"],
+            "first [image 1] second [image 1]",
+            ["[image 1]"],
         )
-        assert result == "first second [img_001]"
+        assert result == "first second [image 1]"
 
     def test_mixed_image_and_video_tokens_removed(self) -> None:
         """Heterogeneous image and video tokens are stripped in one pass."""
         result = strip_media_placeholders(
-            "[img_001] and [vid_001] together", ["[img_001]", "[vid_001]"]
+            "[image 1] and [video 1] together", ["[image 1]", "[video 1]"]
         )
         assert result == "and together"
 
     def test_text_without_placeholder_unchanged(self) -> None:
         """Text without a bound placeholder is unchanged (aside from trim)."""
         assert (
-            strip_media_placeholders("plain text only", ["[img_001]"])
+            strip_media_placeholders("plain text only", ["[image 1]"])
             == "plain text only"
         )
 
     def test_no_placeholders_returns_text_verbatim(self) -> None:
         """An empty placeholder set returns the text unchanged, including whitespace."""
-        assert strip_media_placeholders("  [img_001]  ", []) == "  [img_001]  "
+        assert strip_media_placeholders("  [image 1]  ", []) == "  [image 1]  "
 
     def test_only_placeholder_becomes_empty(self) -> None:
         """A string that is only a bound placeholder becomes empty."""
-        assert strip_media_placeholders("[vid_002]", ["[vid_002]"]) == ""
+        assert strip_media_placeholders("[video 2]", ["[video 2]"]) == ""
 
     def test_newlines_preserved(self) -> None:
         """Newlines around a placeholder are preserved."""
         assert (
-            strip_media_placeholders("line1\n[img_001]\nline2", ["[img_001]"])
+            strip_media_placeholders("line1\n[image 1]\nline2", ["[image 1]"])
             == "line1\n\nline2"
         )
 
@@ -614,11 +594,11 @@ class TestStripMediaPlaceholders:
         r"""Leading newlines and code indentation after a placeholder survive.
 
         Regression: ``.strip()`` removed all leading whitespace, so attaching
-        an image before indented code (``[img_001]\n    def foo():``) would
+        an image before indented code (``[image 1]\n    def foo():``) would
         lose the four-space indent. Only spaces/tabs on each edge are trimmed.
         """
         assert (
-            strip_media_placeholders("[img_001]\n    def foo():", ["[img_001]"])
+            strip_media_placeholders("[image 1]\n    def foo():", ["[image 1]"])
             == "\n    def foo():"
         )
 
@@ -626,14 +606,14 @@ class TestStripMediaPlaceholders:
 class TestGetClipboardImage:
     """Tests for clipboard image detection."""
 
-    @patch("deepagents_code.media_utils.sys.platform", "freebsd")
+    @patch("deepagents_code.media_utils.sys.platform", "linux")
     def test_unsupported_platform_returns_none_and_warns(self) -> None:
-        """Test that non-macOS/Windows/Linux platforms return None and log a warning."""
+        """Test that non-macOS platforms return None and log a warning."""
         with patch("deepagents_code.media_utils.logger") as mock_logger:
             result = get_clipboard_image()
             assert result is None
             mock_logger.warning.assert_called_once()
-            assert "freebsd" in mock_logger.warning.call_args[0][1]
+            assert "linux" in mock_logger.warning.call_args[0][1]
 
     @patch("deepagents_code.media_utils.sys.platform", "darwin")
     @patch("deepagents_code.media_utils._get_macos_clipboard_image")
@@ -673,26 +653,6 @@ class TestGetClipboardImage:
     @patch("deepagents_code.media_utils.sys.platform", "darwin")
     @patch("deepagents_code.media_utils.subprocess.run")
     @patch("deepagents_code.media_utils._get_executable")
-    def test_pngpaste_oversized_image_returns_none(
-        self, mock_get_executable: MagicMock, mock_run: MagicMock
-    ) -> None:
-        """Images exceeding MAX_MEDIA_BYTES are rejected before encoding."""
-        mock_get_executable.return_value = "/usr/local/bin/pngpaste"
-
-        # Create a fake PNG payload larger than MAX_MEDIA_BYTES
-        oversized_bytes = b"\x00" * (MAX_MEDIA_BYTES + 1)
-
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout=oversized_bytes,
-        )
-
-        result = get_clipboard_image()
-        assert result is None
-
-    @patch("deepagents_code.media_utils.sys.platform", "darwin")
-    @patch("deepagents_code.media_utils.subprocess.run")
-    @patch("deepagents_code.media_utils._get_executable")
     def test_pngpaste_not_installed_falls_back(
         self, mock_get_executable: MagicMock, mock_run: MagicMock
     ) -> None:
@@ -723,32 +683,6 @@ class TestGetClipboardImage:
         mock_run.return_value = MagicMock(returncode=1, stdout=b"")
         # osascript fallback also returns None
         mock_osascript.return_value = None
-
-        result = get_clipboard_image()
-        assert result is None
-
-    @patch("deepagents_code.media_utils.sys.platform", "win32")
-    @patch("deepagents_code.media_utils.subprocess.run")
-    @patch("deepagents_code.media_utils._get_executable")
-    def test_windows_timeout_returns_none(
-        self, mock_get_executable: MagicMock, mock_run: MagicMock
-    ) -> None:
-        """A slow PowerShell start must not crash the paste handler."""
-        mock_get_executable.return_value = "powershell.exe"
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd="powershell", timeout=5)
-
-        result = get_clipboard_image()
-        assert result is None
-
-    @patch("deepagents_code.media_utils.sys.platform", "win32")
-    @patch("deepagents_code.media_utils.subprocess.run")
-    @patch("deepagents_code.media_utils._get_executable")
-    def test_windows_powershell_missing_returns_none(
-        self, mock_get_executable: MagicMock, mock_run: MagicMock
-    ) -> None:
-        """A missing PowerShell executable must not crash the paste handler."""
-        mock_get_executable.return_value = "powershell.exe"
-        mock_run.side_effect = FileNotFoundError
 
         result = get_clipboard_image()
         assert result is None
@@ -828,11 +762,12 @@ class TestSyncToTextWithIDGaps:
         tracker.add_image(img3)
 
         # Remove the middle placeholder — IDs 1 and 3 remain
-        tracker.sync_to_text("[img_001] and [img_003]")
+        tracker.sync_to_text("[image 1] and [image 3]")
 
         assert len(tracker.images) == 2
-        assert tracker.images[0].placeholder == "[img_001]"
-        assert tracker.images[1].placeholder == "[img_003]"
+        assert tracker.images[0].placeholder == "[image 1]"
+        assert tracker.images[1].placeholder == "[image 3]"
+        assert tracker.next_image_id == 4
 
 
 class TestVideoData:
@@ -843,7 +778,7 @@ class TestVideoData:
         video = VideoData(
             base64_data="AAAAIGZ0eXBtcDQyAAAAAGlzb21tcDQyAAACAGlzb2...",
             format="mp4",
-            placeholder="[vid_001]",
+            placeholder="[video 1]",
         )
         result = video.to_message_content()
 
@@ -856,7 +791,7 @@ class TestVideoData:
         video = VideoData(
             base64_data="abc123",
             format="quicktime",
-            placeholder="[vid_002]",
+            placeholder="[video 2]",
         )
         result = video.to_message_content()
 
@@ -961,10 +896,10 @@ class TestMediaTrackerVideo:
         placeholder1 = tracker.add_video(vid1)
         placeholder2 = tracker.add_video(vid2)
 
-        assert placeholder1 == "[vid_001]"
-        assert placeholder2 == "[vid_002]"
-        assert vid1.placeholder == "[vid_001]"
-        assert vid2.placeholder == "[vid_002]"
+        assert placeholder1 == "[video 1]"
+        assert placeholder2 == "[video 2]"
+        assert vid1.placeholder == "[video 1]"
+        assert vid2.placeholder == "[video 2]"
 
     def test_get_videos_returns_copy(self) -> None:
         """Test that get_videos returns a copy, not the original list."""
@@ -985,14 +920,16 @@ class TestMediaTrackerVideo:
         tracker.add_video(vid)
         tracker.add_video(vid)
 
+        assert tracker.next_video_id == 3
         assert len(tracker.videos) == 2
 
         tracker.clear()
 
+        assert tracker.next_video_id == 1
         assert len(tracker.videos) == 0
 
     def test_add_video_after_clear_starts_at_one(self) -> None:
-        """Test that adding video after clear starts from [vid_001] again."""
+        """Test that adding video after clear starts from [video 1] again."""
         tracker = MediaTracker()
         vid = VideoData(base64_data="abc", format="mp4", placeholder="")
 
@@ -1003,11 +940,7 @@ class TestMediaTrackerVideo:
         new_vid = VideoData(base64_data="xyz", format="mp4", placeholder="")
         placeholder = tracker.add_video(new_vid)
 
-        # Same as `test_add_after_clear_starts_at_one` for images: the tracker
-        # no longer maintains its own counter, so clear() does not rewind ids.
-        # The third add_video call gets id "003" from the deterministic
-        # generator, and uniqueness is the invariant that matters.
-        assert placeholder == "[vid_003]"
+        assert placeholder == "[video 1]"
 
     def test_sync_to_text_prunes_unreferenced_videos(self) -> None:
         """Sync should prune unreferenced videos while preserving video ID order."""
@@ -1018,10 +951,11 @@ class TestMediaTrackerVideo:
 
         tracker.add_video(vid1)
         tracker.add_video(vid2)
-        tracker.sync_to_text("keep [vid_002] only")
+        tracker.sync_to_text("keep [video 2] only")
 
+        assert tracker.next_video_id == 3
         assert len(tracker.videos) == 1
-        assert tracker.videos[0].placeholder == "[vid_002]"
+        assert tracker.videos[0].placeholder == "[video 2]"
 
     def test_image_and_video_tracking_work_together(self) -> None:
         """Test that images and videos can be tracked independently."""
@@ -1033,8 +967,8 @@ class TestMediaTrackerVideo:
         img_placeholder = tracker.add_image(img)
         vid_placeholder = tracker.add_video(vid)
 
-        assert img_placeholder == "[img_001]"
-        assert vid_placeholder == "[vid_001]"
+        assert img_placeholder == "[image 1]"
+        assert vid_placeholder == "[video 1]"
         assert len(tracker.images) == 1
         assert len(tracker.videos) == 1
 
@@ -1047,7 +981,7 @@ class TestMediaTrackerVideo:
 
         tracker.add_image(img)
         tracker.add_video(vid)
-        tracker.sync_to_text("[img_001] and [vid_001]")
+        tracker.sync_to_text("[image 1] and [video 1]")
 
         assert len(tracker.images) == 1
         assert len(tracker.videos) == 1
@@ -1065,6 +999,8 @@ class TestMediaTrackerVideo:
 
         assert len(tracker.images) == 0
         assert len(tracker.videos) == 0
+        assert tracker.next_image_id == 1
+        assert tracker.next_video_id == 1
 
 
 class TestCreateMultimodalContentWithVideo:
@@ -1072,7 +1008,7 @@ class TestCreateMultimodalContentWithVideo:
 
     def test_text_and_video(self) -> None:
         """Test creating content with text and one video."""
-        vid = VideoData(base64_data="abc", format="mp4", placeholder="[vid_001]")
+        vid = VideoData(base64_data="abc", format="mp4", placeholder="[video 1]")
         result = create_multimodal_content("Analyze this:", [], [vid])
 
         assert len(result) == 2
@@ -1081,8 +1017,8 @@ class TestCreateMultimodalContentWithVideo:
 
     def test_text_image_and_video(self) -> None:
         """Test creating content with text, image, and video."""
-        img = ImageData(base64_data="img", format="png", placeholder="[img_001]")
-        vid = VideoData(base64_data="vid", format="mp4", placeholder="[vid_001]")
+        img = ImageData(base64_data="img", format="png", placeholder="[image 1]")
+        vid = VideoData(base64_data="vid", format="mp4", placeholder="[video 1]")
         result = create_multimodal_content("Compare:", [img], [vid])
 
         assert len(result) == 3
@@ -1092,7 +1028,7 @@ class TestCreateMultimodalContentWithVideo:
 
     def test_video_only(self) -> None:
         """Test that empty text is not included when only video is present."""
-        vid = VideoData(base64_data="vid", format="mp4", placeholder="[vid_001]")
+        vid = VideoData(base64_data="vid", format="mp4", placeholder="[video 1]")
         result = create_multimodal_content("", [], [vid])
 
         assert len(result) == 1
@@ -1100,11 +1036,11 @@ class TestCreateMultimodalContentWithVideo:
 
     def test_multiple_videos(self) -> None:
         """Test creating content with multiple videos."""
-        vid1 = VideoData(base64_data="vid1", format="mp4", placeholder="[vid_001]")
+        vid1 = VideoData(base64_data="vid1", format="mp4", placeholder="[video 1]")
         vid2 = VideoData(
             base64_data="vid2",
             format="quicktime",
-            placeholder="[vid_002]",
+            placeholder="[video 2]",
         )
         result = create_multimodal_content("Compare these videos:", [], [vid1, vid2])
 

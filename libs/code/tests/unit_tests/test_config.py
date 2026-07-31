@@ -327,15 +327,15 @@ class TestProjectContext:
 class TestProjectAgentMdFinding:
     """Test finding project-specific AGENTS.md files."""
 
-    def test_find_agent_md_in_zjcode_dir(self, tmp_path: Path) -> None:
-        """Test finding AGENTS.md in .zjcode/ directory."""
+    def test_find_agent_md_in_deepagents_dir(self, tmp_path: Path) -> None:
+        """Test finding AGENTS.md in .deepagents/ directory."""
         project_root = tmp_path / "project"
         project_root.mkdir()
 
-        # Create .zjcode/AGENTS.md
-        zjcode_dir = project_root / ".zjcode"
-        zjcode_dir.mkdir()
-        agent_md = zjcode_dir / "AGENTS.md"
+        # Create .deepagents/AGENTS.md
+        deepagents_dir = project_root / ".deepagents"
+        deepagents_dir.mkdir()
+        agent_md = deepagents_dir / "AGENTS.md"
         agent_md.write_text("Project instructions")
 
         result = _find_project_agent_md(project_root)
@@ -361,18 +361,18 @@ class TestProjectAgentMdFinding:
         project_root.mkdir()
 
         # Create both locations
-        zjcode_dir = project_root / ".zjcode"
-        zjcode_dir.mkdir()
-        zjcode_md = zjcode_dir / "AGENTS.md"
-        zjcode_md.write_text("In .zjcode/")
+        deepagents_dir = project_root / ".deepagents"
+        deepagents_dir.mkdir()
+        deepagents_md = deepagents_dir / "AGENTS.md"
+        deepagents_md.write_text("In .deepagents/")
 
         root_md = project_root / "AGENTS.md"
         root_md.write_text("In root")
 
-        # Should return both, with .zjcode/ first
+        # Should return both, with .deepagents/ first
         result = _find_project_agent_md(project_root)
         assert len(result) == 2
-        assert result[0] == zjcode_md
+        assert result[0] == deepagents_md
         assert result[1] == root_md
 
     def test_find_agent_md_not_found(self, tmp_path: Path) -> None:
@@ -394,7 +394,7 @@ class TestProjectAgentMdFinding:
         original_resolve = Path.resolve
 
         def patched_resolve(self: Path, *args: object, **kwargs: object) -> Path:
-            if self.name == "AGENTS.md" and ".zjcode" in str(self):
+            if self.name == "AGENTS.md" and ".deepagents" in str(self):
                 msg = "Permission denied"
                 raise PermissionError(msg)
             return original_resolve(self, *args, **kwargs)  # ty: ignore
@@ -456,7 +456,7 @@ class TestProjectAgentMdFinding:
         outside_agent_md = outside / "AGENTS.md"
         outside_agent_md.write_text("attacker-controlled")
 
-        (project_root / ".zjcode").symlink_to(outside, target_is_directory=True)
+        (project_root / ".deepagents").symlink_to(outside, target_is_directory=True)
 
         with caplog.at_level(logging.WARNING, logger="deepagents_code.project_utils"):
             result = _find_project_agent_md(project_root)
@@ -550,10 +550,10 @@ class TestSettingsGetProjectAgentMdPath:
 
     def test_returns_existing_paths(self, tmp_path: Path) -> None:
         """Should return existing AGENTS.md paths from project root."""
-        zjcode_dir = tmp_path / ".zjcode"
-        zjcode_dir.mkdir()
-        zjcode_md = zjcode_dir / "AGENTS.md"
-        zjcode_md.write_text("inner")
+        deepagents_dir = tmp_path / ".deepagents"
+        deepagents_dir.mkdir()
+        deepagents_md = deepagents_dir / "AGENTS.md"
+        deepagents_md.write_text("inner")
 
         root_md = tmp_path / "AGENTS.md"
         root_md.write_text("root")
@@ -562,7 +562,7 @@ class TestSettingsGetProjectAgentMdPath:
         s.project_root = tmp_path
 
         result = s.get_project_agent_md_path()
-        assert result == [zjcode_md, root_md]
+        assert result == [deepagents_md, root_md]
 
     def test_returns_empty_when_no_agents_md_files(self, tmp_path: Path) -> None:
         """Should return [] when project exists but has no AGENTS.md."""
@@ -4290,86 +4290,6 @@ base_url = "https://wrong-url.com"
         # Explicit base_url field should win over kwargs.base_url
         assert kwargs["base_url"] == "https://correct-url.com"
 
-    def test_defaults_stream_usage_for_openai_provider(self, tmp_path: Path) -> None:
-        """Built-in `openai` provider gets `stream_usage=True` by default.
-
-        Third-party OpenAI-compatible gateways only emit `usage_metadata` in
-        the final stream chunk when `stream_options.include_usage` is sent,
-        which `langchain_openai.ChatOpenAI` maps to the `stream_usage` kwarg.
-        Injecting it by default makes the per-call info line render
-        `tokens in/out/total=...` and `ctx=used/limit~ (pct%)` for gateways
-        that would otherwise drop the usage payload (Volcengine ark,
-        DeepSeek, SiliconFlow, …).
-        """
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("")
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
-        ):
-            kwargs = _get_provider_kwargs("openai")
-
-        assert kwargs["stream_usage"] is True
-
-    def test_defaults_stream_usage_for_openai_compatible_class_path(
-        self, tmp_path: Path
-    ) -> None:
-        """Custom providers that target `ChatOpenAI` also get `stream_usage=True`."""
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("""
-[models.providers.huoshan]
-models = ["ark-code-latest"]
-base_url = "https://ark.cn-beijing.volces.com/api/coding/v3"
-class_path = "langchain_openai:ChatOpenAI"
-api_key_env = "OPENAI_API_KEY"
-""")
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
-        ):
-            kwargs = _get_provider_kwargs("huoshan")
-
-        assert kwargs["stream_usage"] is True
-
-    def test_user_params_override_stream_usage_default(self, tmp_path: Path) -> None:
-        """A user-supplied `stream_usage` in `params` is not clobbered."""
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("""
-[models.providers.huoshan]
-models = ["ark-code-latest"]
-base_url = "https://ark.example.com/v1"
-class_path = "langchain_openai:ChatOpenAI"
-api_key_env = "OPENAI_API_KEY"
-
-[models.providers.huoshan.params]
-stream_usage = false
-""")
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True),
-        ):
-            kwargs = _get_provider_kwargs("huoshan")
-
-        assert kwargs["stream_usage"] is False
-
-    def test_stream_usage_not_injected_for_non_openai_providers(
-        self, tmp_path: Path
-    ) -> None:
-        """Non-OpenAI-compatible providers do not receive `stream_usage`.
-
-        `ChatAnthropic` does not accept a `stream_usage` kwarg — injecting it
-        would raise at construction time.
-        """
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("")
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=True),
-        ):
-            kwargs = _get_provider_kwargs("anthropic")
-
-        assert "stream_usage" not in kwargs
-
 
 def _make_init_chat_model_mock() -> Mock:
     """Return a `Mock` shaped like `init_chat_model`'s return value.
@@ -5364,7 +5284,7 @@ class TestCreateModelViaInitImportError:
         fallback (see the sibling unreadable-receipt test).
         """
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
+            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -5379,7 +5299,7 @@ class TestCreateModelViaInitImportError:
                 ModelConfigError,
                 match=(
                     "Install with: uv tool install --reinstall -U "
-                    f"zjcode=={__version__} "
+                    f"deepagents-code=={__version__} "
                     "--with langchain-custom_provider --prerelease allow"
                 ),
             ),

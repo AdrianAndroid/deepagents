@@ -871,23 +871,13 @@ class TestSplitCredentialSource:
     """`warn_on_split_credential_source` flags key/endpoint env-tier mismatches."""
 
     @pytest.fixture(autouse=True)
-    def _isolate_openai_env(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def _isolate_openai_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Clear every OpenAI key/endpoint env var so each test sets its own.
 
         `dotenv.load_dotenv()` runs during config bootstrap (first `Settings`
         access) and may inject prefixed variants from a developer's
         `~/.deepagents/.env` that would otherwise leak into these assertions.
-
-        Also isolate `ModelConfig.load()` from the developer's real
-        `~/.deepagents/config.toml`: without this, the first call in each
-        xdist worker parses that file and emits DEBUG log lines that
-        `caplog.at_level(DEBUG, ...)` captures, breaking the "no warning"
-        assertions in this class.
         """
-        import deepagents_code.model_config as _mc
-
         for var in (
             "OPENAI_API_KEY",
             "DEEPAGENTS_CODE_OPENAI_API_KEY",
@@ -897,8 +887,6 @@ class TestSplitCredentialSource:
             "DEEPAGENTS_CODE_OPENAI_API_BASE",
         ):
             monkeypatch.delenv(var, raising=False)
-        monkeypatch.setattr(_mc, "DEFAULT_CONFIG_PATH", tmp_path / "config.toml")
-        _mc.clear_caches()
 
     def test_warns_when_key_prefixed_but_base_url_plain(
         self,
@@ -1109,14 +1097,7 @@ base_url = "https://configured.example/v1"
             clear_caches()
             warn_on_split_credential_source("openai")
 
-        # `ModelConfig.load()` emits its own DEBUG lines when it reads a
-        # non-empty config.toml; those are noise for this assertion. Only the
-        # split-source warning (mentions "API key resolved from") is what
-        # we're asserting *does not* fire.
-        split_warnings = [
-            r for r in caplog.records if "API key resolved from" in r.getMessage()
-        ]
-        assert not split_warnings
+        assert not caplog.records
 
 
 class TestThreadColumnPersistence:
@@ -2804,8 +2785,8 @@ models = ["claude-sonnet-4-5"]
 
         assert models["anthropic"].count("claude-sonnet-4-5") == 1
 
-    def test_adds_config_provider_with_no_models_and_no_class_path(self, tmp_path):
-        """Adds config provider with no models and no class path."""
+    def test_skips_config_provider_with_no_models_and_no_class_path(self, tmp_path):
+        """Config provider with no models and no class_path is not added."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.empty]
@@ -2820,8 +2801,7 @@ api_key_env = "SOME_KEY"
         ):
             models = get_available_models()
 
-        assert "empty" in models
-        assert models["empty"] == ["custom_model"]
+        assert "empty" not in models
 
 
 class TestOllamaModelDiscovery:
@@ -4279,7 +4259,7 @@ max_input_tokens = 9999
         assert "max_input_tokens" in entry["overridden_keys"]
 
     def test_class_path_import_failure_graceful(self, tmp_path):
-        """Handles missing class path packages gracefully."""
+        """Gracefully handles class_path package not being installed."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.baseten]
@@ -4295,8 +4275,7 @@ api_key_env = "BASETEN_API_KEY"
         ):
             models = get_available_models()
 
-        assert "baseten" in models
-        assert models["baseten"] == ["custom_model"]
+        assert "baseten" not in models
 
     def test_class_path_non_import_error_logs_warning(self, tmp_path, caplog):
         """Non-ImportError from class_path package logs warning, not debug."""
@@ -4324,8 +4303,7 @@ api_key_env = "BASETEN_API_KEY"
         ):
             models = get_available_models()
 
-        assert "baseten" in models
-        assert models["baseten"] == ["custom_model"]
+        assert "baseten" not in models
         assert any(
             "Failed to load profiles" in record.message and "baseten" in record.message
             for record in caplog.records
@@ -5728,105 +5706,6 @@ recent = "anthropic:claude-sonnet-4-5"
 
         assert result == "ollama:qwen3:4b"
 
-    def test_provider_default_takes_priority_over_unusable_recent(self, tmp_path):
-        """Provider defaults beat stale recent models."""
-        from deepagents_code.config import _get_default_model_spec
-
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("""
-[models]
-recent = "openai:gpt-5.5"
-
-[models.providers.huoshan]
-display_name = "huoshan"
-base_url = "https://ark.cn-beijing.volces.com/api/v3"
-class_path = "langchain_openai:ChatOpenAI"
-models = ["ark-code-latest"]
-default_model = "ark-code-latest"
-""")
-
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch("deepagents_code.auth_store.get_stored_key", return_value=None),
-            patch.dict("os.environ", {}, clear=True),
-        ):
-            result = _get_default_model_spec()
-
-        assert result == "huoshan:ark-code-latest"
-
-    def test_provider_default_keeps_explicit_provider_spec(self, tmp_path):
-        """Provider-level defaults may already include provider:model format."""
-        from deepagents_code.config import _get_default_model_spec
-
-        config_path = tmp_path / "config.toml"
-        config_path.write_text("""
-[models.providers.huoshan]
-display_name = "huoshan"
-base_url = "https://ark.cn-beijing.volces.com/api/v3"
-class_path = "langchain_openai:ChatOpenAI"
-models = ["ark-code-latest"]
-default_model = "huoshan:ark-code-latest"
-""")
-
-        with (
-            patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
-            patch("deepagents_code.auth_store.get_stored_key", return_value=None),
-            patch.dict("os.environ", {}, clear=True),
-        ):
-            result = _get_default_model_spec()
-
-        assert result == "huoshan:ark-code-latest"
-
-    def test_save_custom_provider_defaults_openai_key_env(self, tmp_path):
-        """OpenAI-compatible custom providers read OpenAI env overrides."""
-        config_path = tmp_path / "config.toml"
-
-        assert model_config.save_custom_provider(
-            "huoshan",
-            "huoshan",
-            "https://ark.cn-beijing.volces.com/api/v3",
-            models=["ark-code-latest"],
-            default_model="ark-code-latest",
-            config_path=config_path,
-        )
-
-        config = ModelConfig.load(config_path)
-        assert config.providers["huoshan"]["api_key_env"] == "OPENAI_API_KEY"
-
-    def test_save_custom_provider_persists_max_input_tokens(self, tmp_path):
-        """`max_input_tokens` is written to `[profile]` so `ctx=used/limit` renders."""
-        config_path = tmp_path / "config.toml"
-
-        assert model_config.save_custom_provider(
-            "huoshan",
-            "huoshan",
-            "https://ark.cn-beijing.volces.com/api/v3",
-            models=["ark-code-latest"],
-            default_model="ark-code-latest",
-            max_input_tokens=262144,
-            config_path=config_path,
-        )
-
-        config = ModelConfig.load(config_path)
-        profile = config.providers["huoshan"].get("profile", {})
-        assert profile == {"max_input_tokens": 262144}
-
-    def test_save_custom_provider_ignores_invalid_max_input_tokens(self, tmp_path):
-        """Non-positive `max_input_tokens` values are silently ignored."""
-        config_path = tmp_path / "config.toml"
-
-        assert model_config.save_custom_provider(
-            "huoshan",
-            "huoshan",
-            "https://ark.example.com/v1",
-            models=["ark-code-latest"],
-            max_input_tokens=0,
-            config_path=config_path,
-        )
-
-        config = ModelConfig.load(config_path)
-        assert "profile" not in config.providers["huoshan"]
-
     def test_recent_takes_priority_over_env(self, tmp_path):
         """[models].recent takes priority over env var auto-detection."""
         from deepagents_code.config import _get_default_model_spec
@@ -5841,7 +5720,7 @@ recent = "openai:gpt-5.2"
             patch.object(model_config, "DEFAULT_CONFIG_PATH", config_path),
             patch.dict(
                 "os.environ",
-                {"ANTHROPIC_API_KEY": "test-key", "OPENAI_API_KEY": "test-key"},
+                {"ANTHROPIC_API_KEY": "test-key"},
                 clear=False,
             ),
         ):
@@ -8336,136 +8215,3 @@ class TestLoadStartupMode:
         config = tmp_path / "config.toml"
         config.write_text("this is not valid toml [[[\n")
         assert load_startup_mode(config) == STARTUP_MODE_MANUAL
-
-
-class TestFetchProviderModels:
-    """Tests for `fetch_provider_models` — the /models discovery helper."""
-
-    def _mock_httpx(
-        self,
-        payload: Any,
-        status_code: int = 200,
-    ) -> AbstractContextManager[MagicMock]:
-        """Patch `httpx.get` to return a canned response."""
-        response = MagicMock()
-        response.status_code = status_code
-        response.text = "" if isinstance(payload, dict) else str(payload)
-        response.json.return_value = payload
-        return patch("httpx.get", return_value=response)
-
-    def test_openai_shape_returns_sorted_unique_ids(self) -> None:
-        """Standard OpenAI `{"object":"list","data":[{"id":...}]}` shape."""
-        from deepagents_code.model_config import fetch_provider_models
-
-        payload = {
-            "object": "list",
-            "data": [
-                {"id": "gpt-4o"},
-                {"id": "gpt-4o-mini"},
-                {"id": "gpt-4o"},  # duplicate should be de-duped
-            ],
-        }
-        with self._mock_httpx(payload):
-            result = fetch_provider_models("https://api.example.com/v1", "sk-x")
-        assert result == ["gpt-4o", "gpt-4o-mini"]
-
-    def test_volcengine_ark_status_shutdown_filtered(self) -> None:
-        """Entries with `status="Shutdown"` are dropped (Volcengine Ark shape)."""
-        from deepagents_code.model_config import fetch_provider_models
-
-        payload = {
-            "object": "list",
-            "data": [
-                {"id": "doubao-alive", "status": "None"},
-                {"id": "doubao-dead", "status": "Shutdown"},
-                {"id": "doubao-retiring", "status": "Retiring"},
-            ],
-        }
-        with self._mock_httpx(payload):
-            result = fetch_provider_models(
-                "https://ark.example.com/api/coding/v3", "sk-x",
-            )
-        # Retiring is kept by default; Shutdown is dropped.
-        assert result == ["doubao-alive", "doubao-retiring"]
-
-    def test_retiring_can_be_excluded(self) -> None:
-        """`include_retiring=False` also drops `Retiring` entries."""
-        from deepagents_code.model_config import fetch_provider_models
-
-        payload = {
-            "data": [
-                {"id": "a", "status": "None"},
-                {"id": "b", "status": "Retiring"},
-            ],
-        }
-        with self._mock_httpx(payload):
-            result = fetch_provider_models(
-                "https://x.example.com/v1", "sk-x", include_retiring=False,
-            )
-        assert result == ["a"]
-
-    def test_bare_list_payload_supported(self) -> None:
-        """Some providers return a bare list rather than `{data: [...]}`."""
-        from deepagents_code.model_config import fetch_provider_models
-
-        payload = [{"id": "m1"}, {"id": "m2"}]
-        with self._mock_httpx(payload):
-            result = fetch_provider_models("https://x.example.com/v1", "sk-x")
-        assert result == ["m1", "m2"]
-
-    def test_401_raises_readable_error(self) -> None:
-        """HTTP 401 → user-facing `ModelDiscoveryError`."""
-        from deepagents_code.model_config import (
-            ModelDiscoveryError,
-            fetch_provider_models,
-        )
-
-        with (
-            self._mock_httpx({}, status_code=401),
-            pytest.raises(ModelDiscoveryError, match="Authentication failed"),
-        ):
-            fetch_provider_models("https://x.example.com/v1", "bad-key")
-
-    def test_404_raises_readable_error(self) -> None:
-        """HTTP 404 → user-facing `ModelDiscoveryError`."""
-        from deepagents_code.model_config import (
-            ModelDiscoveryError,
-            fetch_provider_models,
-        )
-
-        with (
-            self._mock_httpx({}, status_code=404),
-            pytest.raises(ModelDiscoveryError, match="404"),
-        ):
-            fetch_provider_models("https://x.example.com/v1", "sk-x")
-
-    def test_missing_base_url_raises(self) -> None:
-        """Empty base_url is rejected up front."""
-        from deepagents_code.model_config import (
-            ModelDiscoveryError,
-            fetch_provider_models,
-        )
-
-        with pytest.raises(ModelDiscoveryError, match="Base URL is required"):
-            fetch_provider_models("", "sk-x")
-
-    def test_bearer_token_forwarded(self) -> None:
-        """When `api_key` is provided it is sent as `Authorization: Bearer ...`."""
-        from deepagents_code.model_config import fetch_provider_models
-
-        captured: dict[str, Any] = {}
-
-        def _fake_get(url: str, *, headers: dict[str, str], timeout: float) -> Any:
-            captured["url"] = url
-            captured["headers"] = headers
-            captured["timeout"] = timeout
-            resp = MagicMock()
-            resp.status_code = 200
-            resp.json.return_value = {"data": []}
-            resp.text = ""
-            return resp
-
-        with patch("httpx.get", side_effect=_fake_get):
-            fetch_provider_models("https://x.example.com/v1/", "sk-abc")
-        assert captured["url"] == "https://x.example.com/v1/models"
-        assert captured["headers"]["Authorization"] == "Bearer sk-abc"
