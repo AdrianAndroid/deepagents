@@ -189,7 +189,7 @@ class TestRuntimeDotenvReload:
             monkeypatch.setenv("DEEPAGENTS_CODE_LANGSMITH_PROJECT", "agent-project")
 
             runtime = Settings.from_environment(start_path=current)
-            assert runtime.deepagents_langchain_project == "agent-project"
+            assert runtime.zjcode_langchain_project == "agent-project"
 
             monkeypatch.delenv("DEEPAGENTS_CODE_LANGSMITH_PROJECT", raising=False)
             runtime.reload_from_environment(start_path=target)
@@ -328,12 +328,12 @@ class TestProjectAgentMdFinding:
     """Test finding project-specific AGENTS.md files."""
 
     def test_find_agent_md_in_deepagents_dir(self, tmp_path: Path) -> None:
-        """Test finding AGENTS.md in .deepagents/ directory."""
+        """Test finding AGENTS.md in .zjcode/ directory."""
         project_root = tmp_path / "project"
         project_root.mkdir()
 
-        # Create .deepagents/AGENTS.md
-        deepagents_dir = project_root / ".deepagents"
+        # Create .zjcode/AGENTS.md
+        deepagents_dir = project_root / ".zjcode"
         deepagents_dir.mkdir()
         agent_md = deepagents_dir / "AGENTS.md"
         agent_md.write_text("Project instructions")
@@ -347,7 +347,7 @@ class TestProjectAgentMdFinding:
         project_root = tmp_path / "project"
         project_root.mkdir()
 
-        # Create root-level AGENTS.md (no .deepagents/)
+        # Create root-level AGENTS.md (no .zjcode/)
         agent_md = project_root / "AGENTS.md"
         agent_md.write_text("Project instructions")
 
@@ -361,15 +361,15 @@ class TestProjectAgentMdFinding:
         project_root.mkdir()
 
         # Create both locations
-        deepagents_dir = project_root / ".deepagents"
+        deepagents_dir = project_root / ".zjcode"
         deepagents_dir.mkdir()
         deepagents_md = deepagents_dir / "AGENTS.md"
-        deepagents_md.write_text("In .deepagents/")
+        deepagents_md.write_text("In .zjcode/")
 
         root_md = project_root / "AGENTS.md"
         root_md.write_text("In root")
 
-        # Should return both, with .deepagents/ first
+        # Should return both, with .zjcode/ first
         result = _find_project_agent_md(project_root)
         assert len(result) == 2
         assert result[0] == deepagents_md
@@ -394,7 +394,7 @@ class TestProjectAgentMdFinding:
         original_resolve = Path.resolve
 
         def patched_resolve(self: Path, *args: object, **kwargs: object) -> Path:
-            if self.name == "AGENTS.md" and ".deepagents" in str(self):
+            if self.name == "AGENTS.md" and ".zjcode" in str(self):
                 msg = "Permission denied"
                 raise PermissionError(msg)
             return original_resolve(self, *args, **kwargs)  # ty: ignore
@@ -456,7 +456,7 @@ class TestProjectAgentMdFinding:
         outside_agent_md = outside / "AGENTS.md"
         outside_agent_md.write_text("attacker-controlled")
 
-        (project_root / ".deepagents").symlink_to(outside, target_is_directory=True)
+        (project_root / ".zjcode").symlink_to(outside, target_is_directory=True)
 
         with caplog.at_level(logging.WARNING, logger="deepagents_code.project_utils"):
             result = _find_project_agent_md(project_root)
@@ -550,7 +550,7 @@ class TestSettingsGetProjectAgentMdPath:
 
     def test_returns_existing_paths(self, tmp_path: Path) -> None:
         """Should return existing AGENTS.md paths from project root."""
-        deepagents_dir = tmp_path / ".deepagents"
+        deepagents_dir = tmp_path / ".zjcode"
         deepagents_dir.mkdir()
         deepagents_md = deepagents_dir / "AGENTS.md"
         deepagents_md.write_text("inner")
@@ -1860,7 +1860,7 @@ class TestGetLangsmithProjectName:
             assert get_langsmith_project_name() is None
 
     def test_returns_project_from_settings(self) -> None:
-        """Should prefer settings.deepagents_langchain_project."""
+        """Should prefer settings.zjcode_langchain_project."""
         env = {
             "LANGSMITH_API_KEY": "lsv2_test",
             "LANGSMITH_TRACING": "true",
@@ -1870,7 +1870,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = "settings-project"
+            mock_settings.zjcode_langchain_project = "settings-project"
             assert get_langsmith_project_name() == "settings-project"
 
     def test_falls_back_to_env_project(self) -> None:
@@ -1884,7 +1884,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = None
+            mock_settings.zjcode_langchain_project = None
             assert get_langsmith_project_name() == "env-project"
 
     def test_falls_back_to_default(self) -> None:
@@ -1899,7 +1899,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = None
+            mock_settings.zjcode_langchain_project = None
             assert get_langsmith_project_name() == LANGSMITH_PROJECT_DEFAULT
 
     def test_accepts_langchain_api_key(self) -> None:
@@ -1915,7 +1915,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = None
+            mock_settings.zjcode_langchain_project = None
             assert get_langsmith_project_name() == LANGSMITH_PROJECT_DEFAULT
 
     def test_agrees_with_config_manifest_resolution(self) -> None:
@@ -1946,7 +1946,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", bare_env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = None
+            mock_settings.zjcode_langchain_project = None
             manifest_value, _ = resolve_scalar(opt, toml_data={})
             assert get_langsmith_project_name() == manifest_value == "parity-bare"
 
@@ -1961,7 +1961,7 @@ class TestGetLangsmithProjectName:
             patch.dict("os.environ", default_env, clear=False),
             patch("deepagents_code.config.settings") as mock_settings,
         ):
-            mock_settings.deepagents_langchain_project = None
+            mock_settings.zjcode_langchain_project = None
             manifest_value, _ = resolve_scalar(opt, toml_data={})
             assert (
                 get_langsmith_project_name()

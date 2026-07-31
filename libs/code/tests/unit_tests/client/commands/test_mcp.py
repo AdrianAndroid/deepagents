@@ -109,7 +109,7 @@ class TestRunMCPLogin:
 
         # User-level configs (under ~/.deepagents) are always loaded — the
         # merge/precedence path no longer depends on a fingerprint trust gate.
-        user_dir = tmp_path / ".deepagents"
+        user_dir = tmp_path / ".zjcode"
         user_dir.mkdir()
         lower = user_dir / "lower.json"
         lower.write_text(
@@ -144,7 +144,7 @@ class TestRunMCPLogin:
         """When two configs define the same server, the later one wins."""
         from deepagents_code.client.commands.mcp import run_mcp_login
 
-        user_dir = tmp_path / ".deepagents"
+        user_dir = tmp_path / ".zjcode"
         user_dir.mkdir()
         lower = user_dir / "lower.json"
         lower.write_text(
@@ -301,10 +301,10 @@ class TestRunMCPLogin:
         from deepagents_code.client.commands.mcp import run_mcp_login
 
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         # Point the trust-policy loader at an absent config so discovery is
-        # hermetic (no real ~/.deepagents/config.toml read).
+        # hermetic (no real ~/.zjcode/config.toml read).
         monkeypatch.setattr(
             "deepagents_code.model_config.DEFAULT_CONFIG_PATH",
             user_dir / "config.toml",
@@ -343,7 +343,7 @@ class TestRunMCPLogin:
         from deepagents_code.client.commands.mcp import run_mcp_login
 
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_config = user_dir / "config.toml"
         # A non-list value is one malformed whole-key entry.
@@ -393,7 +393,7 @@ class TestRunMCPLogin:
         from deepagents_code.client.commands.mcp import run_mcp_login
 
         fake_home = tmp_path / "home"
-        user_dir = fake_home / ".deepagents"
+        user_dir = fake_home / ".zjcode"
         user_dir.mkdir(parents=True)
         user_config = user_dir / "config.toml"
         user_config.write_text("this is not = valid toml [[[")
