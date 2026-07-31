@@ -85,6 +85,20 @@ def patch_path_constants() -> None:
             if old != model_config.DEFAULT_CONFIG_DIR:
                 patched += 1
 
+        # 修补 DEFAULT_CONFIG_FILE
+        if hasattr(model_config, "DEFAULT_CONFIG_FILE"):
+            old = model_config.DEFAULT_CONFIG_FILE
+            model_config.DEFAULT_CONFIG_FILE = Path.home() / ".zjcode" / "config.toml"
+            if old != model_config.DEFAULT_CONFIG_FILE:
+                patched += 1
+
+        # 修补 STATE_DIR
+        if hasattr(model_config, "STATE_DIR"):
+            old = model_config.STATE_DIR
+            model_config.STATE_DIR = Path.home() / ".zjcode" / ".state"
+            if old != model_config.STATE_DIR:
+                patched += 1
+
         # 修补 media_utils.py 中的 PASTED_MEDIA_DIR
         try:
             from deepagents_code import media_utils

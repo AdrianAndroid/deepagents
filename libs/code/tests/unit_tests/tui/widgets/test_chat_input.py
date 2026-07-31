@@ -14,11 +14,13 @@ from textual.widgets import Static
 from textual.widgets.text_area import Selection
 
 from deepagents_code import _textual_patches as _textual_patches
-from deepagents_code import input as _input_module
-from deepagents_code.command_registry import SLASH_COMMANDS
+from deepagents_code.command_registry import get_slash_commands
 from deepagents_code.input import MediaTracker
 from deepagents_code.media_utils import ImageData, create_multimodal_content
-from deepagents_code.tui.widgets import chat_input as chat_input_module
+from deepagents_code.tui.widgets import (
+    _paste_textarea as paste_textarea_module,
+    chat_input as chat_input_module,
+)
 from deepagents_code.tui.widgets.autocomplete import MAX_SUGGESTIONS
 from deepagents_code.tui.widgets.chat_input import (
     ChatInput,
@@ -32,26 +34,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from textual.pilot import Pilot
-
-
-@pytest.fixture(autouse=True)
-def _deterministic_media_ids(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Replace `_generate_media_id` with a per-kind counter for stable tokens.
-
-    Placeholder tokens shown in ChatInput tests use short literal forms like
-    ``[img_001]`` / ``[vid_001]``. In production the id is a wall-clock
-    timestamp, so without this substitution tests would be non-deterministic
-    (and would break every second). The 3-digit zero-padded id also keeps the
-    token 9 characters wide so span-offset assertions carried over from the
-    old ``[image N]`` scheme stay valid.
-    """
-    counters: dict[str, int] = {"image": 0, "video": 0}
-
-    def fake_id(kind: str) -> str:
-        counters[kind] += 1
-        return f"{counters[kind]:03d}"
-
-    monkeypatch.setattr(_input_module, "_generate_media_id", fake_id)
 
 
 class TestCompletionOption:
@@ -248,6 +230,23 @@ class _RecordingApp(App[None]):
 
     def on_chat_input_submitted(self, event: ChatInput.Submitted) -> None:
         self.submitted.append(event)
+
+
+def _capture_notifications(
+    monkeypatch: pytest.MonkeyPatch, app: App[None]
+) -> list[tuple[str, dict[str, object]]]:
+    """Patch ``app.notify`` and return a list recording each call.
+
+    Each entry is ``(message, kwargs)`` so tests can assert both the toast
+    text and the notification options (e.g. ``markup``, ``timeout``).
+    """
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    def _record(message: str, *_args: object, **kwargs: object) -> None:
+        calls.append((str(message), kwargs))
+
+    monkeypatch.setattr(app, "notify", _record)
+    return calls
 
 
 async def _noop() -> None:
@@ -1712,7 +1711,7 @@ class TestDismissCompletion:
 
             # Menu should reappear with all commands
             assert len(chat._current_suggestions) == min(
-                len(SLASH_COMMANDS), MAX_SUGGESTIONS
+                len(get_slash_commands()), MAX_SUGGESTIONS
             )
             assert popup.styles.display == "block"
 
@@ -2599,6 +2598,7 @@ class TestSlashCompletionCursorMapping:
 
             chat._text_area.insert("/")
             await _pause_for_strip(pilot)
+            # Shared prefix `re`: shorter `/remember` ranks above `/reload`.
             chat._text_area.insert("re")
             await pilot.pause()
 
@@ -2777,7 +2777,7 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
 
             # Move cursor to start and press forward-delete
             chat._text_area.move_cursor((0, 0))
@@ -2789,6 +2789,7 @@ class TestDroppedImagePaste:
             # trailing space (unlike backspace which catches it).
             assert "[image" not in chat._text_area.text
             assert app.tracker.get_images() == []
+            assert app.tracker.next_image_id == 1
 
     async def test_backspace_removes_full_image_placeholder(self, tmp_path) -> None:
         """Backspace should remove `[image N]` as a single token."""
@@ -2805,25 +2806,56 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
 
             await pilot.press("backspace")
             await pilot.pause()
 
             assert chat._text_area.text == ""
             assert app.tracker.get_images() == []
+            assert app.tracker.next_image_id == 1
 
-    async def test_readding_after_delete_gets_fresh_placeholder(self, tmp_path) -> None:
-        """Re-adding after deleting all placeholders still gets a unique token.
+    async def test_backspace_from_line_below_image_keeps_placeholder(
+        self, tmp_path
+    ) -> None:
+        """Backspace on the line below `[image N]` rejoins lines, keeps token.
 
-        Historically the tracker maintained its own counter that reset to 1
-        when the draft went empty; today the id comes from a
-        wall-clock-timestamped generator (deterministic per-kind counter in
-        tests), so the second paste gets the next id from that generator
-        rather than "restarting at 1". The invariant that still matters is
-        that the returned placeholder is unique and correctly rebound to the
-        newly attached image.
+        Two images dropped on separate lines render as `[image 1]`, a newline,
+        and then `[image 2]`, with no trailing space after the first token. The
+        newline sits immediately after the first
+        token's closing bracket. Backspacing from the start of the second line
+        must remove only the line break, not delete `[image 1]` atomically with
+        it (the regression this fix addresses for the media code path).
         """
+        from PIL import Image
+
+        img1 = tmp_path / "one.png"
+        img2 = tmp_path / "two.png"
+        Image.new("RGB", (4, 4), color="cyan").save(img1, format="PNG")
+        Image.new("RGB", (4, 4), color="magenta").save(img2, format="PNG")
+
+        app = _ImagePasteApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat.handle_external_paste(f"{img1}\n{img2}")
+            await pilot.pause()
+            assert chat._text_area.text == "[image 1]\n[image 2]"
+
+            chat._text_area.move_cursor((1, 0))
+            await pilot.pause()
+
+            await pilot.press("backspace")
+            await pilot.pause()
+
+            # The line break is removed and both placeholders survive rather
+            # than `[image 1]` being deleted atomically with the newline.
+            assert chat._text_area.text == "[image 1][image 2]"
+            assert len(app.tracker.get_images()) == 2
+
+    async def test_readding_after_delete_restarts_image_counter(self, tmp_path) -> None:
+        """Re-adding after deleting all placeholders should restart at `[image 1]`."""
         img_path = tmp_path / "readd.png"
         from PIL import Image
 
@@ -2837,38 +2869,40 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
 
             await pilot.press("backspace")
             await pilot.pause()
+            assert app.tracker.next_image_id == 1
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_002] "
+            assert chat._text_area.text == "[image 1] "
             assert len(app.tracker.get_images()) == 1
+            assert app.tracker.next_image_id == 2
 
     async def test_typed_image_placeholder_is_not_atomic(self) -> None:
         """Manually typed `[image N]` (no attachment) edits char-by-char.
 
         Regression test: placeholder-shaped text the user typed must not be
         treated as an atomic media token, so backspace removes a single
-        character instead of deleting the whole `[img_002]`.
+        character instead of deleting the whole `[image 2]`.
         """
         app = _ImagePasteApp()
         async with app.run_test() as pilot:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
 
-            chat._text_area.text = "[img_002]"
+            chat._text_area.text = "[image 2]"
             await pilot.pause()
             assert app.tracker.get_images() == []
 
-            chat._text_area.move_cursor((0, len("[img_002]")))
+            chat._text_area.move_cursor((0, len("[image 2]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
-            assert chat._text_area.text == "[img_002"
+            assert chat._text_area.text == "[image 2"
 
     async def test_typed_placeholder_not_atomic_alongside_real_image(
         self, tmp_path
@@ -2887,28 +2921,28 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
 
             # Append a manually typed placeholder-shaped token that is not
             # backed by any attachment.
-            chat._text_area.text = "[img_001] [img_002]"
+            chat._text_area.text = "[image 1] [image 2]"
             await pilot.pause()
             assert len(app.tracker.get_images()) == 1
 
-            chat._text_area.move_cursor((0, len("[img_001] [img_002]")))
+            chat._text_area.move_cursor((0, len("[image 1] [image 2]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
             # Only one character of the typed token is removed; the real
-            # `[img_001]` placeholder is untouched and still tracked.
-            assert chat._text_area.text == "[img_001] [img_002"
+            # `[image 1]` placeholder is untouched and still tracked.
+            assert chat._text_area.text == "[image 1] [image 2"
             assert len(app.tracker.get_images()) == 1
 
     async def test_real_image_placeholder_still_atomic_with_typed_lookalike(
         self, tmp_path
     ) -> None:
-        """The real `[img_001]` deletes atomically even beside a typed token."""
+        """The real `[image 1]` deletes atomically even beside a typed token."""
         img_path = tmp_path / "atomic.png"
         from PIL import Image
 
@@ -2922,19 +2956,19 @@ class TestDroppedImagePaste:
 
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            chat._text_area.text = "[img_002] [img_001]"
+            chat._text_area.text = "[image 2] [image 1]"
             await pilot.pause()
             assert len(app.tracker.get_images()) == 1
 
-            # Cursor just after the real trailing `[img_001]` token.
-            chat._text_area.move_cursor((0, len("[img_002] [img_001]")))
+            # Cursor just after the real trailing `[image 1]` token.
+            chat._text_area.move_cursor((0, len("[image 2] [image 1]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
             # The whole real placeholder is removed atomically, leaving the
             # typed look-alike intact.
-            assert chat._text_area.text == "[img_002] "
+            assert chat._text_area.text == "[image 2] "
 
     async def test_submit_remaps_span_onto_stripped_value(self, tmp_path) -> None:
         """`_submit_value` re-maps placeholder spans onto the final submitted text.
@@ -2958,7 +2992,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             # Leading whitespace shifts every offset when submit strips it.
-            chat._text_area.text = "  look [img_001]"
+            chat._text_area.text = "  look [image 1]"
             await pilot.pause()
             img = app.tracker.get_images()[0]
             assert img.placeholder_span == (7, 16)
@@ -2966,7 +3000,7 @@ class TestDroppedImagePaste:
             chat._submit_value(chat._text_area.text.strip())
             await pilot.pause()
 
-            assert app.submitted[-1].value == "look [img_001]"
+            assert app.submitted[-1].value == "look [image 1]"
             # The span now indexes the submitted value, not the raw draft.
             assert img.placeholder_span == (5, 14)
             content = create_multimodal_content(
@@ -2990,7 +3024,7 @@ class TestDroppedImagePaste:
             assert chat.handle_external_paste(str(img_path))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[img_001]"
+            assert chat._text_area.text.strip() == "[image 1]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_handle_external_paste_attaches_unquoted_path_with_spaces(
@@ -3011,7 +3045,7 @@ class TestDroppedImagePaste:
             assert chat.handle_external_paste(str(img_path))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[img_001]"
+            assert chat._text_area.text.strip() == "[image 1]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_handle_external_paste_inserts_plain_text(self) -> None:
@@ -3045,7 +3079,7 @@ class TestDroppedImagePaste:
             await chat._text_area._on_paste(events.Paste(str(img_path)))
             await pilot.pause()
 
-            assert chat._text_area.text.strip() == "[img_001]"
+            assert chat._text_area.text.strip() == "[image 1]"
             assert len(app.tracker.get_images()) == 1
 
     async def test_paste_image_path_skips_literal_placeholder_in_draft(
@@ -3062,18 +3096,15 @@ class TestDroppedImagePaste:
         async with app.run_test() as pilot:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
-            chat._text_area.text = "restore [img_001] "
+            chat._text_area.text = "restore [image 1] "
             chat._text_area.move_cursor_to_end()
 
             await chat._text_area._on_paste(events.Paste(str(img_path)))
             await pilot.pause()
 
-            # First attachment: generator returns id "001", but that token
-            # already appears in the draft, so the tracker appends "_2" to
-            # keep the new token distinct from the user-typed literal.
-            assert chat._text_area.text == "restore [img_001] [img_001_2] "
+            assert chat._text_area.text == "restore [image 1] [image 2] "
             assert [img.placeholder for img in app.tracker.get_images()] == [
-                "[img_001_2]"
+                "[image 2]"
             ]
 
     async def test_paste_non_image_path_keeps_original_text(self, tmp_path) -> None:
@@ -3111,7 +3142,7 @@ class TestDroppedImagePaste:
             chat._text_area.text = f"'{img_path}'"
             await pilot.pause()
 
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
             assert len(app.tracker.get_images()) == 1
 
     async def test_key_burst_quoted_path_rewrites_without_showing_raw_path(
@@ -3121,8 +3152,10 @@ class TestDroppedImagePaste:
         # This test exercises burst parsing behavior, not scheduler precision.
         # CI workers can exceed the default 30ms inter-key gap, which would
         # flush mid-sequence and make the test flaky.
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 1.0)
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_FLUSH_DELAY_SECONDS", 0.25)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 1.0)
+        monkeypatch.setattr(
+            paste_textarea_module, "PASTE_BURST_FLUSH_DELAY_SECONDS", 0.25
+        )
 
         img_path = tmp_path / "vscode-burst.png"
         from PIL import Image
@@ -3144,7 +3177,7 @@ class TestDroppedImagePaste:
 
             await pilot.pause(0.35)
 
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
             assert len(app.tracker.get_images()) == 1
 
     async def test_submit_absolute_path_without_paste_event_attaches_image(
@@ -3171,7 +3204,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001]"
+            assert app.submitted[0].value == "[image 1]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3199,7 +3232,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001]"
+            assert app.submitted[0].value == "[image 1]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3226,7 +3259,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001] what's in this"
+            assert app.submitted[0].value == "[image 1] what's in this"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3252,7 +3285,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001] what's in this image?"
+            assert app.submitted[0].value == "[image 1] what's in this image?"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3281,7 +3314,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001] analyze"
+            assert app.submitted[0].value == "[image 1] analyze"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3309,7 +3342,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001] analyze this"
+            assert app.submitted[0].value == "[image 1] analyze this"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3329,7 +3362,7 @@ class TestDroppedImagePaste:
             # Paste an image and submit
             chat.handle_external_paste(str(img_path))
             await pilot.pause()
-            assert chat._text_area.text == "[img_001] "
+            assert chat._text_area.text == "[image 1] "
 
             await pilot.press("enter")
             await pilot.pause()
@@ -3342,6 +3375,7 @@ class TestDroppedImagePaste:
             # The tracker should have synced and cleared images since
             # the new text has no placeholders.
             assert app.tracker.get_images() == []
+            assert app.tracker.next_image_id == 1
 
     async def test_submit_recovers_if_command_mode_already_stripped_path(
         self, tmp_path
@@ -3367,7 +3401,7 @@ class TestDroppedImagePaste:
             await pilot.pause()
 
             assert len(app.submitted) == 1
-            assert app.submitted[0].value == "[img_001]"
+            assert app.submitted[0].value == "[image 1]"
             assert app.submitted[0].mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3389,7 +3423,7 @@ class TestDroppedVideoPaste:
     async def test_paste_video_attaches_and_inserts_placeholder(
         self, tmp_path: Path
     ) -> None:
-        """Dropping a valid .mp4 should insert `[vid_001]` placeholder."""
+        """Dropping a valid .mp4 should insert `[video 1]` placeholder."""
         video_path = tmp_path / "clip.mp4"
         video_path.write_bytes(_make_mp4_bytes())
 
@@ -3401,7 +3435,7 @@ class TestDroppedVideoPaste:
             assert chat.handle_external_paste(str(video_path))
             await pilot.pause()
 
-            assert "[vid_001]" in chat._text_area.text
+            assert "[video 1]" in chat._text_area.text
             assert len(app.tracker.get_videos()) == 1
 
     async def test_backspace_removes_video_placeholder(self, tmp_path: Path) -> None:
@@ -3416,13 +3450,14 @@ class TestDroppedVideoPaste:
 
             chat.handle_external_paste(str(video_path))
             await pilot.pause()
-            assert "[vid_001]" in chat._text_area.text
+            assert "[video 1]" in chat._text_area.text
 
             await pilot.press("backspace")
             await pilot.pause()
 
             assert "[video" not in chat._text_area.text
             assert app.tracker.get_videos() == []
+            assert app.tracker.next_video_id == 1
 
     async def test_forward_delete_removes_video_placeholder(
         self, tmp_path: Path
@@ -3438,7 +3473,7 @@ class TestDroppedVideoPaste:
 
             chat.handle_external_paste(str(video_path))
             await pilot.pause()
-            assert "[vid_001]" in chat._text_area.text
+            assert "[video 1]" in chat._text_area.text
 
             chat._text_area.move_cursor((0, 0))
             await pilot.pause()
@@ -3460,16 +3495,16 @@ class TestDroppedVideoPaste:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
 
-            chat._text_area.text = "[vid_002]"
+            chat._text_area.text = "[video 2]"
             await pilot.pause()
             assert app.tracker.get_videos() == []
 
-            chat._text_area.move_cursor((0, len("[vid_002]")))
+            chat._text_area.move_cursor((0, len("[video 2]")))
             await pilot.pause()
             await pilot.press("backspace")
             await pilot.pause()
 
-            assert chat._text_area.text == "[vid_002"
+            assert chat._text_area.text == "[video 2"
 
     async def test_mixed_image_and_video_drop(self, tmp_path: Path) -> None:
         """Dropping an image and video should produce both placeholder types."""
@@ -3492,8 +3527,8 @@ class TestDroppedVideoPaste:
             await pilot.pause()
 
             text = chat._text_area.text
-            assert "[img_001]" in text
-            assert "[vid_001]" in text
+            assert "[image 1]" in text
+            assert "[video 1]" in text
             assert len(app.tracker.get_images()) == 1
             assert len(app.tracker.get_videos()) == 1
 
@@ -3592,7 +3627,7 @@ class TestPathPayloadDetectionGating:
             ta.text = str(img_path)
             await pilot.pause()
 
-            assert ta.text == "[img_001] "
+            assert ta.text == "[image 1] "
             assert chat.mode == "normal"
             assert len(app.tracker.get_images()) == 1
 
@@ -3612,7 +3647,7 @@ class TestBackslashEnterNewline:
         # Widen the gap so wall-clock timing between pilot.press calls on slow
         # CI runners cannot push the enter past the 150ms default and trip the
         # submit path.
-        monkeypatch.setattr(chat_input_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
+        monkeypatch.setattr(paste_textarea_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
 
         app = _RecordingApp()
         async with app.run_test() as pilot:
@@ -3650,7 +3685,7 @@ class TestBackslashEnterNewline:
         `call_after_refresh(scroll_cursor_visible)` keeps the cursor visible.
         """
         # Widen the backslash+enter gap so the fallback test isn't racy on CI.
-        monkeypatch.setattr(chat_input_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
+        monkeypatch.setattr(paste_textarea_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
 
         app = _ChatInputTestApp()
         async with app.run_test() as pilot:
@@ -3708,7 +3743,7 @@ class TestBackslashEnterNewline:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Backslash + enter on empty prompt should not submit."""
-        monkeypatch.setattr(chat_input_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
+        monkeypatch.setattr(paste_textarea_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
 
         app = _RecordingApp()
         async with app.run_test() as pilot:
@@ -3729,7 +3764,7 @@ class TestBackslashEnterNewline:
     ) -> None:
         """Backslash + enter beyond the timing gap should submit normally."""
         # Set gap to 0 so any real delay exceeds it.
-        monkeypatch.setattr(chat_input_module, "_BACKSLASH_ENTER_GAP_SECONDS", 0.0)
+        monkeypatch.setattr(paste_textarea_module, "_BACKSLASH_ENTER_GAP_SECONDS", 0.0)
 
         app = _RecordingApp()
         async with app.run_test() as pilot:
@@ -3747,6 +3782,44 @@ class TestBackslashEnterNewline:
 
             # Should have submitted (backslash included in text)
             assert len(app.submitted) == 1
+
+    async def test_backslash_enter_suppressed_while_completion_active(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An open completion popup owns Enter, so the fallback must not fire.
+
+        `_on_key` passes `enabled=not self._completion_active` to the shared
+        `_consume_backslash_enter_newline`. While completion is active the
+        backslash+enter fallback must be suppressed (the popup consumes Enter to
+        accept a suggestion), yet the pending-backslash timestamp must still be
+        cleared so a *later* Enter can't retroactively trip the fallback.
+
+        Driving `_on_key` directly (as the sibling completion tests do) isolates
+        the text area's handling from the parent's completion bubbling, which is
+        what makes the assertions deterministic.
+        """
+        monkeypatch.setattr(paste_textarea_module, "_BACKSLASH_ENTER_GAP_SECONDS", 60.0)
+
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            ta = chat._text_area
+            assert ta is not None
+
+            ta.insert("hello")
+            ta.set_completion_active(active=True)
+            await pilot.pause()
+
+            # Backslash arms the fallback; Enter arrives well within the gap.
+            await ta._on_key(events.Key("backslash", "\\"))
+            await ta._on_key(events.Key("enter", None))
+            await pilot.pause()
+
+            # Fallback suppressed: backslash untouched, no newline, no submit.
+            assert ta.text == "hello\\"
+            # Pending state cleared even though the fallback was disabled.
+            assert ta._backslash_pending_time is None
+            assert len(app.submitted) == 0
 
 
 class TestVSCodeSpaceWorkaround:
@@ -3946,6 +4019,47 @@ class TestModifiedBackspaceDeleteWordLeft:
             assert ta.text == "hello "
             assert ta.cursor_location == (0, 6)
 
+    @pytest.mark.parametrize("key", ["ctrl+backspace", "alt+backspace"])
+    async def test_modified_backspace_deletes_paste_placeholder_atomically(
+        self, key: str
+    ) -> None:
+        """Modified Backspace should not corrupt a collapsed-paste token."""
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat.handle_external_paste("p" * 900)
+            await pilot.pause()
+            assert chat._text_area.text == "[Pasted text #1]"
+
+            await pilot.press(key)
+            await pilot.pause()
+
+            assert chat._text_area.text == ""
+            assert 1 in chat._pasted_contents
+
+    @pytest.mark.parametrize("key", ["ctrl+backspace", "alt+backspace"])
+    async def test_modified_backspace_after_tab_deletes_placeholder_atomically(
+        self, key: str
+    ) -> None:
+        """Modified Backspace preserves token integrity after a tab."""
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat.handle_external_paste("p" * 900)
+            chat._text_area.insert("\t")
+            await pilot.pause()
+            assert chat._text_area.text == "[Pasted text #1]\t"
+
+            await pilot.press(key)
+            await pilot.pause()
+
+            assert chat._text_area.text == ""
+            assert 1 in chat._pasted_contents
+
 
 class _TextAreaTypingApp(App[None]):
     """Minimal app that captures ChatTextArea.Typing and ChatInput.Typing events."""
@@ -4063,6 +4177,60 @@ class TestArgumentHints:
         chat = ChatInput()
         chat._rebuild_argument_hints(commands)
         assert chat._argument_hints == {}
+
+    async def test_runtime_override_updates_hint_and_survives_refresh(self) -> None:
+        """Session-specific hints remain active when skill commands are rebuilt."""
+        from deepagents_code.command_registry import CommandEntry
+
+        app = _ChatInputTestApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat._text_area.insert("/")
+            await _pause_for_strip(pilot)
+            chat._text_area.insert("effort ")
+            await pilot.pause()
+            assert chat._text_area.argument_hint == "[<level>|clear]"
+
+            dynamic_hint = "[minimal|turbo-v2|max|clear]"
+            chat.set_argument_hint_override("/effort", dynamic_hint)
+            assert chat._text_area.argument_hint == dynamic_hint
+
+            chat.update_slash_commands(
+                [
+                    *get_slash_commands(),
+                    CommandEntry("/skill:test", "Test skill", "test", ""),
+                ]
+            )
+            chat._update_argument_hint()
+            assert chat._text_area.argument_hint == dynamic_hint
+
+            chat.set_argument_hint_override("/effort", None)
+            assert chat._text_area.argument_hint == "[<level>|clear]"
+
+    async def test_empty_override_hides_registered_hint(self) -> None:
+        """An empty override suppresses the registered hint until restored."""
+        app = _ChatInputTestApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat._text_area.insert("/")
+            await _pause_for_strip(pilot)
+            chat._text_area.insert("effort ")
+            await pilot.pause()
+
+            chat.set_argument_hint_override("/effort", "[custom|clear]")
+            assert chat._text_area.argument_hint == "[custom|clear]"
+
+            chat.set_argument_hint_override("/effort", "")
+            assert chat._argument_hint_overrides["effort"] == ""
+            assert chat._text_area.argument_hint == ""
+
+            chat.set_argument_hint_override("/effort", None)
+            assert "effort" not in chat._argument_hint_overrides
+            assert chat._text_area.argument_hint == "[<level>|clear]"
 
     async def test_hint_shown_after_command_and_space(self) -> None:
         """Ghost text appears when text is a known command + trailing space."""
@@ -4333,9 +4501,9 @@ class TestPasteBurstEnterSuppression:
         """A fast keystroke run followed by enter inserts a newline."""
         # Widen the burst gap so wall-clock delays between pilot.press calls on
         # slow CI runners still register as a single rapid burst.
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 60.0)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 60.0)
         monkeypatch.setattr(
-            chat_input_module, "_PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 60.0
+            paste_textarea_module, "PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 60.0
         )
 
         app = _RecordingApp()
@@ -4348,7 +4516,7 @@ class TestPasteBurstEnterSuppression:
                 await pilot.press(char)
             await pilot.press("enter")
             await pilot.press("w")
-            await pilot.pause()
+            await pilot.pause(0.15)
 
             assert len(app.submitted) == 0
             assert "\n" in ta.text
@@ -4358,7 +4526,7 @@ class TestPasteBurstEnterSuppression:
     ) -> None:
         """Deliberate typing (no burst) keeps enter as submit."""
         # Force every inter-key gap to exceed the burst threshold.
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 0.0)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 0.0)
 
         app = _RecordingApp()
         async with app.run_test() as pilot:
@@ -4378,9 +4546,9 @@ class TestPasteBurstEnterSuppression:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Single-line paste followed by manual enter still submits."""
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
         monkeypatch.setattr(
-            chat_input_module, "_PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 0.12
+            paste_textarea_module, "PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 0.12
         )
 
         app = _RecordingApp()
@@ -4392,10 +4560,10 @@ class TestPasteBurstEnterSuppression:
             ta.text = "abc"
             now = chat_input_module.time.monotonic()
             ta._paste_burst_last_key_time = (
-                now - chat_input_module._PASTE_BURST_CHAR_GAP_SECONDS - 0.01
+                now - paste_textarea_module.PASTE_BURST_CHAR_GAP_SECONDS - 0.01
             )
             ta._paste_burst_window_until = (
-                now + chat_input_module._PASTE_ENTER_SUPPRESS_WINDOW_SECONDS
+                now + paste_textarea_module.PASTE_ENTER_SUPPRESS_WINDOW_SECONDS
             )
 
             await ta._on_key(events.Key("enter", None))
@@ -4409,9 +4577,9 @@ class TestPasteBurstEnterSuppression:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A suppressed enter extends the window so trailing lines stay grouped."""
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
         monkeypatch.setattr(
-            chat_input_module, "_PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 0.12
+            paste_textarea_module, "PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 0.12
         )
 
         app = _RecordingApp()
@@ -4440,9 +4608,9 @@ class TestPasteBurstEnterSuppression:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A delayed second enter in a blank-line paste does not submit."""
-        monkeypatch.setattr(chat_input_module, "_PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
+        monkeypatch.setattr(paste_textarea_module, "PASTE_BURST_CHAR_GAP_SECONDS", 0.03)
         monkeypatch.setattr(
-            chat_input_module, "_PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 60.0
+            paste_textarea_module, "PASTE_ENTER_SUPPRESS_WINDOW_SECONDS", 60.0
         )
 
         app = _RecordingApp()
@@ -4463,7 +4631,7 @@ class TestPasteBurstEnterSuppression:
 
             ta._paste_burst_last_key_time = (
                 chat_input_module.time.monotonic()
-                - chat_input_module._PASTE_BURST_CHAR_GAP_SECONDS
+                - paste_textarea_module.PASTE_BURST_CHAR_GAP_SECONDS
                 - 0.01
             )
             await ta._on_key(events.Key("enter", None))
@@ -4579,24 +4747,24 @@ class TestPasteCollapseHelpers:
         assert expand_paste_refs(text, {}) == text
 
     def test_load_collapse_pastes_default_enabled(self, monkeypatch) -> None:
-        """The loader defaults to enabled when nothing overrides it."""
+        """The shared resolver defaults to enabled when nothing overrides it."""
         from deepagents_code import config_manifest
         from deepagents_code._env_vars import COLLAPSE_PASTES
-        from deepagents_code.tui.widgets import chat_input
+        from deepagents_code.tui.widgets import _paste_textarea
 
         monkeypatch.delenv(COLLAPSE_PASTES, raising=False)
         monkeypatch.setattr(config_manifest, "load_config_toml", dict)
-        assert chat_input._load_collapse_pastes() is True
+        assert _paste_textarea._collapse_pastes_enabled() is True
 
     def test_load_collapse_pastes_env_disables(self, monkeypatch) -> None:
-        """A falsy env var disables paste collapsing in the loader."""
+        """A falsy env var disables paste collapsing in the shared resolver."""
         from deepagents_code import config_manifest
         from deepagents_code._env_vars import COLLAPSE_PASTES
-        from deepagents_code.tui.widgets import chat_input
+        from deepagents_code.tui.widgets import _paste_textarea
 
         monkeypatch.setenv(COLLAPSE_PASTES, "0")
         monkeypatch.setattr(config_manifest, "load_config_toml", dict)
-        assert chat_input._load_collapse_pastes() is False
+        assert _paste_textarea._collapse_pastes_enabled() is False
 
 
 class TestPasteCollapseIntegration:
@@ -4946,11 +5114,14 @@ class TestPasteCollapseIntegration:
             assert chat._pasted_contents[1].content == text
             assert chat._pasted_contents[2].content == text
 
-    async def test_bracketed_paste_event_collapses(self) -> None:
+    async def test_bracketed_paste_event_collapses(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A real Paste event over the threshold collapses to a placeholder.
 
         Exercises the production path (`_on_paste` -> `PastedText` message ->
-        `on_chat_text_area_pasted_text`) rather than `handle_external_paste`.
+        `on_chat_text_area_pasted_text`) rather than `handle_external_paste`,
+        and asserts the collapse toast fires on that path too.
         """
         big_text = "z" * 900
         app = _RecordingApp()
@@ -4958,20 +5129,109 @@ class TestPasteCollapseIntegration:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
 
+            calls = _capture_notifications(monkeypatch, app)
+
             await chat._text_area._on_paste(events.Paste(big_text))
             await pilot.pause()
 
             assert "[Pasted text #1]" in chat._text_area.text
             assert big_text not in chat._text_area.text
             assert chat._pasted_contents[1].content == big_text
+            assert calls == [
+                (
+                    chat_input_module._PASTE_COLLAPSED_TOAST,
+                    {"timeout": 5, "markup": False},
+                )
+            ]
 
-    async def test_paste_burst_flush_collapses_large_payload(self) -> None:
-        """A large buffered paste burst collapses to a placeholder on flush."""
+    async def test_collapse_emits_expand_toast(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Collapsing a paste notifies the user they can paste again to expand."""
+        text = "T" * 900
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            calls = _capture_notifications(monkeypatch, app)
+
+            chat.handle_external_paste(text)
+            await pilot.pause()
+
+            assert chat._text_area.text == "[Pasted text #1]"
+            # Render the message literally (no markup) so bracketed text like
+            # `[Pasted text #N]` is never interpreted as Textual markup.
+            assert calls == [
+                (
+                    chat_input_module._PASTE_COLLAPSED_TOAST,
+                    {"timeout": 5, "markup": False},
+                )
+            ]
+
+    async def test_repeat_paste_expansion_does_not_emit_toast(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Expanding an existing placeholder via repeat paste emits no toast."""
+        text = "T" * 900
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat.handle_external_paste(text)
+            await pilot.pause()
+            assert chat._text_area.text == "[Pasted text #1]"
+
+            # Patch after the first (expected) toast so only the repeat-paste
+            # expansion branch is recorded.
+            calls = _capture_notifications(monkeypatch, app)
+
+            chat.handle_external_paste(text)
+            await pilot.pause()
+
+            assert chat._text_area.text == text
+            assert calls == []
+
+    async def test_distinct_pastes_each_emit_toast(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Each distinct large paste collapses to its own placeholder + toast."""
+        first = "A" * 900
+        second = "B" * 900
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            calls = _capture_notifications(monkeypatch, app)
+
+            chat.handle_external_paste(first)
+            await pilot.pause()
+            chat.handle_external_paste(second)
+            await pilot.pause()
+
+            assert chat._text_area.text == "[Pasted text #1][Pasted text #2]"
+            toast = (
+                chat_input_module._PASTE_COLLAPSED_TOAST,
+                {"timeout": 5, "markup": False},
+            )
+            assert calls == [toast, toast]
+
+    async def test_paste_burst_flush_collapses_large_payload(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A large buffered paste burst collapses to a placeholder on flush.
+
+        Also asserts the collapse toast fires on the burst-flush path.
+        """
         big_text = "q" * 900
         app = _RecordingApp()
         async with app.run_test() as pilot:
             chat = app.query_one(ChatInput)
             assert chat._text_area is not None
+
+            calls = _capture_notifications(monkeypatch, app)
 
             chat._text_area._paste_burst_buffer = big_text
             await chat._text_area._flush_paste_burst()
@@ -4980,6 +5240,12 @@ class TestPasteCollapseIntegration:
             assert "[Pasted text #1]" in chat._text_area.text
             assert big_text not in chat._text_area.text
             assert chat._pasted_contents[1].content == big_text
+            assert calls == [
+                (
+                    chat_input_module._PASTE_COLLAPSED_TOAST,
+                    {"timeout": 5, "markup": False},
+                )
+            ]
 
     async def test_backspace_removes_full_paste_placeholder(self) -> None:
         """Backspace deletes a [Pasted text #N] placeholder as a single token."""
@@ -5083,6 +5349,36 @@ class TestPasteCollapseIntegration:
             await pilot.pause()
 
             assert chat._text_area.text == ""
+            assert 1 in chat._pasted_contents
+
+    async def test_backspace_from_line_below_placeholder_keeps_it(self) -> None:
+        """Backspace on a line below a placeholder rejoins lines, keeps token.
+
+        Regression: a newline immediately after a `[Pasted text #N]` placeholder
+        was treated as an auto-inserted trailing separator, so backspacing from
+        the start of the next line deleted the whole placeholder instead of just
+        removing the line break. The cursor should land at the end of the
+        placeholder line with the placeholder intact.
+        """
+        big_text = "p" * 900
+        app = _RecordingApp()
+        async with app.run_test() as pilot:
+            chat = app.query_one(ChatInput)
+            assert chat._text_area is not None
+
+            chat.handle_external_paste(big_text)
+            await pilot.pause()
+            assert chat._text_area.text == "[Pasted text #1]"
+
+            chat._text_area.insert("\n")
+            await pilot.pause()
+            assert chat._text_area.cursor_location == (1, 0)
+
+            await pilot.press("backspace")
+            await pilot.pause()
+
+            assert chat._text_area.text == "[Pasted text #1]"
+            assert chat._text_area.cursor_location == (0, len("[Pasted text #1]"))
             assert 1 in chat._pasted_contents
 
     async def test_identical_multiline_repaste_expands_placeholder(self) -> None:
