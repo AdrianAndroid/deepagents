@@ -1,3 +1,10 @@
+---
+name: zjcode-brand-migration
+description: "zjcode 品牌隔离层迁移工具，一键解决合并 main 分支的品牌冲突问题。Use this skill when the user says: (1) 品牌迁移, (2) brand migration, (3) 合并 main 后品牌冲突, (4) check brand after merge, (5) 品牌常量被覆盖."
+license: MIT
+compatibility: designed for zjcode
+---
+
 # zjcode Brand Migration Skill
 
 ## 描述

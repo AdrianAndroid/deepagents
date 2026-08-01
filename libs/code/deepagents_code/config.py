@@ -2822,11 +2822,13 @@ class Settings:
         """Get project-level skills directory path.
 
         Returns:
-            Path to {project_root}/.deepagents/skills/, or None if not in a project
+            Path to {project_root}/{PROJECT_DOTDIR}/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "skills"
+        from deepagents_code._constants import PROJECT_DOTDIR
+
+        return self.project_root / PROJECT_DOTDIR / "skills"
 
     def ensure_project_skills_dir(self) -> Path | None:
         """Ensure project-level skills directory exists and return its path.
@@ -2857,11 +2859,13 @@ class Settings:
         """Get project-level agents directory path for custom subagent definitions.
 
         Returns:
-            Path to {project_root}/.deepagents/agents/, or None if not in a project
+            Path to {project_root}/{PROJECT_DOTDIR}/agents/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "agents"
+        from deepagents_code._constants import PROJECT_DOTDIR
+
+        return self.project_root / PROJECT_DOTDIR / "agents"
 
     @property
     def user_agents_dir(self) -> Path:
