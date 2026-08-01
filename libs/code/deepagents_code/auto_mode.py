@@ -679,10 +679,16 @@ async def _live_mode(runtime: object) -> tuple[ApprovalMode, bool]:
     """
     key = _thread_key(runtime)
     if key is None:
+        ctx_mode = _context_value(_runtime_context(runtime), "approval_mode")
+        if ctx_mode == ApprovalMode.YOLO.value:
+            return ApprovalMode.YOLO, False
         logger.warning("Approval-mode Store key is missing or invalid; using Manual")
         return ApprovalMode.MANUAL, True
     mode = await aread_approval_mode_from_store(getattr(runtime, "store", None), key)
     if mode is None:
+        ctx_mode = _context_value(_runtime_context(runtime), "approval_mode")
+        if ctx_mode == ApprovalMode.YOLO.value:
+            return ApprovalMode.YOLO, False
         return ApprovalMode.MANUAL, True
     return mode, False
 

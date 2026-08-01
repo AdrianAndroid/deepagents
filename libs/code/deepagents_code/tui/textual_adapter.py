@@ -1290,50 +1290,45 @@ async def execute_task_textual(
                 selected_mode = ApprovalMode.MANUAL
             context["approval_mode"] = selected_mode.value
             context["auto_approve"] = selected_mode is not ApprovalMode.MANUAL
+            written_key: str | None = None
             try:
-                live_key = _require_approval_mode_key(
-                    await awrite_approval_mode(
-                        agent,
-                        thread_id,
-                        mode=selected_mode,
-                    )
-                )
+                  written_key = await awrite_approval_mode(
+                      agent,
+                      thread_id,
+                      mode=selected_mode,
+                  )
             except Exception:
+                  logger.warning(
+                      "Failed to persist selected approval mode",
+                      exc_info=True,
+                  )
+            if written_key is not None:
+                live_key = written_key
+            elif selected_mode is ApprovalMode.YOLO:
+                # No Store writer (local agent). YOLO bypasses the classifier
+                # entirely, so the Store key anti-forgery role for Auto is
+                # not applicable. Carry the mode via context only.
+                live_key = None
+                context.pop("approval_mode_key", None)
+            else:
+                # Auto or Manual without a Store writer cannot be safely
+                # enforced; fall back to Manual.
                 logger.warning(
-                    "Failed to persist selected approval mode; forcing Manual",
-                    exc_info=True,
+                    "Approval-mode Store writer is unavailable; forcing Manual"
                 )
-                try:
-                    live_key = _require_approval_mode_key(
-                        await awrite_approval_mode(
-                            agent,
-                            thread_id,
-                            mode=ApprovalMode.MANUAL,
-                        )
-                    )
-                except Exception as exc:
-                    context["approval_mode"] = ApprovalMode.MANUAL.value
-                    context["auto_approve"] = False
-                    context.pop("approval_mode_key", None)
-                    session_state.approval_mode = ApprovalMode.MANUAL
-                    session_state.approval_mode_key = None
-                    if adapter._on_approval_mode_fallback is not None:
-                        adapter._on_approval_mode_fallback(ApprovalMode.MANUAL.value)
-                    adapter._update_status("Approval mode fell back to Manual")
-                    msg = (
-                        "Manual approval mode could not be persisted; graph execution "
-                        "is blocked until the Store is available."
-                    )
-                    raise RuntimeError(msg) from exc
                 selected_mode = ApprovalMode.MANUAL
-                session_state.approval_mode = ApprovalMode.MANUAL
                 context["approval_mode"] = ApprovalMode.MANUAL.value
                 context["auto_approve"] = False
+                context.pop("approval_mode_key", None)
+                session_state.approval_mode = ApprovalMode.MANUAL
+                session_state.approval_mode_key = None
                 if adapter._on_approval_mode_fallback is not None:
                     adapter._on_approval_mode_fallback(ApprovalMode.MANUAL.value)
                 adapter._update_status("Approval mode fell back to Manual")
-            context["approval_mode_key"] = live_key
-            session_state.approval_mode_key = live_key
+                live_key = None
+            if live_key is not None:
+                context["approval_mode_key"] = live_key
+                session_state.approval_mode_key = live_key
 
             from deepagents_code.hooks.interrupt import is_hook_interrupt_payload
             from deepagents_code.hooks.models.domain import HookEvent

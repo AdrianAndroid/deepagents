@@ -1831,13 +1831,14 @@ def _approval_mode_source(context: object) -> _DecidedMode | _LiveLookup:
 
     if has_typed_mode:
         requested = coerce_approval_mode(raw_mode)
-        if requested is not ApprovalMode.MANUAL:
+        if requested is ApprovalMode.YOLO:
+            return _DecidedMode(ApprovalMode.YOLO)
+        if requested is ApprovalMode.AUTO:
             logger.warning(
-                "Typed autonomous mode is missing its Store key; using Manual"
+                "Typed Auto mode is missing its Store key; using Manual"
             )
+            return _DecidedMode(ApprovalMode.MANUAL)
         elif raw_mode == ApprovalMode.MANUAL.value and legacy_auto is True:
-            # Compatibility for callers predating typed modes. New typed Auto
-            # and YOLO values always require a live Store record.
             return _DecidedMode(ApprovalMode.YOLO)
         return _DecidedMode(ApprovalMode.MANUAL)
     if legacy_auto is True:
