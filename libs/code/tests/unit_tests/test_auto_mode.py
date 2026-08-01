@@ -320,7 +320,7 @@ def test_temp_artifact_state_is_private_and_reducer_backed() -> None:
     assert metadata[-1] is _merge_temp_artifacts
     assert isinstance(channel, BinaryOperatorAggregate)
     paths = [
-        str(Path(tempfile.gettempdir()) / f"dcode-scratch-{suffix}.md")
+        str(Path(tempfile.gettempdir()) / f"zjcode-scratch-{suffix}.md")
         for suffix in ("one", "two")
     ]
     updates: list[dict[str, Any]] = []
@@ -1307,7 +1307,7 @@ async def test_predictable_preexisting_temp_path_remains_denied(
                     tool_call_id="call-1",
                     decision="deny",
                     category=AutoDecisionCategory.TRUST_BOUNDARY,
-                    reason="The path was not allocated by dcode for this request.",
+                    reason="The path was not allocated by zjcode for this request.",
                 )
             ]
         )
@@ -1692,7 +1692,7 @@ def test_failed_temp_creation_does_not_grant_deletion_authority(
 async def test_failed_proposed_creation_is_not_temp_provenance(
     tmp_path: Path,
 ) -> None:
-    failed_path = tmp_path / "dcode-scratch-failed.md"
+    failed_path = tmp_path / "zjcode-scratch-failed.md"
     model = _StructuredModel(
         AutoDecisionBatch(
             decisions=[
@@ -2913,7 +2913,7 @@ def test_classifier_unavailable_reason_specializes_timeouts() -> None:
         )
         == "classifier did not respond within 1.5s"
     )
-    # Provider exception type alone must not claim dcode's deadline fired.
+    # Provider exception type alone must not claim zjcode's deadline fired.
     assert (
         classifier_unavailable_reason(TimeoutError(), timeout_seconds=20.0)
         == "failed (TimeoutError)"

@@ -47,7 +47,7 @@ _SANDBOX_DEFAULT_SENTINEL = "\x00default"
 """Marker stored by `--sandbox` with no value, resolved to `[sandboxes].default`."""
 
 _UNPERSISTED_AUTO_UPDATE_FAILURE_NOTE = (
-    "\n[yellow]Note:[/yellow] this failure could not be recorded, so dcode will "
+    "\n[yellow]Note:[/yellow] this failure could not be recorded, so zjcode will "
     "retry this update on the next launch until the state directory becomes writable."
 )
 
@@ -82,7 +82,7 @@ _PROJECT_MCP_PICKER_VISIBLE_ROWS = 8
 
 
 def _handle_termination_signal(signum: int, _frame: object) -> NoReturn:
-    """Unwind dcode on a terminating signal so owned resources are cleaned up.
+    """Unwind zjcode on a terminating signal so owned resources are cleaned up.
 
     Args:
         signum: Received signal number.
@@ -145,7 +145,7 @@ def build_version_text() -> str:
         sdk_annotation = ""
 
     text = (
-        f"deepagents-code {__version__}{cli_annotation}\n"
+        f"zjcode {__version__}{cli_annotation}\n"
         f"deepagents (SDK) {sdk_version}{sdk_annotation}"
     )
 
@@ -203,7 +203,7 @@ def _restart_current_process() -> NoReturn:
 
     argv = [sys.executable, "-m", "deepagents_code", *sys.argv[1:]]
     # `-m` discards argv[0], so the launch name would be lost across the exec
-    # and post-update resume hints would fall back to `dcode`. Hand it to the
+    # and post-update resume hints would fall back to `zjcode`. Hand it to the
     # next generation explicitly.
     os.environ[INVOKED_AS] = invoked_name()
     # Re-exec the trusted interpreter with the user's own argv verbatim; the
@@ -302,7 +302,7 @@ def _render_teardown_thread_hints(
         console.print()
         console.print("[dim]Resume this thread with:[/dim]")
         # Echo the command the user actually launched (a shim or the
-        # `deepagents-code` alias), not a hardcoded `dcode` they may not have.
+        # `zjcode` alias), not a harzjcoded `zjcode` they may not have.
         hint = Text(invoked_name(), style="cyan")
         hint.append(" -r ", style="cyan")
         hint.append(str(thread_id), style="cyan")
@@ -370,9 +370,9 @@ def _run_startup_auto_update(console: "Console") -> None:
     from deepagents_code.update_check import (
         clear_startup_auto_update_failure,
         create_update_log_path,
-        detect_shadowed_dcode_safe,
+        detect_shadowed_zjcode_safe,
         format_release_age_parenthetical,
-        format_shadowed_dcode_warning,
+        format_shadowed_zjcode_warning,
         get_cached_update_available,
         is_auto_update_enabled,
         is_installed_version_at_least,
@@ -467,11 +467,11 @@ def _run_startup_auto_update(console: "Console") -> None:
             # console and is the lesser evil versus an unbounded re-nag.
             acknowledged = mark_auto_update_default_acknowledged()
             message = (
-                "[bold]dcode now updates automatically by default.[/bold] "
+                "[bold]zjcode now updates automatically by default.[/bold] "
                 f"v{latest} will be installed on the next launch.\n"
                 "To opt out, set [cyan][update].auto_update = false[/cyan] in "
                 "config.toml or [cyan]DEEPAGENTS_CODE_AUTO_UPDATE=0[/cyan] "
-                "(or run [cyan]dcode --auto-update[/cyan] to toggle it off now).\n"
+                "(or run [cyan]zjcode --auto-update[/cyan] to toggle it off now).\n"
                 f"Continuing with v{cli_version} for now."
             )
             if not acknowledged:
@@ -487,7 +487,7 @@ def _run_startup_auto_update(console: "Console") -> None:
             return
         release_age = format_release_age_parenthetical(latest)
         console.print(
-            f"Updating dcode from v{cli_version} to v{latest}{release_age}..."
+            f"Updating zjcode from v{cli_version} to v{latest}{release_age}..."
         )
         if os.environ.get(DEBUG_UPDATE):
             console.print("Skipped update install (debug mode).", style="dim")
@@ -506,7 +506,7 @@ def _run_startup_auto_update(console: "Console") -> None:
         if success:
             pending_failure_version = None
             clear_startup_auto_update_failure(latest)
-            # If a stale `dcode` is earlier on PATH, the auto-restart would
+            # If a stale `zjcode` is earlier on PATH, the auto-restart would
             # re-exec into the old binary and the user would silently keep
             # running the pre-upgrade version. Detect that *before* the
             # re-exec so the warning isn't immediately wiped by the new
@@ -515,7 +515,7 @@ def _run_startup_auto_update(console: "Console") -> None:
             # no-op loop guard on the next launch. Use the never-raises
             # wrapper so a detector defect can't crash startup after an
             # otherwise-successful upgrade.
-            shadow = detect_shadowed_dcode_safe()
+            shadow = detect_shadowed_zjcode_safe()
             if shadow is not None:
                 # The warning embeds filesystem paths from `shutil.which`,
                 # which can legally contain `[` (macOS/Linux). With
@@ -523,7 +523,7 @@ def _run_startup_auto_update(console: "Console") -> None:
                 # so escape the warning before interpolation; the sibling
                 # auto-update failure branch at the bottom of this function
                 # escapes its uv output the same way.
-                warning = format_shadowed_dcode_warning(shadow)
+                warning = format_shadowed_zjcode_warning(shadow)
                 console.print(
                     f"[bold yellow]Warning:[/bold yellow] {escape(warning)}\n"
                     f"Continuing with v{cli_version}.",
@@ -549,7 +549,7 @@ def _run_startup_auto_update(console: "Console") -> None:
                 logger.warning("Restart after update failed", exc_info=True)
                 console.print(
                     f"[bold yellow]Warning:[/bold yellow] Updated to v{latest} but "
-                    "the automatic restart failed. Restart dcode manually to use "
+                    "the automatic restart failed. Restart zjcode manually to use "
                     "the new version.",
                     highlight=False,
                 )
@@ -719,7 +719,7 @@ def _parse_interpreter_tools_flag(
 
 
 # Aliased from the dependency-free `_constants` module (see its docstring for
-# why the set is hardcoded, how the drift guard pins it, and why importing it
+# why the set is harzjcoded, how the drift guard pins it, and why importing it
 # here keeps the arg-parsing hot path free of a `deepagents` import).
 from deepagents_code._constants import FS_TOOL_NAMES as _FS_TOOL_NAMES
 
@@ -1019,7 +1019,7 @@ def _resolve_rubric_text(rubric: str | None) -> str | None:
     """Resolve the rubric from `--rubric` into one string.
 
     `--rubric` accepts literal text, or `@path` to read a file. File paths
-    may be absolute, relative to the `dcode` process working directory, or
+    may be absolute, relative to the `zjcode` process working directory, or
     `~`-expanded home paths.
 
     Args:
@@ -1036,7 +1036,7 @@ def _resolve_rubric_text(rubric: str | None) -> str | None:
         return None
 
     # An `@`-prefixed value is always read as a file path. The path may be
-    # absolute, relative to the `dcode` process working directory, or `~`-based.
+    # absolute, relative to the `zjcode` process working directory, or `~`-based.
     # There is no way to pass a literal rubric that begins with `@` (put such
     # text in a file).
     if rubric.startswith("@"):
@@ -1086,7 +1086,7 @@ def _warn_if_interpreter_tools_without_interpreter(
 
 
 def _recent_agent_is_valid(name: str) -> bool:
-    """Return `True` when `~/.deepagents/<name>/` still exists on disk.
+    """Return `True` when `~/.zjcode/<name>/` still exists on disk.
 
     Used to guard against a stale `[agents].recent` entry pointing at an
     agent the user has since deleted — in that case we silently fall back
@@ -1098,13 +1098,13 @@ def _recent_agent_is_valid(name: str) -> bool:
     undo that deferral.
 
     `is_dir()` is wrapped in `try/except OSError` so permission errors on
-    `~/.deepagents` (symlink loops, EACCES) don't crash the launch — we
+    `~/.zjcode` (symlink loops, EACCES) don't crash the launch — we
     treat them the same as "not valid" and fall back to the default.
     """
     from pathlib import Path as _Path
 
     try:
-        return (_Path.home() / ".deepagents" / name).is_dir()
+        return (_Path.home() / ".zjcode" / name).is_dir()
     except OSError:
         logger.warning(
             "Could not validate recent agent %r; falling back to default",
@@ -1132,13 +1132,13 @@ def check_cli_dependencies() -> None:
 
     if missing:
         print("\nMissing required dependencies!")  # noqa: T201  # App output for missing dependencies
-        print("\nThe following packages are required to use dcode:")  # noqa: T201  # App output for missing dependencies
+        print("\nThe following packages are required to use zjcode:")  # noqa: T201  # App output for missing dependencies
         for pkg in missing:
             print(f"  - {pkg}")  # noqa: T201  # CLI output for missing dependencies
-        print("\nReinstall dcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
-        print("  curl -LsSf https://langch.in/dcode | bash")  # noqa: T201  # CLI output for missing dependencies
+        print("\nReinstall zjcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
+        print("  curl -LsSf https://langch.in/zjcode | bash")  # noqa: T201  # CLI output for missing dependencies
         print("\nOr install the tool directly via uv:")  # noqa: T201  # CLI output for missing dependencies
-        print("  uv tool install -U deepagents-code")  # noqa: T201  # CLI output for missing dependencies
+        print("  uv tool install -U zjcode")  # noqa: T201  # CLI output for missing dependencies
         sys.exit(1)
 
 
@@ -1845,7 +1845,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Treat NAME as a package added via `uv --with` "
-            "(for a custom provider package), not a deepagents-code extra"
+            "(for a custom provider package), not a zjcode extra"
         ),
     )
     install_parser.add_argument(
@@ -2117,7 +2117,7 @@ def parse_args() -> argparse.Namespace:
         "--mcp-config",
         help="Path to MCP servers JSON configuration file (Claude Desktop format). "
         "Merged on top of auto-discovered configs (highest precedence). "
-        "Run `dcode mcp config` to see discovery paths.",
+        "Run `zjcode mcp config` to see discovery paths.",
     )
     parser.add_argument(
         "--no-mcp",
@@ -2192,7 +2192,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "With --install or `install`, treat NAME as a package added via "
             "`uv --with` (for a custom provider package), not a "
-            "deepagents-code extra"
+            "zjcode extra"
         ),
     )
     parser.add_argument(
@@ -2214,7 +2214,7 @@ def parse_args() -> argparse.Namespace:
         # Never surfaced: argparse only emits `version=` when the flag is
         # actually passed, which takes the `build_version_text()` branch above.
         # This placeholder only exists because `version=` requires a value.
-        version_text = f"deepagents-code {__version__}"
+        version_text = f"zjcode {__version__}"
     parser.add_argument(
         "-v",
         "--version",
@@ -2244,7 +2244,7 @@ def _resolve_and_validate_sandbox(
     `parser.error` (which exits) on invalid input.
 
     Because `--sandbox` takes an optional value (`nargs="?"`), placing it
-    immediately before a subcommand (e.g. `dcode --sandbox agents`) makes
+    immediately before a subcommand (e.g. `zjcode --sandbox agents`) makes
     argparse consume the subcommand as the flag's value. Pass an explicit
     provider (`--sandbox daytona`) or keep the bare form last on the command
     line.
@@ -2715,7 +2715,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
         piped text to it (the CLI still runs non-interactively):
 
         ```bash
-        cat context.txt | dcode -n "summarize this"
+        cat context.txt | zjcode -n "summarize this"
         # non_interactive_message = "{contents of context.txt}\n\nsummarize this"
         ```
 
@@ -2723,7 +2723,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
         the piped text to it (the CLI still runs interactively):
 
         ```bash
-        cat error.log | dcode -m "explain this"
+        cat error.log | zjcode -m "explain this"
         # initial_prompt = "{contents of error.log}\n\nexplain this"
         ```
 
@@ -2733,7 +2733,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
         interactive TUI:
 
         ```bash
-        cat diff.txt | dcode --skill code-review
+        cat diff.txt | zjcode --skill code-review
         # initial_prompt = "{contents of diff.txt}"
         ```
 
@@ -2742,7 +2742,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
         headless (see below):
 
         ```bash
-        cat diff.txt | dcode --skill code-review --stdin
+        cat diff.txt | zjcode --skill code-review --stdin
         # non_interactive_message = "{contents of diff.txt}"
         ```
 
@@ -2750,7 +2750,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
         the CLI to run non-interactively with it as the prompt:
 
         ```bash
-        echo "fix the typo in README.md" | dcode
+        echo "fix the typo in README.md" | zjcode
         # non_interactive_message = "fix the typo in README.md"
         ```
 
@@ -2786,7 +2786,7 @@ def apply_stdin_pipe(args: argparse.Namespace) -> None:
             console.print(
                 "[bold red]Error:[/bold red] --stdin was passed but stdin "
                 "is a terminal. Pipe input or use -n instead.\n"
-                "  cat prompt.txt | dcode --stdin -q"
+                "  cat prompt.txt | zjcode --stdin -q"
             )
             sys.exit(1)
         return
@@ -3730,7 +3730,7 @@ def cli_main() -> None:
     # The app-owned server runs in a detached session so terminal job-control
     # signals do not suspend or kill it. Replace terminating signals' immediate
     # default behavior with an exception so the app/server cleanup finally
-    # blocks run when dcode's process group is stopped.
+    # blocks run when zjcode's process group is stopped.
     _install_termination_signal_handlers()
 
     try:
@@ -3741,6 +3741,16 @@ def cli_main() -> None:
 
         if _show_bare_command_group_help(args):
             return
+
+        # Apply zjcode path-constant patches now that help-only fast paths
+        # have exited. This imports model_config etc., so it must not run
+        # on the lightweight startup paths above.
+        try:
+            from zjcode.patches import _ensure_path_constants_patched
+
+            _ensure_path_constants_patched()
+        except ImportError:
+            pass
 
         # Keep self-contained commands that do not need global settings here, before
         # state migration and settings bootstrap. If a future command only reads
@@ -3860,7 +3870,7 @@ def cli_main() -> None:
             except ImportError as exc:
                 msg = (
                     f"ACP dependencies not available: {exc}\n"
-                    "Install with: uv tool install --reinstall -U deepagents-code "
+                    "Install with: uv tool install --reinstall -U zjcode "
                     "--with deepagents-acp\n"
                 )
                 sys.stderr.write(msg)
@@ -3871,8 +3881,8 @@ def cli_main() -> None:
                 msg = (
                     "Error: --no-mcp and --mcp-config are mutually exclusive."
                     " Use one or the other.\n"
-                    "  dcode --mcp-config path/to/config.json\n"
-                    "  dcode --no-mcp\n"
+                    "  zjcode --mcp-config path/to/config.json\n"
+                    "  zjcode --no-mcp\n"
                 )
                 sys.stderr.write(msg)
                 sys.stderr.flush()
@@ -3927,8 +3937,8 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 "[bold red]Error:[/bold red] --no-mcp and --mcp-config "
                 "are mutually exclusive. Use one or the other.\n"
-                "  dcode --mcp-config path/to/config.json\n"
-                "  dcode --no-mcp"
+                "  zjcode --mcp-config path/to/config.json\n"
+                "  zjcode --no-mcp"
             )
             sys.exit(2)
 
@@ -3943,8 +3953,8 @@ def cli_main() -> None:
                 "[bold red]Error:[/bold red] --skill requires "
                 "--non-interactive (-n) when combined with --quiet or "
                 "--no-stream.\n"
-                "  dcode --skill code-review -m 'review this patch'\n"
-                "  dcode --skill code-review -n 'review this patch'"
+                "  zjcode --skill code-review -m 'review this patch'\n"
+                "  zjcode --skill code-review -n 'review this patch'"
             )
             sys.exit(2)
 
@@ -3955,7 +3965,7 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 "[bold red]Error:[/bold red] --max-turns requires "
                 "--non-interactive (-n) or piped stdin\n"
-                "  dcode -n 'refactor auth module' --max-turns 5"
+                "  zjcode -n 'refactor auth module' --max-turns 5"
             )
             sys.exit(2)
 
@@ -3966,7 +3976,7 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 "[bold red]Error:[/bold red] --timeout requires "
                 "--non-interactive (-n) or piped stdin\n"
-                "  dcode -n 'run the test suite' --timeout 120"
+                "  zjcode -n 'run the test suite' --timeout 120"
             )
             sys.exit(2)
 
@@ -4004,7 +4014,7 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 "[bold red]Error:[/bold red] --goal is only supported in "
                 "interactive mode for now.\n"
-                "  dcode --goal 'add OAuth refresh handling'"
+                "  zjcode --goal 'add OAuth refresh handling'"
             )
             sys.exit(2)
         if goal_text is not None and (
@@ -4016,7 +4026,7 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 "[bold red]Error:[/bold red] --goal cannot be combined with "
                 "-m/--message or --skill.\n"
-                "  dcode --goal 'add OAuth refresh handling'"
+                "  zjcode --goal 'add OAuth refresh handling'"
             )
             sys.exit(2)
 
@@ -4035,7 +4045,7 @@ def cli_main() -> None:
                 "[bold red]Error:[/bold red] --rubric/--rubric-model/"
                 "--rubric-max-iterations require "
                 "--non-interactive (-n) or piped stdin\n"
-                "  dcode -n 'implement X' --rubric 'tests pass'"
+                "  zjcode -n 'implement X' --rubric 'tests pass'"
             )
             sys.exit(2)
 
@@ -4054,7 +4064,7 @@ def cli_main() -> None:
             _Console(stderr=True).print(
                 f"[bold red]Error:[/bold red] {flag} requires "
                 "--non-interactive (-n) or piped stdin\n"
-                "  dcode -n 'summarize README.md' --quiet"
+                "  zjcode -n 'summarize README.md' --quiet"
             )
             sys.exit(2)
 
@@ -4207,13 +4217,13 @@ def cli_main() -> None:
         if args.package and not args.install:
             console.print(
                 "[bold red]Error:[/bold red] --package requires "
-                "`dcode install <package> --package` "
+                "`zjcode install <package> --package` "
                 "(or the `--install <package>` alias).",
             )
             sys.exit(2)
 
         # Handle --install <name> [--package] flag (headless, no session).
-        # Alias for `dcode install`. Always exits.
+        # Alias for `zjcode install`. Always exits.
         if args.install:
             from deepagents_code.client.commands.extras import run_install_request
 
@@ -4751,7 +4761,7 @@ def cli_main() -> None:
                         console.print(cmd_hint)
                         if not is_auto_update_enabled():
                             auto_hint = Text("Enable auto-updates: ", style="dim")
-                            auto_hint.append("dcode --auto-update", style="cyan")
+                            auto_hint.append("zjcode --auto-update", style="cyan")
                             console.print(auto_hint)
                         mark_update_notified(latest)
             except Exception:

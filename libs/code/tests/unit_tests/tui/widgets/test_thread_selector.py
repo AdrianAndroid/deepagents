@@ -4247,7 +4247,7 @@ class TestBuildThreadMessage:
     async def test_linked_content_matches_plain_app_message_styling(self) -> None:
         """Linked notes carry the same styling `AppMessage` gives plain strings.
 
-        The expected style is read off a real `AppMessage` rather than hardcoded,
+        The expected style is read off a real `AppMessage` rather than harzjcoded,
         so that if `AppMessage` stops styling plain strings `dim italic` this
         fails instead of silently locking in the divergence it exists to catch.
         `AppMessage` records the style as an unresolved spec string, so compare

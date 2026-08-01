@@ -1,6 +1,6 @@
 """Confirmation modals for `/update` dependency-refresh flows in the TUI.
 
-When `deepagents-code` itself is already on the latest release, `/update` can
+When `zjcode` itself is already on the latest release, `/update` can
 still re-resolve its dependencies to the newest versions allowed by the pinned
 ranges (e.g. a new `langchain-openai`). The already-current path dry-runs the
 resolution first, then asks for explicit confirmation only when dependencies can
@@ -118,7 +118,7 @@ class _DependencyConfirmScreen(ModalScreen[bool]):
 
 
 class UpdateBeforeDependenciesConfirmScreen(_DependencyConfirmScreen):
-    """Confirmation overlay before `/update --deps` upgrades dcode itself.
+    """Confirmation overlay before `/update --deps` upgrades zjcode itself.
 
     Dismisses with `True` when the user chooses the app update first and `False`
     when they prefer to refresh dependencies for the current app version.
@@ -133,17 +133,17 @@ class UpdateBeforeDependenciesConfirmScreen(_DependencyConfirmScreen):
         """Create the app-update confirmation dialog.
 
         Args:
-            current: Currently running `deepagents-code` version.
-            latest: Latest available `deepagents-code` version.
+            current: Currently running `zjcode` version.
+            latest: Latest available `zjcode` version.
         """
         super().__init__(
-            title="Update dcode first?",
+            title="Update zjcode first?",
             body=(
-                f"A newer deepagents-code version is available ({current} -> "
-                f"{latest}). Update dcode now, or refresh dependencies for the "
+                f"A newer zjcode version is available ({current} -> "
+                f"{latest}). Update zjcode now, or refresh dependencies for the "
                 "current version you already have."
             ),
-            help_text="Enter to update dcode, Esc to refresh current dependencies",
+            help_text="Enter to update zjcode, Esc to refresh current dependencies",
         )
 
 
@@ -167,12 +167,12 @@ class RefreshDependenciesConfirmScreen(_DependencyConfirmScreen):
             planned_changes: Optional dry-run summary of dependency updates.
         """
         body = (
-            "deepagents-code is already up to date, but compatible dependency "
+            "zjcode is already up to date, but compatible dependency "
             "updates are available. Refresh to apply these changes:\n\n"
             f"{planned_changes}"
             if planned_changes
             else (
-                "deepagents-code is already up to date, but its dependencies "
+                "zjcode is already up to date, but its dependencies "
                 "can be re-resolved to the newest compatible versions. This may "
                 "pull in newer minor releases of packages like langchain-openai."
             )

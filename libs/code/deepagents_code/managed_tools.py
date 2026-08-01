@@ -151,7 +151,7 @@ def _artifact_not_found_error(
         message=(
             f"Managed ripgrep artifact for {platform_name}/{arch} was not found "
             f"in pinned ripgrep {RIPGREP_VERSION}. Install ripgrep manually, or "
-            "try a newer dcode version."
+            "try a newer zjcode version."
         ),
     )
 

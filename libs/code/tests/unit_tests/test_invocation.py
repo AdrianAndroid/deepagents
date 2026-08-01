@@ -40,9 +40,9 @@ class TestInvokedNameFromArgv:
     @pytest.mark.parametrize(
         "argv0",
         [
-            "dcode",
-            "/usr/local/bin/dcode",
-            "./.superset/bin/dcode",
+            "zjcode",
+            "/usr/local/bin/zjcode",
+            "./.superset/bin/zjcode",
         ],
     )
     def test_reports_console_script_name(
@@ -52,14 +52,14 @@ class TestInvokedNameFromArgv:
         monkeypatch.delenv(INVOKED_AS, raising=False)
         monkeypatch.setattr(sys, "argv", [argv0, "-r", "thread-1"])
 
-        assert invoked_name() == "dcode"
+        assert invoked_name() == "zjcode"
 
     def test_reports_alias_entry_point(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The longer `deepagents-code` console script is reported verbatim."""
+        """The longer `zjcode` console script is reported verbatim."""
         monkeypatch.delenv(INVOKED_AS, raising=False)
-        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/deepagents-code"])
+        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/zjcode"])
 
-        assert invoked_name() == "deepagents-code"
+        assert invoked_name() == "zjcode"
 
     def test_reports_shim_name_not_symlink_target(
         self, monkeypatch: pytest.MonkeyPatch
@@ -67,7 +67,7 @@ class TestInvokedNameFromArgv:
         """A renamed shim reports its own name, not the script it points at.
 
         Mirrors the per-worktree setup where `~/.local/bin/abc` is a symlink to
-        a checkout's `bin/dcode`: the kernel hands the interpreter the pathname
+        a checkout's `bin/zjcode`: the kernel hands the interpreter the pathname
         passed to `execve`, so `argv[0]` keeps the shim name.
         """
         monkeypatch.delenv(INVOKED_AS, raising=False)
@@ -93,9 +93,9 @@ class TestInvokedNameFromArgv:
             "-c",
             "python3.13",
             "/usr/bin/python",
-            "run dcode",
-            "dcode; rm -rf /",
-            "dcode$(id)",
+            "run zjcode",
+            "zjcode; rm -rf /",
+            "zjcode$(id)",
             "a" * 65,
         ],
     )
@@ -125,9 +125,9 @@ class TestInvokedNameFromArgv:
     ) -> None:
         """Windows console scripts are `.exe` wrappers; users type the stem."""
         monkeypatch.delenv(INVOKED_AS, raising=False)
-        monkeypatch.setattr(sys, "argv", ["dcode.exe"])
+        monkeypatch.setattr(sys, "argv", ["zjcode.exe"])
 
-        assert invoked_name() == "dcode"
+        assert invoked_name() == "zjcode"
 
     def test_result_is_cached(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The name is fixed for the process, so later argv edits are ignored."""
@@ -135,7 +135,7 @@ class TestInvokedNameFromArgv:
         monkeypatch.setattr(sys, "argv", ["abc"])
         assert invoked_name() == "abc"
 
-        monkeypatch.setattr(sys, "argv", ["dcode"])
+        monkeypatch.setattr(sys, "argv", ["zjcode"])
 
         assert invoked_name() == "abc"
 
@@ -157,9 +157,9 @@ class TestInvokedNameFromEnv:
     ) -> None:
         """A junk sentinel must not shadow a usable `argv[0]`."""
         monkeypatch.setenv(INVOKED_AS, "rm -rf /")
-        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/dcode"])
+        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/zjcode"])
 
-        assert invoked_name() == "dcode"
+        assert invoked_name() == "zjcode"
 
     def test_empty_override_falls_back_to_argv(
         self, monkeypatch: pytest.MonkeyPatch
@@ -210,7 +210,7 @@ class TestLogNonstandardInvokedName:
         assert record.levelno == logging.DEBUG
         assert "'abc'" in record.getMessage()
 
-    @pytest.mark.parametrize("argv0", ["dcode", "deepagents-code"])
+    @pytest.mark.parametrize("argv0", ["zjcode"])
     def test_standard_names_log_nothing(
         self,
         monkeypatch: pytest.MonkeyPatch,

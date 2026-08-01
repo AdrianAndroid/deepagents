@@ -1,4 +1,4 @@
-"""Tests for tool enumeration behind `dcode tools list`."""
+"""Tests for tool enumeration behind `zjcode tools list`."""
 
 from __future__ import annotations
 
@@ -239,7 +239,7 @@ class TestCollectBuiltInTools:
 
 
 class TestTodoToolNotBound:
-    """Todos are opt-in in the SDK, so dcode binds no `write_todos` by default."""
+    """Todos are opt-in in the SDK, so zjcode binds no `write_todos` by default."""
 
     def test_write_todos_absent_by_default(self) -> None:
         names = {tool.name for tool in collect_built_in_tools()}

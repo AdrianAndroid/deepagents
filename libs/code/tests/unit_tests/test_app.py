@@ -510,8 +510,9 @@ class TestStartupSequence:
             *,
             thread_id: str | None = None,
             preloaded_payload: object | None = None,
+            resolve_pending_goal: bool = True,
         ) -> None:
-            del thread_id, preloaded_payload
+            del thread_id, preloaded_payload, resolve_pending_goal
             nonlocal call_count
             call_count += 1
 
@@ -560,8 +561,9 @@ class TestStartupSequence:
             *,
             thread_id: str | None = None,
             preloaded_payload: object | None = None,
+            resolve_pending_goal: bool = True,
         ) -> None:
-            del thread_id, preloaded_payload
+            del thread_id, preloaded_payload, resolve_pending_goal
             order.append("history")
 
         async def capture_startup(command: str) -> None:  # noqa: RUF029
@@ -835,8 +837,9 @@ class TestStartupSequence:
             *,
             thread_id: str | None = None,
             preloaded_payload: object | None = None,
+            resolve_pending_goal: bool = True,
         ) -> None:
-            del thread_id, preloaded_payload
+            del thread_id, preloaded_payload, resolve_pending_goal
 
         app._run_startup_command = capture_startup  # ty: ignore
         app._load_thread_history = stub_history  # ty: ignore
@@ -4673,7 +4676,7 @@ class TestTraceCommand:
 
             expected_url = (
                 "https://smith.langchain.com/o/org/projects/p/proj"
-                "/t/test-thread-123?utm_source=deepagents-code"
+                "/t/test-thread-123?utm_source=zjcode"
             )
             mock_open.assert_called_once_with(expected_url)
             app_msgs = app.query(AppMessage)
@@ -4892,12 +4895,12 @@ class TestTraceCommand:
             with (
                 patch(
                     "deepagents_code.config.get_langsmith_project_name",
-                    return_value="deepagents-code",
+                    return_value="zjcode",
                 ),
                 patch(
                     "deepagents_code.config.fetch_langsmith_project_url_or_raise",
                     side_effect=LangSmithProjectNotFoundError(
-                        "Project deepagents-code not found"
+                        "Project zjcode not found"
                     ),
                 ),
             ):
@@ -6237,7 +6240,7 @@ class TestGoalCommand:
         assert "Use /goal when you have a plain-language objective" in usage
         assert "draft a checklist and ask before applying it" in usage
         assert "the goal stays active for this thread" in usage
-        assert "when you want dcode to propose" not in usage
+        assert "when you want zjcode to propose" not in usage
 
     def test_goal_usage_text_mentions_grader_settings(self) -> None:
         """Goal help should surface the grader settings without alias wording."""
@@ -13918,7 +13921,7 @@ class TestDefaultAgentNameDrift:
     asserts that every consumer (`agent.DEFAULT_AGENT_NAME`,
     `_server_config.DEFAULT_ASSISTANT_ID`, `app.DEFAULT_ASSISTANT_ID`)
     resolves back to it — guarding against a future refactor that
-    re-introduces a hardcoded `"agent"` literal.
+    re-introduces a harzjcoded `"agent"` literal.
     """
 
     def test_all_default_agent_constants_match(self) -> None:
@@ -14245,7 +14248,7 @@ class TestInstallExtraModelSwitch:
             str(c.args[0]._content)
             for c in app._mount_message.await_args_list  # ty: ignore
         )
-        assert "Relaunch dcode" in mounted
+        assert "Relaunch zjcode" in mounted
         assert "/restart" not in mounted
 
     async def test_install_extra_auto_restart_fallback_on_failed_restart(
@@ -16558,7 +16561,7 @@ class TestRestartServerForAgentSwap:
             # Confirmation + resume-hint messages reached the user.
             plain = [str(getattr(m, "_content", m)) for m in mounted]
             assert any("Switched to researcher" in s for s in plain)
-            assert any("dcode -r old-thread" in s and "to resume" in s for s in plain)
+            assert any("zjcode -r old-thread" in s and "to resume" in s for s in plain)
 
     async def test_no_resume_hint_when_previous_thread_has_no_agent_output(
         self,
@@ -17271,7 +17274,7 @@ def _update_entry(latest: str = "2.0.0") -> PendingNotification:
             NotificationAction(ActionId.SKIP_VERSION, "Skip this version"),
         ),
         payload=UpdateAvailablePayload(
-            latest=latest, upgrade_cmd="uv tool upgrade deepagents-code"
+            latest=latest, upgrade_cmd="uv tool upgrade zjcode"
         ),
     )
 
@@ -17285,7 +17288,7 @@ def test_build_update_notification_uses_release_and_installed_age_copy() -> None
         cli_version="1.0.0",
         release_age=" (released 3d ago)",
         installed_age=" (8 days old)",
-        upgrade_cmd="uv tool upgrade deepagents-code",
+        upgrade_cmd="uv tool upgrade zjcode",
     )
 
     assert notification.body == (
@@ -17330,18 +17333,18 @@ class TestNotificationCenterIntegration:
             yield
 
     @pytest.fixture(autouse=True)
-    def _no_shadowed_dcode(self) -> Iterator[None]:
+    def _no_shadowed_zjcode(self) -> Iterator[None]:
         """Default to no PATH shadow for the notification-action tests.
 
         Without this, every successful "Install now" test runs the real
-        `detect_shadowed_dcode` against the host filesystem. The runner's
+        `detect_shadowed_zjcode` against the host filesystem. The runner's
         editable install currently short-circuits at `detect_install_method()`,
         but a uv-tool-managed runner would silently re-route every success
         case through the new warning branch. Pin to `None` here; the
         dedicated shadow-present test below overrides it.
         """
         with patch(
-            "deepagents_code.update_check.detect_shadowed_dcode",
+            "deepagents_code.update_check.detect_shadowed_zjcode",
             return_value=None,
         ):
             yield
@@ -18070,7 +18073,7 @@ class TestNotificationCenterIntegration:
             await pilot.pause()
             with patch(
                 "deepagents_code.update_check.perform_upgrade",
-                new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                new=AsyncMock(return_value=(True, "Updated zjcode")),
             ):
                 await app._dispatch_notification_action(entry.key, ActionId.INSTALL)
                 await pilot.pause()
@@ -18092,11 +18095,11 @@ class TestNotificationCenterIntegration:
         from deepagents_code.tui.widgets.update_progress import UpdateProgressScreen
         from deepagents_code.update_check import (
             ShadowedDcode,
-            format_shadowed_dcode_fix_command,
+            format_shadowed_zjcode_fix_command,
         )
 
         shadow = ShadowedDcode(
-            shadowing_bin=Path("/opt/stale/bin/dcode"),
+            shadowing_bin=Path("/opt/stale/bin/zjcode"),
             upgraded_bin_dir=Path("/home/user/.local/bin"),
         )
 
@@ -18120,11 +18123,11 @@ class TestNotificationCenterIntegration:
             with (
                 patch(
                     "deepagents_code.update_check.perform_upgrade",
-                    new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                    new=AsyncMock(return_value=(True, "Updated zjcode")),
                 ),
                 # Override the autouse `None` patch.
                 patch(
-                    "deepagents_code.update_check.detect_shadowed_dcode",
+                    "deepagents_code.update_check.detect_shadowed_zjcode",
                     return_value=shadow,
                 ),
             ):
@@ -18134,7 +18137,7 @@ class TestNotificationCenterIntegration:
             assert isinstance(app.screen, UpdateProgressScreen)
             status = app.screen.query(Static).filter(".up-status").first()
             assert "Update complete" not in str(status.render())
-            assert "/opt/stale/bin/dcode" in str(status.render())
+            assert "/opt/stale/bin/zjcode" in str(status.render())
             assert "/home/user/.local/bin/zjcode" in str(status.render())
             await pilot.press("c")
             await pilot.pause()
@@ -18142,14 +18145,14 @@ class TestNotificationCenterIntegration:
         # The entry is still cleared — the upgrade did succeed; only the
         # post-restart guidance is different.
         assert app._notice_registry.get("update:available") is None
-        assert copied == [format_shadowed_dcode_fix_command(shadow)]
+        assert copied == [format_shadowed_zjcode_fix_command(shadow)]
         # The toast must NOT congratulate the user on a working upgrade.
         assert not any(
             "Updated to v" in m and "Quit and relaunch" in m for m in notified
         )
         # The warning toast names both paths so the user can act on it.
         assert any(
-            "/opt/stale/bin/dcode" in m and "/home/user/.local/bin" in m
+            "/opt/stale/bin/zjcode" in m and "/home/user/.local/bin" in m
             for m in notified
         )
 
@@ -18174,7 +18177,7 @@ class TestNotificationCenterIntegration:
         from deepagents_code.update_check import ShadowedDcode
 
         shadow = ShadowedDcode(
-            shadowing_bin=Path("/opt/stale/bin/dcode"),
+            shadowing_bin=Path("/opt/stale/bin/zjcode"),
             upgraded_bin_dir=Path("/home/user/.local/bin"),
         )
 
@@ -18200,10 +18203,10 @@ class TestNotificationCenterIntegration:
             with (
                 patch(
                     "deepagents_code.update_check.perform_upgrade",
-                    new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                    new=AsyncMock(return_value=(True, "Updated zjcode")),
                 ),
                 patch(
-                    "deepagents_code.update_check.detect_shadowed_dcode",
+                    "deepagents_code.update_check.detect_shadowed_zjcode",
                     return_value=shadow,
                 ),
             ):
@@ -18221,7 +18224,7 @@ class TestNotificationCenterIntegration:
         )
         # The warning toast names both paths so the user can act on it.
         assert any(
-            "/opt/stale/bin/dcode" in m and "/home/user/.local/bin" in m
+            "/opt/stale/bin/zjcode" in m and "/home/user/.local/bin" in m
             for m in notified
         )
 
@@ -18251,7 +18254,7 @@ class TestNotificationCenterIntegration:
             monkeypatch.setenv(DEBUG_UPDATE, "1")
             with patch(
                 "deepagents_code.update_check.perform_upgrade",
-                new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                new=AsyncMock(return_value=(True, "Updated zjcode")),
             ) as mock_upgrade:
                 with patch(
                     "deepagents_code.app.asyncio.sleep",
@@ -18741,7 +18744,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
         ):
             async with app.run_test() as pilot:
@@ -18781,7 +18784,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool install -U deepagents-code --prerelease allow",
+                return_value="uv tool install -U zjcode --prerelease allow",
             ) as upgrade_command_mock,
         ):
             async with app.run_test() as pilot:
@@ -18847,7 +18850,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
         ):
             async with app.run_test() as pilot:
@@ -19458,7 +19461,7 @@ class TestPrewarmDeferredImports:
     """Prewarming is a cache optimization and must never crash the app.
 
     When the installed package is replaced in place mid-session (e.g. a
-    concurrent `uv tool upgrade deepagents-code`), a not-yet-imported module
+    concurrent `uv tool upgrade zjcode`), a not-yet-imported module
     can be transiently absent on disk, so a deferred import raises
     `ModuleNotFoundError`. The prewarm worker must swallow that — the module
     cold-loads on first use instead — rather than surfacing a fatal traceback.

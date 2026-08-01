@@ -1,11 +1,11 @@
-"""The `dcode doctor` command: report install health and diagnostics.
+"""The `zjcode doctor` command: report install health and diagnostics.
 
 Inspired by `claude doctor`, this prints a grouped, tree-style summary of the
 running install, update status, and configuration locations so the output is
 safe to paste into a bug report. It stays offline: the update section reads
 only the local cache and never contacts PyPI.
 
-Help rendering for `dcode doctor -h` is served by `ui.show_doctor_help`, which
+Help rendering for `zjcode doctor -h` is served by `ui.show_doctor_help`, which
 does not import this module, so the help path stays light.
 """
 
@@ -188,7 +188,7 @@ def _collect_diagnostics() -> DiagnosticSection:
     return DiagnosticSection(
         title="Diagnostics",
         items=[
-            DiagnosticItem("deepagents-code", cli_value),
+            DiagnosticItem("zjcode", cli_value),
             DiagnosticItem("deepagents (SDK)", sdk_version, ok=sdk_ok),
             DiagnosticItem("Commit hash", _commit_hash(path)),
             DiagnosticItem("Python", platform.python_version()),
@@ -319,7 +319,7 @@ def _endpoint_gateway_state(endpoint: str) -> str:
         host = urlsplit(endpoint.strip()).hostname or ""
     except ValueError:
         # urlsplit raises on bracket-malformed IPv6 (e.g. `http://[::1`); a
-        # diagnostic must degrade to "unknown" rather than crash `dcode doctor`.
+        # diagnostic must degrade to "unknown" rather than crash `zjcode doctor`.
         return "unknown"
     if not host:
         return "unknown"
@@ -522,13 +522,13 @@ def _render_text(sections: list[DiagnosticSection]) -> None:
         console.print()
 
     console.print(
-        "  Tip: Run `dcode config` or `dcode config get <key>` "
+        "  Tip: Run `zjcode config` or `zjcode config get <key>` "
         "to drill into config details.",
         style=theme.MUTED,
         highlight=False,
     )
     console.print(
-        "       Run `dcode --version` (or `dcode -v`) for dependency versions.",
+        "       Run `zjcode --version` (or `zjcode -v`) for dependency versions.",
         style=theme.MUTED,
         highlight=False,
     )
@@ -536,7 +536,7 @@ def _render_text(sections: list[DiagnosticSection]) -> None:
 
 
 def run_doctor_command(args: argparse.Namespace) -> int:
-    """Run `dcode doctor`, printing diagnostics as text or JSON.
+    """Run `zjcode doctor`, printing diagnostics as text or JSON.
 
     Args:
         args: Parsed CLI namespace. Only `output_format` is read.

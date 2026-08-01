@@ -72,7 +72,7 @@ class ApiKeyCredential(TypedDict):
 
     Set only for the `langsmith` tracing service when the user supplies a
     custom project in `/auth`; absent means traces fall back to the default
-    (`deepagents-code`). Not a secret — it is shown in the `/auth` advanced
+    (`zjcode`). Not a secret — it is shown in the `/auth` advanced
     panel and applied to `LANGSMITH_PROJECT` at startup.
     """
 

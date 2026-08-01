@@ -30,6 +30,7 @@ from langchain.agents.middleware.types import (
     PrivateStateAttr,
 )
 
+from deepagents_code._constants import PROJECT_DOTDIR
 from deepagents_code.unicode_security import sanitize_control_chars
 
 if TYPE_CHECKING:
@@ -518,43 +519,44 @@ def _section_files() -> str:
     Returns:
         Bash snippet (standalone).
     """
-    return r"""# --- Files ---
+    dotdir = PROJECT_DOTDIR
+    return f"""# --- Files ---
 FILE_SUMMARY=$(
-  { ls -1 2>/dev/null; [ -e .deepagents ] && echo .deepagents; } |
+  {{ ls -1 2>/dev/null; [ -e {dotdir} ] && echo {dotdir}; }} |
   sort -u |
   awk '
-    BEGIN {
+    BEGIN {{
       excluded["node_modules"] = excluded["__pycache__"] = 1
       excluded[".pytest_cache"] = excluded[".mypy_cache"] = 1
       excluded[".ruff_cache"] = excluded[".tox"] = 1
       excluded[".coverage"] = excluded[".eggs"] = 1
       excluded["dist"] = excluded["build"] = 1
-    }
-    !($0 in excluded) {
+    }}
+    !($0 in excluded) {{
       total++
       if (shown < 20) files[++shown] = $0
-    }
-    END {
+    }}
+    END {{
       print total + 0
       print shown + 0
       for (i = 1; i <= shown; i++) print files[i]
-    }
+    }}
   '
 )
-TOTAL="${FILE_SUMMARY%%$'\n'*}"
-FILE_DETAILS="${FILE_SUMMARY#*$'\n'}"
-SHOWN="${FILE_DETAILS%%$'\n'*}"
-SHOWN_FILES="${FILE_DETAILS#*$'\n'}"
+TOTAL="${{FILE_SUMMARY%%$'\n'*}}"
+FILE_DETAILS="${{FILE_SUMMARY#*$'\n'}}"
+SHOWN="${{FILE_DETAILS%%$'\n'*}}"
+SHOWN_FILES="${{FILE_DETAILS#*$'\n'}}"
 
 if [ "$TOTAL" -gt 0 ]; then
   if [ "$SHOWN" -lt "$TOTAL" ]; then
-    echo "**Files** (showing ${SHOWN} of ${TOTAL}):"
+    echo "**Files** (showing ${{SHOWN}} of ${{TOTAL}}):"
   else
-    echo "**Files** (${TOTAL}):"
+    echo "**Files** (${{TOTAL}}):"
   fi
   while IFS= read -r f; do
-    if [ -d "$f" ]; then echo "- ${f}/"
-    else echo "- ${f}"
+    if [ -d "$f" ]; then echo "- ${{f}}/"
+    else echo "- ${{f}}"
     fi
   done <<< "$SHOWN_FILES"
   echo ""

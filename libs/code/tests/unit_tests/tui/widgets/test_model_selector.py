@@ -2502,7 +2502,7 @@ class TestGetModelDisplayName:
         ],
     )
     def test_uses_recommended_name_when_no_profile(self, spec: str, name: str) -> None:
-        """Uninstalled recommendations use the hardcoded name, not the raw id."""
+        """Uninstalled recommendations use the harzjcoded name, not the raw id."""
         from deepagents_code.tui.widgets import model_selector
 
         screen = ModelSelectorScreen.__new__(ModelSelectorScreen)
@@ -2511,7 +2511,7 @@ class TestGetModelDisplayName:
         assert screen._get_model_display_name(spec) == name
 
     def test_profile_name_wins_over_recommended_name(self) -> None:
-        """A loaded profile's `name` takes precedence over the hardcoded one."""
+        """A loaded profile's `name` takes precedence over the harzjcoded one."""
         from deepagents_code.tui.widgets import model_selector
 
         spec = "openai:gpt-5.5"
@@ -2898,7 +2898,7 @@ class TestModelSelectorInstallRouting:
         assert spec in model_selector._RECOMMENDED_MODELS
 
         # Provider is installed/discoverable but its profiles omit the curated
-        # model, mirroring an upstream profile list that lags the hardcoded set.
+        # model, mirroring an upstream profile list that lags the harzjcoded set.
         monkeypatch.setattr(
             model_selector,
             "get_available_models",

@@ -33,16 +33,16 @@ def _write_fake_tools(
     latest_version: str | None = None,
     curl_fails: bool = False,
     curl_failures_before_success: int = 0,
-    dcode_verify_fails: bool = False,
+    zjcode_verify_fails: bool = False,
     mktemp_fails: bool = False,
 ) -> tuple[Path, Path, Path]:
-    """Stage fake `uv`, `curl`, and (optionally) `dcode` binaries on `PATH`.
+    """Stage fake `uv`, `curl`, and (optionally) `zjcode` binaries on `PATH`.
 
-    `installed_version` controls whether `dcode -v` reports an existing install
+    `installed_version` controls whether `zjcode -v` reports an existing install
     (`None` simulates a fresh machine). `latest_version` is the version the
     fake `curl` reports from PyPI; `curl_fails` makes that probe error out so
-    the script's offline fallback can be exercised. `dcode_verify_fails` makes
-    `dcode -v` exit non-zero (`VERIFY_OK=false`) so the eager managed-ripgrep
+    the script's offline fallback can be exercised. `zjcode_verify_fails` makes
+    `zjcode -v` exit non-zero (`VERIFY_OK=false`) so the eager managed-ripgrep
     guard can be exercised against a present-but-broken binary.
     """
     bin_dir = tmp_path / "bin"
@@ -77,15 +77,15 @@ if [ "${{1:-}}" = "tool" ] && [ "${{2:-}}" = "install" ]; then
   if [ "${{FAKE_UV_CREATE_LOCAL_DCODE:-}}" = "1" ]; then
     tool_bin="${{FAKE_UV_TOOL_BIN_DIR:-$default_tool_bin}}"
     mkdir -p "$tool_bin"
-    cat > "$tool_bin/dcode" <<'DCODE'
+    cat > "$tool_bin/zjcode" <<'DCODE'
 #!/usr/bin/env bash
 if [ "${{1:-}}" = "-v" ]; then
-  printf 'deepagents-code %s\n' "${{FAKE_LOCAL_DCODE_VERSION:-0.2.0}}"
+  printf 'zjcode %s\n' "${{FAKE_LOCAL_DCODE_VERSION:-0.2.0}}"
   exit 0
 fi
 exit 0
 DCODE
-    chmod +x "$tool_bin/dcode"
+    chmod +x "$tool_bin/zjcode"
   fi
   if [ -n "${{FAKE_UV_INSTALL_STDERR:-}}" ]; then
     printf '%s\n' "$FAKE_UV_INSTALL_STDERR" >&2
@@ -134,13 +134,13 @@ printf '%s' '{payload}'
         _make_executable(mktemp)
 
     if installed_version is not None:
-        dcode = bin_dir / "dcode"
-        tools_log = tmp_path / "dcode-tools.txt"
-        verify_rc = 1 if dcode_verify_fails else 0
-        dcode.write_text(
+        zjcode = bin_dir / "zjcode"
+        tools_log = tmp_path / "zjcode-tools.txt"
+        verify_rc = 1 if zjcode_verify_fails else 0
+        zjcode.write_text(
             f"""#!/usr/bin/env bash
 if [ "${{1:-}}" = "-v" ]; then
-  printf 'deepagents-code {installed_version}\\n'
+  printf 'zjcode {installed_version}\\n'
   exit {verify_rc}
 fi
 if [ "${{1:-}}" = "tools" ]; then
@@ -151,7 +151,7 @@ fi
 exit 0
 """
         )
-        _make_executable(dcode)
+        _make_executable(zjcode)
     return bin_dir, home, uv
 
 
@@ -163,7 +163,7 @@ def _env(
     latest_version: str | None = None,
     curl_fails: bool = False,
     curl_failures_before_success: int = 0,
-    dcode_verify_fails: bool = False,
+    zjcode_verify_fails: bool = False,
     mktemp_fails: bool = False,
 ) -> dict[str, str]:
     bin_dir, home, uv = _write_fake_tools(
@@ -172,7 +172,7 @@ def _env(
         latest_version=latest_version,
         curl_fails=curl_fails,
         curl_failures_before_success=curl_failures_before_success,
-        dcode_verify_fails=dcode_verify_fails,
+        zjcode_verify_fails=zjcode_verify_fails,
         mktemp_fails=mktemp_fails,
     )
     return {
@@ -194,7 +194,7 @@ def _invoke(
     latest_version: str | None = None,
     curl_fails: bool = False,
     curl_failures_before_success: int = 0,
-    dcode_verify_fails: bool = False,
+    zjcode_verify_fails: bool = False,
     mktemp_fails: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], Path]:
     """Run `install.sh` non-interactively with the fake tools on `PATH`.
@@ -211,7 +211,7 @@ def _invoke(
         latest_version=latest_version,
         curl_fails=curl_fails,
         curl_failures_before_success=curl_failures_before_success,
-        dcode_verify_fails=dcode_verify_fails,
+        zjcode_verify_fails=zjcode_verify_fails,
         mktemp_fails=mktemp_fails,
     )
     proc = subprocess.run(
@@ -357,7 +357,7 @@ def test_install_script_default_invocation_installs_plain_package(
     args = _run_install_script(tmp_path, {}, installed_version=None)
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-3:] == ["--prerelease", "allow", "deepagents-code"]
+    assert args[-3:] == ["--prerelease", "allow", "zjcode"]
 
 
 def test_install_script_supports_exact_version_with_extras(tmp_path: Path) -> None:
@@ -371,7 +371,7 @@ def test_install_script_supports_exact_version_with_extras(tmp_path: Path) -> No
     )
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code[nvidia,ollama]==0.1.0rc1"
+    assert args[-1] == "zjcode[nvidia,ollama]==0.1.0rc1"
     assert "--prerelease" not in args
 
 
@@ -379,7 +379,7 @@ def test_install_script_supports_exact_version_without_extras(tmp_path: Path) ->
     """The version spec appends directly to the package name when no extras."""
     args = _run_install_script(tmp_path, {"DEEPAGENTS_CODE_VERSION": "0.1.0rc1"})
 
-    assert args[-1] == "deepagents-code==0.1.0rc1"
+    assert args[-1] == "zjcode==0.1.0rc1"
 
 
 @pytest.mark.parametrize("strategy", PRERELEASE_STRATEGIES)
@@ -390,7 +390,7 @@ def test_install_script_forwards_each_prerelease_strategy(
     args = _run_install_script(tmp_path, {"DEEPAGENTS_CODE_PRERELEASE": strategy})
 
     # The flag is forwarded immediately before the (unpinned) package name.
-    assert args[-3:] == ["--prerelease", strategy, "deepagents-code"]
+    assert args[-3:] == ["--prerelease", strategy, "zjcode"]
 
 
 @pytest.mark.parametrize(
@@ -474,7 +474,7 @@ def test_install_script_positional_version_installs_exact_version(
     assert proc.returncode == 0, proc.stderr
     args = (tmp_path / "uv-args.txt").read_text().splitlines()
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code==0.1.0rc1"
+    assert args[-1] == "zjcode==0.1.0rc1"
 
 
 def test_install_script_positional_version_with_extras(tmp_path: Path) -> None:
@@ -488,7 +488,7 @@ def test_install_script_positional_version_with_extras(tmp_path: Path) -> None:
 
     assert proc.returncode == 0, proc.stderr
     args = (tmp_path / "uv-args.txt").read_text().splitlines()
-    assert args[-1] == "deepagents-code[ollama]==0.1.0rc1"
+    assert args[-1] == "zjcode[ollama]==0.1.0rc1"
 
 
 @pytest.mark.parametrize(
@@ -576,7 +576,7 @@ def test_install_script_latest_version_with_extras_installs_requested_extra(
     )
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code[ollama]"
+    assert args[-1] == "zjcode[ollama]"
 
 
 def test_install_script_latest_version_with_extras_skips_prompt(
@@ -595,7 +595,7 @@ def test_install_script_latest_version_with_extras_skips_prompt(
     assert "0.1.0 → 0.1.0" not in output
     args = args_path.read_text().splitlines()
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code[ollama]"
+    assert args[-1] == "zjcode[ollama]"
 
 
 def test_install_script_out_of_date_with_extras_skips_prompt(
@@ -611,10 +611,10 @@ def test_install_script_out_of_date_with_extras_skips_prompt(
     )
 
     assert code == 0
-    assert "Keeping deepagents-code 0.1.0" not in output
+    assert "Keeping zjcode 0.1.0" not in output
     args = args_path.read_text().splitlines()
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code[ollama]"
+    assert args[-1] == "zjcode[ollama]"
 
 
 def test_install_script_latest_version_with_python_rebuilds_tool_env(
@@ -629,7 +629,7 @@ def test_install_script_latest_version_with_python_rebuilds_tool_env(
     )
 
     assert args[:5] == ["tool", "install", "-U", "--python", "3.12"]
-    assert args[-1] == "deepagents-code"
+    assert args[-1] == "zjcode"
 
 
 def test_install_script_out_of_date_auto_updates_without_tty(tmp_path: Path) -> None:
@@ -639,7 +639,7 @@ def test_install_script_out_of_date_auto_updates_without_tty(tmp_path: Path) -> 
     )
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code"
+    assert args[-1] == "zjcode"
 
 
 def test_install_script_assume_yes_updates_without_prompt(tmp_path: Path) -> None:
@@ -652,7 +652,7 @@ def test_install_script_assume_yes_updates_without_prompt(tmp_path: Path) -> Non
     )
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code"
+    assert args[-1] == "zjcode"
 
 
 @pytest.mark.parametrize("assume_yes", ["true", "TRUE", "yes", " YES "])
@@ -669,7 +669,7 @@ def test_install_script_assume_yes_accepts_codex_style_truthy_values(
     )
 
     assert code == 0
-    assert "Keeping deepagents-code" not in output
+    assert "Keeping zjcode" not in output
     assert args_path.read_text().splitlines()[:3] == ["tool", "install", "-U"]
 
 
@@ -678,7 +678,7 @@ def test_install_script_unreachable_pypi_falls_back_to_upgrade(tmp_path: Path) -
     args = _run_install_script(tmp_path, {}, installed_version="0.1.0", curl_fails=True)
 
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code"
+    assert args[-1] == "zjcode"
 
 
 def test_install_script_retries_transient_pypi_failure(tmp_path: Path) -> None:
@@ -728,9 +728,9 @@ def test_install_script_interactive_decline_keeps_current(tmp_path: Path) -> Non
     assert "0.1.0 → 0.2.0" in output
     assert (
         "What's new: https://github.com/langchain-ai/deepagents/releases/tag/"
-        "deepagents-code%3D%3D0.2.0" in output
+        "zjcode%3D%3D0.2.0" in output
     )
-    assert "Keeping deepagents-code 0.1.0" in output
+    assert "Keeping zjcode 0.1.0" in output
 
 
 def test_install_script_interactive_accept_updates(tmp_path: Path) -> None:
@@ -743,14 +743,14 @@ def test_install_script_interactive_accept_updates(tmp_path: Path) -> None:
     # The accept-path uv argv is identical to the auto-update and assume-yes
     # paths, so assert the "Updating ..." line to prove the prompt was shown and
     # answered yes rather than bypassed.
-    assert "Updating deepagents-code 0.1.0 → 0.2.0" in output
+    assert "Updating zjcode 0.1.0 → 0.2.0" in output
     assert (
         "What's new: https://github.com/langchain-ai/deepagents/releases/tag/"
-        "deepagents-code%3D%3D0.2.0" in output
+        "zjcode%3D%3D0.2.0" in output
     )
     args = args_path.read_text().splitlines()
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code"
+    assert args[-1] == "zjcode"
 
 
 def test_install_script_pinned_version_skips_prompt_over_existing_install(
@@ -773,10 +773,10 @@ def test_install_script_pinned_version_skips_prompt_over_existing_install(
     assert code == 0
     assert "→" not in output
     assert "What's new:" not in output
-    assert "Keeping deepagents-code" not in output
+    assert "Keeping zjcode" not in output
     args = args_path.read_text().splitlines()
     assert args[:3] == ["tool", "install", "-U"]
-    assert args[-1] == "deepagents-code==0.2.0"
+    assert args[-1] == "zjcode==0.2.0"
 
 
 def test_can_prompt_false_when_not_interactive(tmp_path: Path) -> None:
@@ -801,15 +801,15 @@ def test_can_prompt_false_without_usable_tty(tmp_path: Path) -> None:
 
 
 _FRESH_INSTALL_DIFF = (
-    " + agent-client-protocol==0.10.1\n + deepagents-code==0.1.19\n + zstandard==0.25.0"
+    " + agent-client-protocol==0.10.1\n + zjcode==0.1.19\n + zstandard==0.25.0"
 )
 
 _UPGRADE_DIFF = (
-    " - deepagents-code==0.1.18\n + deepagents-code==0.1.19\n + brand-new-dep==1.0.0"
+    " - zjcode==0.1.18\n + zjcode==0.1.19\n + brand-new-dep==1.0.0"
 )
 
 _REMOVAL_DIFF = (
-    " - deepagents-code==0.1.18\n + deepagents-code==0.1.19\n - dropped-dep==2.0.0"
+    " - zjcode==0.1.18\n + zjcode==0.1.19\n - dropped-dep==2.0.0"
 )
 
 _DEPENDENCY_UPDATE_DIFF = " - boto3==1.43.33\n + boto3==1.43.34"
@@ -921,7 +921,7 @@ def test_install_script_same_version_with_dependency_updates_says_dependencies_u
 ) -> None:
     """Unchanged app version + a uv dependency diff reports the deps were updated.
 
-    The fake `dcode -v` reports the same version before and after install, so
+    The fake `zjcode -v` reports the same version before and after install, so
     `PRE_VERSION == NEW_VERSION` and the same-version branch fires; the `± pkg==`
     diff in stderr must steer it away from the flat "already up to date" message.
     Also verifies the raw uv diff is persisted to the cache install log and that
@@ -936,15 +936,15 @@ def test_install_script_same_version_with_dependency_updates_says_dependencies_u
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated. "
-        "Details: ~/.cache/deepagents-code/install.log"
+        "zjcode 0.1.8 was already up to date; dependencies were updated. "
+        "Details: ~/.cache/zjcode/install.log"
     ) in proc.stdout
-    assert "deepagents-code 0.1.8 already up to date" not in proc.stdout
-    assert (tmp_path / "home/.cache/deepagents-code/install.log").read_text() == (
+    assert "zjcode 0.1.8 already up to date" not in proc.stdout
+    assert (tmp_path / "home/.cache/zjcode/install.log").read_text() == (
         f"{_DEPENDENCY_UPDATE_DIFF}\n"
     )
-    assert "✔ Dependencies updated. Run: dcode" in proc.stdout
-    assert "✔ Already installed. Run: dcode" not in proc.stdout
+    assert "✔ Dependencies updated. Run: zjcode" in proc.stdout
+    assert "✔ Already installed. Run: zjcode" not in proc.stdout
 
 
 def test_install_script_same_version_no_dependency_changes_says_up_to_date(
@@ -967,13 +967,13 @@ def test_install_script_same_version_no_dependency_changes_says_up_to_date(
     )
 
     assert proc.returncode == 0
-    assert "deepagents-code 0.1.8 already up to date." in proc.stdout
+    assert "zjcode 0.1.8 already up to date." in proc.stdout
     assert "dependencies were updated" not in proc.stdout
-    assert "Details: ~/.cache/deepagents-code/install.log" not in proc.stdout
-    assert (tmp_path / "home/.cache/deepagents-code/install.log").read_text() == (
+    assert "Details: ~/.cache/zjcode/install.log" not in proc.stdout
+    assert (tmp_path / "home/.cache/zjcode/install.log").read_text() == (
         f"{_NO_PACKAGE_CHANGE_STDERR}\n"
     )
-    assert "✔ Already installed. Run: dcode" in proc.stdout
+    assert "✔ Already installed. Run: zjcode" in proc.stdout
 
 
 def test_install_script_same_version_with_new_dependency_says_dependencies_updated(
@@ -995,10 +995,10 @@ def test_install_script_same_version_with_new_dependency_says_dependencies_updat
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated. "
-        "Details: ~/.cache/deepagents-code/install.log"
+        "zjcode 0.1.8 was already up to date; dependencies were updated. "
+        "Details: ~/.cache/zjcode/install.log"
     ) in proc.stdout
-    assert (tmp_path / "home/.cache/deepagents-code/install.log").read_text() == (
+    assert (tmp_path / "home/.cache/zjcode/install.log").read_text() == (
         f"{_DEPENDENCY_ADDITION_DIFF}\n"
     )
 
@@ -1028,7 +1028,7 @@ def test_install_script_dependency_update_without_writable_log_omits_details(
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated."
+        "zjcode 0.1.8 was already up to date; dependencies were updated."
         in proc.stdout
     )
     assert "Details:" not in proc.stdout
@@ -1043,7 +1043,7 @@ def test_install_script_dependency_update_with_failed_log_copy_omits_details(
         pytest.skip("root can write through directory permissions")
 
     cache = tmp_path / "cache"
-    install_log_dir = cache / "deepagents-code"
+    install_log_dir = cache / "zjcode"
     install_log_dir.mkdir(parents=True)
     install_log_dir.chmod(0o500)
 
@@ -1062,7 +1062,7 @@ def test_install_script_dependency_update_with_failed_log_copy_omits_details(
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated."
+        "zjcode 0.1.8 was already up to date; dependencies were updated."
         in proc.stdout
     )
     assert "Details:" not in proc.stdout
@@ -1073,7 +1073,7 @@ def test_install_script_refuses_symlinked_log_dir(tmp_path: Path) -> None:
     """A pre-existing log-dir symlink disables the persistent install log."""
     cache = tmp_path / "cache"
     target = tmp_path / "target"
-    install_log_dir = cache / "deepagents-code"
+    install_log_dir = cache / "zjcode"
     cache.mkdir()
     target.mkdir()
     install_log_dir.symlink_to(target, target_is_directory=True)
@@ -1090,7 +1090,7 @@ def test_install_script_refuses_symlinked_log_dir(tmp_path: Path) -> None:
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated."
+        "zjcode 0.1.8 was already up to date; dependencies were updated."
         in proc.stdout
     )
     assert "Details:" not in proc.stdout
@@ -1100,7 +1100,7 @@ def test_install_script_refuses_symlinked_log_dir(tmp_path: Path) -> None:
 def test_install_script_refuses_symlinked_log_file(tmp_path: Path) -> None:
     """A pre-existing log-file symlink disables the persistent install log."""
     cache = tmp_path / "cache"
-    install_log_dir = cache / "deepagents-code"
+    install_log_dir = cache / "zjcode"
     target = tmp_path / "target.log"
     install_log_dir.mkdir(parents=True)
     target.write_text("keep me\n")
@@ -1118,7 +1118,7 @@ def test_install_script_refuses_symlinked_log_file(tmp_path: Path) -> None:
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated."
+        "zjcode 0.1.8 was already up to date; dependencies were updated."
         in proc.stdout
     )
     assert "Details:" not in proc.stdout
@@ -1146,10 +1146,10 @@ def test_install_script_unset_xdg_cache_home_falls_back_to_home_cache(
 
     assert proc.returncode == 0
     assert (
-        "deepagents-code 0.1.8 was already up to date; dependencies were updated. "
-        "Details: ~/.cache/deepagents-code/install.log"
+        "zjcode 0.1.8 was already up to date; dependencies were updated. "
+        "Details: ~/.cache/zjcode/install.log"
     ) in proc.stdout
-    assert (tmp_path / "home/.cache/deepagents-code/install.log").read_text() == (
+    assert (tmp_path / "home/.cache/zjcode/install.log").read_text() == (
         f"{_DEPENDENCY_UPDATE_DIFF}\n"
     )
 
@@ -1173,7 +1173,7 @@ def test_install_script_log_path_outside_home_stays_absolute(tmp_path: Path) -> 
     )
 
     assert proc.returncode == 0
-    expected_log = external / "deepagents-code" / "install.log"
+    expected_log = external / "zjcode" / "install.log"
     assert f"Details: {expected_log}" in proc.stdout
     assert "Details: ~/" not in proc.stdout
     assert expected_log.read_text() == f"{_DEPENDENCY_UPDATE_DIFF}\n"
@@ -1198,8 +1198,8 @@ def test_install_script_failed_install_points_to_log(tmp_path: Path) -> None:
 
     assert proc.returncode != 0
     assert "Failed to install" in proc.stderr
-    assert "Full install log: ~/.cache/deepagents-code/install.log" in proc.stderr
-    assert (tmp_path / "home/.cache/deepagents-code/install.log").read_text() == (
+    assert "Full install log: ~/.cache/zjcode/install.log" in proc.stderr
+    assert (tmp_path / "home/.cache/zjcode/install.log").read_text() == (
         f"{_DEPENDENCY_UPDATE_DIFF}\n"
     )
 
@@ -1843,13 +1843,13 @@ def test_install_script_interactive_empty_answer_keeps_current(tmp_path: Path) -
 
     assert code == 0
     assert not args_path.exists()
-    assert "Keeping deepagents-code 0.1.0" in output
+    assert "Keeping zjcode 0.1.0" in output
 
 
-def _path_without_dcode() -> str:
-    """Return the host `PATH` with any directory that already provides dcode dropped.
+def _path_without_zjcode() -> str:
+    """Return the host `PATH` with any directory that already provides zjcode dropped.
 
-    The test venv installs a real `dcode`/`deepagents-code` on `PATH`. Tests that
+    The test venv installs a real `zjcode`/`zjcode` on `PATH`. Tests that
     need to exercise the `~/.local/bin` fallback must ensure neither resolves via
     `PATH`, while keeping the system directories the script's coreutils need.
     Filtering the real `PATH` is portable across hosts, unlike hardcoding
@@ -1860,7 +1860,7 @@ def _path_without_dcode() -> str:
         for entry in os.environ.get("PATH", "").split(os.pathsep)
         if entry
         and not any(
-            (Path(entry) / name).exists() for name in ("dcode", "deepagents-code")
+            (Path(entry) / name).exists() for name in ("zjcode", "zjcode")
         )
     ]
     return os.pathsep.join(kept)
@@ -2318,7 +2318,7 @@ def _invoke_with_local_uv_not_on_path(
 
     path_without_uv = os.pathsep.join(
         entry
-        for entry in _path_without_dcode().split(os.pathsep)
+        for entry in _path_without_zjcode().split(os.pathsep)
         if entry and not (Path(entry) / "uv").exists()
     )
     env = {
@@ -2381,8 +2381,8 @@ def test_install_script_custom_bin_from_sourced_uv_persists_path(
 
     assert proc.returncode == 0, proc.stderr
     assert uv_args.exists()
-    installed = tool_bin / "dcode"
-    exposed = tmp_path / "home/.local/bin/dcode"
+    installed = tool_bin / "zjcode"
+    exposed = tmp_path / "home/.local/bin/zjcode"
     assert installed.is_file()
     assert exposed.is_symlink()
     assert exposed.resolve() == installed.resolve()
@@ -2420,7 +2420,7 @@ def test_install_script_honors_uv_tool_bin_dir(tmp_path: Path) -> None:
         "UV_TOOL_BIN_DIR": str(tool_bin),
         "FAKE_UV_TOOL_BIN_DIR": str(tool_bin),
         "FAKE_UV_CREATE_LOCAL_DCODE": "1",
-        "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_dcode()}",
+        "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_zjcode()}",
         "SHELL": "/bin/zsh",
     }
 
@@ -2428,12 +2428,12 @@ def test_install_script_honors_uv_tool_bin_dir(tmp_path: Path) -> None:
 
     assert proc.returncode == 0, proc.stderr
     assert uv_args.exists()
-    installed = tool_bin / "dcode"
-    exposed = tmp_path / "home/.local/bin/dcode"
+    installed = tool_bin / "zjcode"
+    exposed = tmp_path / "home/.local/bin/zjcode"
     assert installed.is_file()
     assert exposed.is_symlink()
     assert exposed.resolve() == installed.resolve()
-    assert "deepagents-code 0.2.0 installed" in proc.stdout
+    assert "zjcode 0.2.0 installed" in proc.stdout
     assert "command not found in PATH" not in proc.stderr
 
 
@@ -2452,7 +2452,7 @@ def test_install_script_old_uv_ignores_unsupported_tool_bin_override(
             "FAKE_UV_TOOL_BIN_DIR": str(legacy_bin),
             "FAKE_UV_TOOL_DIR_BIN_UNSUPPORTED": "1",
             "FAKE_UV_CREATE_LOCAL_DCODE": "1",
-            "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_dcode()}",
+            "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_zjcode()}",
             "SHELL": "/bin/zsh",
         },
         installed_version=None,
@@ -2460,15 +2460,15 @@ def test_install_script_old_uv_ignores_unsupported_tool_bin_override(
 
     assert proc.returncode == 0, proc.stderr
     assert uv_args.exists()
-    assert (legacy_bin / "dcode").is_file()
-    assert not (legacy_bin / "dcode").is_symlink()
+    assert (legacy_bin / "zjcode").is_file()
+    assert not (legacy_bin / "zjcode").is_symlink()
     assert not custom_bin.exists()
 
 
 def test_install_script_does_not_replace_tool_bin_path_alias_with_symlink(
     tmp_path: Path,
 ) -> None:
-    """Equivalent uv bin spellings cannot turn `dcode` into a symlink loop."""
+    """Equivalent uv bin spellings cannot turn `zjcode` into a symlink loop."""
     home = tmp_path / "home"
     alias_bin = home / ".local/share/../bin"
     proc, _ = _invoke(
@@ -2476,17 +2476,17 @@ def test_install_script_does_not_replace_tool_bin_path_alias_with_symlink(
         {
             "FAKE_UV_TOOL_BIN_DIR": str(alias_bin),
             "FAKE_UV_CREATE_LOCAL_DCODE": "1",
-            "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_dcode()}",
+            "PATH": f"{tmp_path / 'bin'}{os.pathsep}{_path_without_zjcode()}",
             "SHELL": "/bin/zsh",
         },
         installed_version=None,
     )
 
-    installed = home / ".local/bin/dcode"
+    installed = home / ".local/bin/zjcode"
     assert proc.returncode == 0, proc.stderr
     assert installed.is_file()
     assert not installed.is_symlink()
-    assert "deepagents-code 0.2.0 installed" in proc.stdout
+    assert "zjcode 0.2.0 installed" in proc.stdout
 
 
 def test_install_script_root_custom_bin_leaves_path_to_mdm(tmp_path: Path) -> None:
@@ -2494,9 +2494,9 @@ def test_install_script_root_custom_bin_leaves_path_to_mdm(tmp_path: Path) -> No
     home = tmp_path / "home"
     tool_bin = home / "custom-bin"
     tool_bin.mkdir(parents=True)
-    dcode = tool_bin / "dcode"
-    dcode.write_text("#!/usr/bin/env bash\nexit 0\n")
-    _make_executable(dcode)
+    zjcode = tool_bin / "zjcode"
+    zjcode.write_text("#!/usr/bin/env bash\nexit 0\n")
+    _make_executable(zjcode)
     harness = tmp_path / "root_path_setup.sh"
     harness.write_text(
         f"HOME={str(home)!r}\n"
@@ -2507,7 +2507,7 @@ def test_install_script_root_custom_bin_leaves_path_to_mdm(tmp_path: Path) -> No
         f"{_extract_shell_function('paths_are_same_file')}\n"
         f"{_extract_shell_function('ensure_path_setup')}\n"
         "set +e\n"
-        f"ensure_path_setup dcode {str(dcode)!r}\n"
+        f"ensure_path_setup zjcode {str(zjcode)!r}\n"
         "rc=$?\n"
         "printf '%s\\n' \"$rc\"\n",
         encoding="utf-8",
@@ -2527,7 +2527,7 @@ def test_install_script_root_custom_bin_leaves_path_to_mdm(tmp_path: Path) -> No
     assert not (home / ".zshrc").exists()
 
 
-def test_install_script_root_does_not_execute_existing_dcode_before_install(
+def test_install_script_root_does_not_execute_existing_zjcode_before_install(
     tmp_path: Path,
 ) -> None:
     """A root install does not run a user-controlled pre-install executable."""
@@ -2538,12 +2538,12 @@ def test_install_script_root_does_not_execute_existing_dcode_before_install(
         latest_version="0.2.0",
     )
     bin_dir = tmp_path / "bin"
-    marker = tmp_path / "pre-install-dcode-ran"
-    dcode = bin_dir / "dcode"
-    dcode.write_text(
+    marker = tmp_path / "pre-install-zjcode-ran"
+    zjcode = bin_dir / "zjcode"
+    zjcode.write_text(
         f"#!/usr/bin/env bash\nprintf 'ran\\n' > {str(marker)!r}\nexit 0\n"
     )
-    _make_executable(dcode)
+    _make_executable(zjcode)
     for name, body in {
         "id": "printf '0\\n'\n",
         "uname": "printf 'Linux\\n'\n",
@@ -2568,21 +2568,21 @@ def test_install_script_root_does_not_execute_existing_dcode_before_install(
     assert not marker.exists()
 
 
-def _invoke_with_local_dcode_not_on_path(
+def _invoke_with_local_zjcode_not_on_path(
     tmp_path: Path, *, create_env_file: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    """Run with a working `dcode` in ~/.local/bin but outside the original PATH."""
+    """Run with a working `zjcode` in ~/.local/bin but outside the original PATH."""
     bin_dir, home, uv = _write_fake_tools(tmp_path, installed_version=None)
 
     local_bin = home / ".local" / "bin"
     local_bin.mkdir(parents=True)
-    dcode = local_bin / "dcode"
-    dcode.write_text(
+    zjcode = local_bin / "zjcode"
+    zjcode.write_text(
         "#!/usr/bin/env bash\n"
-        'if [ "${1:-}" = "-v" ]; then printf "deepagents-code 0.1.0\\n"; exit 0; fi\n'
+        'if [ "${1:-}" = "-v" ]; then printf "zjcode 0.1.0\\n"; exit 0; fi\n'
         "exit 0\n"
     )
-    _make_executable(dcode)
+    _make_executable(zjcode)
     if create_env_file:
         (local_bin / "env").write_text('export PATH="$HOME/.local/bin:$PATH"\n')
 
@@ -2590,7 +2590,7 @@ def _invoke_with_local_dcode_not_on_path(
         **os.environ,
         "HOME": str(home),
         "XDG_CACHE_HOME": str(home / ".cache"),
-        "PATH": f"{bin_dir}{os.pathsep}{_path_without_dcode()}",
+        "PATH": f"{bin_dir}{os.pathsep}{_path_without_zjcode()}",
         "UV_BIN": str(uv),
         "DEEPAGENTS_CODE_SKIP_OPTIONAL": "1",
         "SHELL": "/bin/zsh",
@@ -2606,24 +2606,24 @@ def _invoke_with_local_dcode_not_on_path(
     )
 
 
-def test_install_script_adds_local_bin_when_dcode_installed_but_not_on_path(
+def test_install_script_adds_local_bin_when_zjcode_installed_but_not_on_path(
     tmp_path: Path,
 ) -> None:
     """A fresh install resolved only via ~/.local/bin adds it to PATH setup.
 
     Simulates `uv tool install` dropping the binary in ~/.local/bin without the
-    current shell having picked it up: `command -v dcode` misses, the fallback
+    current shell having picked it up: `command -v zjcode` misses, the fallback
     path hits, and the script verifies it directly. The success path should not
     replace the installed executable with a self-referential symlink when the
     binary path and intended symlink path are the same.
     """
-    proc = _invoke_with_local_dcode_not_on_path(tmp_path)
+    proc = _invoke_with_local_zjcode_not_on_path(tmp_path)
 
     assert proc.returncode == 0
     combined = proc.stdout + proc.stderr
-    dcode = tmp_path / "home/.local/bin/dcode"
-    assert not dcode.is_symlink()
-    assert "deepagents-code 0.1.0" in dcode.read_text()
+    zjcode = tmp_path / "home/.local/bin/zjcode"
+    assert not zjcode.is_symlink()
+    assert "zjcode 0.1.0" in zjcode.read_text()
     assert "Added ~/.local/bin to PATH" in combined
     assert "isn't on your PATH yet" not in combined
     profile_texts = [
@@ -2635,9 +2635,9 @@ def test_install_script_adds_local_bin_when_dcode_installed_but_not_on_path(
         )
         if profile.exists()
     ]
-    assert any("# >>> deepagents-code installer >>>" in text for text in profile_texts)
+    assert any("# >>> zjcode installer >>>" in text for text in profile_texts)
     assert any('export PATH="$HOME/.local/bin:$PATH"' in text for text in profile_texts)
-    assert any("# <<< deepagents-code installer <<<" in text for text in profile_texts)
+    assert any("# <<< zjcode installer <<<" in text for text in profile_texts)
     assert "source ~/.local/bin/env" not in combined
 
 
@@ -2650,10 +2650,10 @@ def test_install_script_uses_uv_env_file_path_hint_when_available(
     modification is needed. But the current shell still lacks ~/.local/bin on
     PATH (the binary resolved only via the installer's absolute-path fallback),
     so the script emits a `source ~/.local/bin/env` reload hint instead of
-    silently returning success — a fresh `dcode` invocation would otherwise fail
+    silently returning success — a fresh `zjcode` invocation would otherwise fail
     until the user restarts their shell.
     """
-    proc = _invoke_with_local_dcode_not_on_path(tmp_path, create_env_file=True)
+    proc = _invoke_with_local_zjcode_not_on_path(tmp_path, create_env_file=True)
 
     assert proc.returncode == 0
     combined = proc.stdout + proc.stderr
@@ -2673,19 +2673,19 @@ def test_install_script_stale_shell_with_profile_already_set_shows_reload_hint(
     But the current shell's PATH lacks ~/.local/bin (the binary resolved only
     via the installer's absolute-path fallback), so the script must emit a
     reload/source hint rather than silently returning success — otherwise the
-    user sees "Run: dcode" but dcode won't resolve until they restart.
+    user sees "Run: zjcode" but zjcode won't resolve until they restart.
     """
     bin_dir, home, uv = _write_fake_tools(tmp_path, installed_version=None)
 
     local_bin = home / ".local" / "bin"
     local_bin.mkdir(parents=True)
-    dcode = local_bin / "dcode"
-    dcode.write_text(
+    zjcode = local_bin / "zjcode"
+    zjcode.write_text(
         "#!/usr/bin/env bash\n"
-        'if [ "${1:-}" = "-v" ]; then printf "deepagents-code 0.1.0\\n"; exit 0; fi\n'
+        'if [ "${1:-}" = "-v" ]; then printf "zjcode 0.1.0\\n"; exit 0; fi\n'
         "exit 0\n"
     )
-    _make_executable(dcode)
+    _make_executable(zjcode)
 
     # Pre-seed the shell profile so `local_bin_in_profile` returns true.
     zshrc = home / ".zshrc"
@@ -2695,7 +2695,7 @@ def test_install_script_stale_shell_with_profile_already_set_shows_reload_hint(
         **os.environ,
         "HOME": str(home),
         "XDG_CACHE_HOME": str(home / ".cache"),
-        "PATH": f"{bin_dir}{os.pathsep}{_path_without_dcode()}",
+        "PATH": f"{bin_dir}{os.pathsep}{_path_without_zjcode()}",
         "UV_BIN": str(uv),
         "DEEPAGENTS_CODE_SKIP_OPTIONAL": "1",
         "SHELL": "/bin/zsh",
@@ -2725,20 +2725,20 @@ def test_install_script_rewrites_existing_managed_path_block(tmp_path: Path) -> 
 
     local_bin = home / ".local" / "bin"
     local_bin.mkdir(parents=True)
-    dcode = local_bin / "dcode"
-    dcode.write_text(
+    zjcode = local_bin / "zjcode"
+    zjcode.write_text(
         "#!/usr/bin/env bash\n"
-        'if [ "${1:-}" = "-v" ]; then printf "deepagents-code 0.1.0\\n"; exit 0; fi\n'
+        'if [ "${1:-}" = "-v" ]; then printf "zjcode 0.1.0\\n"; exit 0; fi\n'
         "exit 0\n"
     )
-    _make_executable(dcode)
+    _make_executable(zjcode)
 
     zshrc = home / ".zshrc"
     zshrc.write_text(
         "before\n"
-        "# >>> deepagents-code installer >>>\n"
+        "# >>> zjcode installer >>>\n"
         'export PATH="$HOME/old-bin:$PATH"\n'
-        "# <<< deepagents-code installer <<<\n"
+        "# <<< zjcode installer <<<\n"
         "after\n"
     )
 
@@ -2746,7 +2746,7 @@ def test_install_script_rewrites_existing_managed_path_block(tmp_path: Path) -> 
         **os.environ,
         "HOME": str(home),
         "XDG_CACHE_HOME": str(home / ".cache"),
-        "PATH": f"{bin_dir}{os.pathsep}{_path_without_dcode()}",
+        "PATH": f"{bin_dir}{os.pathsep}{_path_without_zjcode()}",
         "UV_BIN": str(uv),
         "DEEPAGENTS_CODE_SKIP_OPTIONAL": "1",
         "SHELL": "/bin/zsh",
@@ -2763,7 +2763,7 @@ def test_install_script_rewrites_existing_managed_path_block(tmp_path: Path) -> 
 
     assert proc.returncode == 0
     profile = zshrc.read_text()
-    assert profile.count("# >>> deepagents-code installer >>>") == 1
+    assert profile.count("# >>> zjcode installer >>>") == 1
     assert 'export PATH="$HOME/.local/bin:$PATH"' in profile
     assert "$HOME/old-bin" not in profile
     assert profile.startswith("before\n")
@@ -2773,7 +2773,7 @@ def test_install_script_rewrites_existing_managed_path_block(tmp_path: Path) -> 
 def test_install_script_warns_when_original_path_shadows_uv_tool(
     tmp_path: Path,
 ) -> None:
-    """An older `dcode` earlier on PATH is reported instead of silently used."""
+    """An older `zjcode` earlier on PATH is reported instead of silently used."""
     proc, _ = _invoke(
         tmp_path,
         {
@@ -2786,13 +2786,13 @@ def test_install_script_warns_when_original_path_shadows_uv_tool(
     )
 
     assert proc.returncode == 0
-    assert "deepagents-code updated: 0.1.0 → 0.2.0" in proc.stdout
-    assert "Detected existing dcode" in proc.stderr
+    assert "zjcode updated: 0.1.0 → 0.2.0" in proc.stdout
+    assert "Detected existing zjcode" in proc.stderr
     assert "PATH order may run that binary instead of the uv tool" in proc.stderr
 
 
 def test_install_script_current_shadow_does_not_skip_uv_install(tmp_path: Path) -> None:
-    """A current non-uv `dcode` cannot suppress installation into uv's bin."""
+    """A current non-uv `zjcode` cannot suppress installation into uv's bin."""
     proc, uv_args = _invoke(
         tmp_path,
         {
@@ -2820,12 +2820,12 @@ def test_install_script_current_uv_tool_repairs_shadowed_path(tmp_path: Path) ->
         latest_version="0.2.0",
     )
     tool_bin.mkdir(parents=True)
-    dcode = tool_bin / "dcode"
-    dcode.write_text(
+    zjcode = tool_bin / "zjcode"
+    zjcode.write_text(
         "#!/usr/bin/env bash\n"
-        'if [ "${1:-}" = "-v" ]; then printf "deepagents-code 0.2.0\\n"; fi\n'
+        'if [ "${1:-}" = "-v" ]; then printf "zjcode 0.2.0\\n"; fi\n'
     )
-    _make_executable(dcode)
+    _make_executable(zjcode)
 
     proc = subprocess.run(
         ["bash", str(SCRIPT)],
@@ -2840,7 +2840,7 @@ def test_install_script_current_uv_tool_repairs_shadowed_path(tmp_path: Path) ->
     assert proc.returncode == 0, proc.stderr
     assert (tmp_path / "uv-args.txt").exists()
     assert "not selected on PATH" in proc.stdout
-    assert "Detected existing dcode" in proc.stderr
+    assert "Detected existing zjcode" in proc.stderr
 
 
 def _run_detect_shadowing_install(
@@ -2851,18 +2851,18 @@ def _run_detect_shadowing_install(
 ) -> str:
     """Run the real `detect_shadowing_install` in isolation; return its stderr.
 
-    `HOME/.local/bin/dcode` is always created as the freshly-installed uv tool.
+    `HOME/.local/bin/zjcode` is always created as the freshly-installed uv tool.
     The caller controls `ORIGINAL_PATH` (the user's pre-installer PATH) to decide
-    what `command -v dcode` resolves to. With `stage_shadow`, a genuinely
-    different `dcode` (distinct inode) is also placed under `HOME/shadow` so the
+    what `command -v zjcode` resolves to. With `stage_shadow`, a genuinely
+    different `zjcode` (distinct inode) is also placed under `HOME/shadow` so the
     caller can put it earlier on `ORIGINAL_PATH` to exercise the warning path.
     """
     home = tmp_path / "home"
     local_bin = home / ".local" / "bin"
     local_bin.mkdir(parents=True)
-    dcode = local_bin / "dcode"
-    dcode.write_text("#!/usr/bin/env bash\nexit 0\n")
-    _make_executable(dcode)
+    zjcode = local_bin / "zjcode"
+    zjcode.write_text("#!/usr/bin/env bash\nexit 0\n")
+    _make_executable(zjcode)
     # The intermediate `share` dir must exist for the kernel to resolve the
     # `~/.local/share/../bin` alias; without it the path is ENOENT and
     # `command -v` finds nothing, so the `-ef` branch would never be reached.
@@ -2871,7 +2871,7 @@ def _run_detect_shadowing_install(
     if stage_shadow:
         shadow_dir = home / "shadow"
         shadow_dir.mkdir()
-        shadow = shadow_dir / "dcode"
+        shadow = shadow_dir / "zjcode"
         shadow.write_text("#!/usr/bin/env bash\nexit 0\n")
         _make_executable(shadow)
 
@@ -2930,7 +2930,7 @@ def test_detect_shadowing_install_warns_on_distinct_binary(tmp_path: Path) -> No
         stage_shadow=True,
     )
 
-    assert "Detected existing dcode" in stderr
+    assert "Detected existing zjcode" in stderr
     assert "PATH order may run that binary instead of the uv tool" in stderr
 
 
@@ -2985,8 +2985,8 @@ def test_local_bin_in_profile_recognizes_alias_spelling(
     assert _eval_local_bin_in_profile(tmp_path, profile_body) is expected
 
 
-def test_install_script_no_path_warning_when_dcode_on_path(tmp_path: Path) -> None:
-    """When `dcode` resolves via PATH, the not-on-PATH hint is suppressed."""
+def test_install_script_no_path_warning_when_zjcode_on_path(tmp_path: Path) -> None:
+    """When `zjcode` resolves via PATH, the not-on-PATH hint is suppressed."""
     proc, _ = _invoke(tmp_path, {}, installed_version="0.1.0", latest_version="0.2.0")
 
     assert proc.returncode == 0
@@ -2995,7 +2995,7 @@ def test_install_script_no_path_warning_when_dcode_on_path(tmp_path: Path) -> No
 
 
 def test_install_script_managed_ripgrep_calls_tools_install(tmp_path: Path) -> None:
-    """Default (`managed`) mode eagerly runs `dcode tools install`."""
+    """Default (`managed`) mode eagerly runs `zjcode tools install`."""
     proc, _ = _invoke(
         tmp_path,
         {"DEEPAGENTS_CODE_SKIP_OPTIONAL": "0"},
@@ -3004,7 +3004,7 @@ def test_install_script_managed_ripgrep_calls_tools_install(tmp_path: Path) -> N
     )
 
     assert proc.returncode == 0, proc.stderr
-    tools_log = tmp_path / "dcode-tools.txt"
+    tools_log = tmp_path / "zjcode-tools.txt"
     assert tools_log.exists(), proc.stdout + proc.stderr
     assert "tools install" in tools_log.read_text()
     combined = proc.stdout + proc.stderr
@@ -3043,7 +3043,7 @@ def test_install_script_system_ripgrep_skips_tools_install(tmp_path: Path) -> No
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert not (tmp_path / "dcode-tools.txt").exists()
+    assert not (tmp_path / "zjcode-tools.txt").exists()
 
 
 def test_install_script_skip_optional_skips_tools_install(tmp_path: Path) -> None:
@@ -3056,11 +3056,11 @@ def test_install_script_skip_optional_skips_tools_install(tmp_path: Path) -> Non
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert not (tmp_path / "dcode-tools.txt").exists()
+    assert not (tmp_path / "zjcode-tools.txt").exists()
 
 
 def test_install_script_managed_ripgrep_failure_warns(tmp_path: Path) -> None:
-    """A failed `dcode tools install` falls back with a slow-grep warning.
+    """A failed `zjcode tools install` falls back with a slow-grep warning.
 
     The captured command output is surfaced on failure — the whole reason the
     quiet path writes to a temp file instead of discarding to `/dev/null`.
@@ -3103,21 +3103,21 @@ def test_install_script_managed_ripgrep_verbose_failure_warns(
 def test_install_script_skips_managed_install_when_verify_failed(
     tmp_path: Path,
 ) -> None:
-    """A present-but-broken `dcode` (`VERIFY_OK=false`) is not run for `tools`.
+    """A present-but-broken `zjcode` (`VERIFY_OK=false`) is not run for `tools`.
 
     The eager managed-ripgrep block is gated on `VERIFY_OK = true`, so a binary
-    that fails its `-v` probe must not be invoked as `dcode tools install`.
+    that fails its `-v` probe must not be invoked as `zjcode tools install`.
     """
     proc, _ = _invoke(
         tmp_path,
         {"DEEPAGENTS_CODE_SKIP_OPTIONAL": "0"},
         installed_version="0.1.0",
         latest_version="0.2.0",
-        dcode_verify_fails=True,
+        zjcode_verify_fails=True,
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert not (tmp_path / "dcode-tools.txt").exists(), proc.stdout + proc.stderr
+    assert not (tmp_path / "zjcode-tools.txt").exists(), proc.stdout + proc.stderr
 
 
 @pytest.mark.parametrize("flag", ["--help", "-h"])
@@ -3169,7 +3169,7 @@ def test_install_script_version_flag_prints_version_and_exits(
     # contains "installer", so a weaker check wouldn't catch --version being
     # mis-wired to print_help. The absent "Usage:" marker pins that distinction
     # and doubles as a drift guard on INSTALLER_VERSION.
-    assert "deepagents-code installer 1.0" in proc.stdout
+    assert "zjcode installer 1.0" in proc.stdout
     assert "Usage:" not in proc.stdout
     assert not (tmp_path / "uv-args.txt").exists()
 

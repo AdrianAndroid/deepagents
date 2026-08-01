@@ -1,8 +1,8 @@
 ---
 name: deepagents-thread-inspector
-description: Inspect and explain conversations in the local Deep Agents Code SQLite session store. Use as a fallback when LangSmith trace tooling is unavailable, for offline or untraced sessions, or when asked to identify or summarize a local dcode thread, inspect checkpoint metadata, list recent local threads, or parse ~/.deepagents/.state/sessions.db and a thread UUID or prefix.
+description: Inspect and explain conversations in the local Deep Agents Code SQLite session store. Use as a fallback when LangSmith trace tooling is unavailable, for offline or untraced sessions, or when asked to identify or summarize a local zjcode thread, inspect checkpoint metadata, list recent local threads, or parse ~/.deepagents/.state/sessions.db and a thread UUID or prefix.
 license: MIT
-compatibility: designed for deepagents-code
+compatibility: designed for zjcode
 ---
 
 # Deep Agents Thread Inspector

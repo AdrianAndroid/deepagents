@@ -652,7 +652,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
                     # Provider is installed and discoverable, but its upstream
                     # profiles don't surface this curated model (missing entry
                     # or filtered out). Add it as a normal selectable row so the
-                    # hardcoded recommendation isn't silently dropped when the
+                    # harzjcoded recommendation isn't silently dropped when the
                     # profile list lags.
                     installed_recommended.append((spec, provider))
                     continue
@@ -1556,7 +1556,7 @@ class ModelSelectorScreen(ModalScreen[tuple[str, str] | None]):
         human-readable `name` (e.g. `'Claude Sonnet 5'`), which reads better
         than the raw model id. When no profile is loaded — the case for
         uninstalled recommendations and onboarding — falls back to the
-        hardcoded name in `_RECOMMENDED_MODELS`, then the model portion of the
+        harzjcoded name in `_RECOMMENDED_MODELS`, then the model portion of the
         spec, then the spec itself.
 
         Args:

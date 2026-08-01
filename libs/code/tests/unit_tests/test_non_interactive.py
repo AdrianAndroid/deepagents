@@ -1160,14 +1160,14 @@ class TestShellAllowListDecisionLogic:
         assert kwargs["shell_allow_list"] == expected_allow_list
 
         # The resolved auto-approve value must also reach the trace metadata
-        # (dcode_auto_approve), not only the server session — guards against the
+        # (zjcode_auto_approve), not only the server session — guards against the
         # trace label silently diverging from the server's approval mode.
         _, astream_kwargs = mock_agent.astream.call_args
         stream_metadata = astream_kwargs["config"]["metadata"]
         if expected_auto:
-            assert stream_metadata["dcode_auto_approve"] is True
+            assert stream_metadata["zjcode_auto_approve"] is True
         else:
-            assert "dcode_auto_approve" not in stream_metadata
+            assert "zjcode_auto_approve" not in stream_metadata
 
 
 class TestNonInteractivePrompt:
@@ -1714,7 +1714,7 @@ class TestMaxTurns:
     ) -> None:
         """Trust remembered interactively must not opt a headless run in.
 
-        The operator of a `dcode -n` run may never have seen the interactive
+        The operator of a `zjcode -n` run may never have seen the interactive
         prompt, so only the explicit flag may enable repository hooks.
         """
         from deepagents_code.hooks import trust as trust_module

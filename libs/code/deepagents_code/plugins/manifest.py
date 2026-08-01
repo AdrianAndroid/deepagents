@@ -246,7 +246,7 @@ def _existing_component_path(path: Path, plugin_root: Path) -> tuple[Path, ...]:
 def _unsupported_component_dirs(
     plugin_root: Path,
 ) -> tuple[UnsupportedComponent, ...]:
-    """Return present component dirs that deepagents-code does not load."""
+    """Return present component dirs that zjcode does not load."""
     found: list[UnsupportedComponent] = []
     for name in _UNSUPPORTED_COMPONENT_DIRS:
         path = plugin_root / name

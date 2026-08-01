@@ -1558,7 +1558,7 @@ class TestGetSystemPromptNonInteractive:
         assert "interactive TUI" in prompt
 
     def test_prompt_omits_todo_guidance(self) -> None:
-        """Todos are opt-in in the SDK, so dcode's prompt must not reference them.
+        """Todos are opt-in in the SDK, so zjcode's prompt must not reference them.
 
         Covers both modes and guards against leftover placeholders once the
         `{todo_list_section}`/`{todo_guidance}` wiring is gone.
@@ -2591,7 +2591,7 @@ class TestCreateCliAgentProjectContext:
     ) -> tuple[Mock, Path]:
         """Build a shell-enabled CLI agent and return the `LocalShellBackend` mock.
 
-        The agent's `deepagents-code` override is placed in `os.environ` so the
+        The agent's `zjcode` override is placed in `os.environ` so the
         returned `call_args` reflect how the user's original `LANGSMITH_PROJECT`
         is restored or dropped for shell commands.
 
@@ -2632,7 +2632,7 @@ class TestCreateCliAgentProjectContext:
         mock_agent = Mock()
         mock_agent.with_config.return_value = mock_agent
         mock_backend = Mock()
-        monkeypatch.setenv("LANGSMITH_PROJECT", "deepagents-code")
+        monkeypatch.setenv("LANGSMITH_PROJECT", "zjcode")
 
         fake_model = _make_fake_chat_model()
         with (
@@ -2662,7 +2662,7 @@ class TestCreateCliAgentProjectContext:
         """Shell backend root follows the cwd; agent override is dropped.
 
         With no user `LANGSMITH_PROJECT` (`user_langchain_project is None`),
-        the agent's `deepagents-code` override must not leak into the shell
+        the agent's `zjcode` override must not leak into the shell
         env — it is popped so the user's code does not trace into the agent's
         project.
         """
@@ -3861,7 +3861,7 @@ class TestCreateCliAgentFsToolsWiring:
 
         `factory` records each call's kwargs and returns a *real*
         `FilesystemMiddleware`, so `isinstance` checks on the agent's middleware
-        still hold while tests assert dcode's actual contract — the `tools=` it
+        still hold while tests assert zjcode's actual contract — the `tools=` it
         passes — instead of the SDK-private `_enabled_tools` attribute (which an
         SDK-internal rename could silently break).
         """
@@ -3893,7 +3893,7 @@ class TestCreateCliAgentFsToolsWiring:
 
         The other tests in this class assert what `create_cli_agent` *passes*
         to `create_deep_agent`; they trust the SDK to replace its own default
-        `FilesystemMiddleware` with dcode's restricted one (matched by `.name`)
+        `FilesystemMiddleware` with zjcode's restricted one (matched by `.name`)
         rather than append a second, unrestricted instance that would win. This
         exercises the real SDK merge so that contract fails loudly here if it
         ever changes, instead of silently leaving the restriction inert.
@@ -3996,7 +3996,7 @@ class TestCreateCliAgentFsToolsWiring:
             m for m in kwargs["middleware"] if isinstance(m, FilesystemMiddleware)
         ]
         assert len(fs_middleware) == 1
-        # dcode's contract: it constructs each allowlist FS middleware with the
+        # zjcode's contract: it constructs each allowlist FS middleware with the
         # exact tool list. Asserting the ctor `tools=` kwarg avoids coupling to
         # the SDK-private `_enabled_tools`. Filter to allowlist-driven
         # constructions (those passing `custom_tool_descriptions`, which only the
@@ -4075,8 +4075,8 @@ class TestCreateCliAgentFsToolsWiring:
         """An explicit allowlist narrows the *effective* filesystem tool set.
 
         The sibling wiring tests mock `create_deep_agent` and assert only the
-        `tools=` kwarg dcode forwards. This one reads the `FilesystemMiddleware`
-        instances dcode actually constructs — on the main agent and on the
+        `tools=` kwarg zjcode forwards. This one reads the `FilesystemMiddleware`
+        instances zjcode actually constructs — on the main agent and on the
         injected `general-purpose` subagent — and asserts their model-visible
         `.tools` contain exactly the allowlist and none of the disallowed names.
         `.tools` is public and already omits disallowed tools, so this pins the
@@ -4135,7 +4135,7 @@ class TestCreateCliAgentFsToolsWiring:
     ) -> None:
         """The auto-added `general-purpose` subagent inherits the restriction.
 
-        dcode always supplies its own explicit `general-purpose` spec (so the
+        zjcode always supplies its own explicit `general-purpose` spec (so the
         SDK's default-subagent inheritance never fires), so the restriction
         must be injected into that subagent's own `middleware` list directly,
         otherwise `task` could bypass `--allow-fs-tools` entirely.
@@ -4363,7 +4363,7 @@ class TestCreateCliAgentFsToolsWiring:
         """A compiled subagent can't carry injected middleware → fail loud.
 
         `_inject_fs_tools_into_subagents` cannot enforce the allowlist on a
-        `CompiledSubAgent` (its `middleware` key is ignored by the SDK). dcode
+        `CompiledSubAgent` (its `middleware` key is ignored by the SDK). zjcode
         never adds one today, but the guard must raise rather than silently
         delegate `task` to it with an unrestricted filesystem.
         """
@@ -4436,11 +4436,11 @@ class TestCreateCliAgentFsToolsWiring:
 
 
 class TestAutoModeSubagentHITLWiring:
-    """Auto-mode async HITL reaches every dcode subagent stack.
+    """Auto-mode async HITL reaches every zjcode subagent stack.
 
     These tests capture the `create_deep_agent` kwargs and assert that, in Auto
     mode, the async approval middleware reaches both custom subagents and the
-    general-purpose subagent that dcode auto-adds.
+    general-purpose subagent that zjcode auto-adds.
     """
 
     @staticmethod
@@ -4478,7 +4478,7 @@ class TestAutoModeSubagentHITLWiring:
     ) -> dict[str, Any]:
         """Build a default agent + custom subagent; capture `create_deep_agent` kwargs.
 
-        Returns the kwargs dcode forwards to `create_deep_agent` so callers can
+        Returns the kwargs zjcode forwards to `create_deep_agent` so callers can
         assert on both the main `middleware` list and each `subagents` spec.
         `subagent_model` sets the custom subagent's `model:` frontmatter, which
         drives the `has_explicit_model` branch in `_subagent_cli_middleware`.
@@ -4705,7 +4705,7 @@ class TestGetAvailableAgentNames:
     def test_ignores_app_owned_dirs_even_with_marker(self, tmp_path: Path) -> None:
         """Reserved app dirs stay out of the picker even if stamped with `AGENTS.md`.
 
-        A invocation like `dcode -a plugins` creates the memory marker inside
+        A invocation like `zjcode -a plugins` creates the memory marker inside
         the app-owned directory. The reserved-name denylist must still exclude
         it so the picker never offers app state as a switchable agent
         (which would also invite destructive `agents reset`).

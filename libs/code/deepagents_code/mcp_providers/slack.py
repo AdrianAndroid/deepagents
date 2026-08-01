@@ -1,7 +1,7 @@
 """Slack-hosted MCP OAuth provider.
 
 Slack's hosted MCP endpoint uses the Authorization Code flow with a
-hardcoded public client ID and a fixed pre-registered loopback redirect
+harzjcoded public client ID and a fixed pre-registered loopback redirect
 URI (`http://localhost:3118/callback`). The local callback server listens
 on that port so the browser redirect completes automatically. An optional
 `team` query parameter selects the workspace to install the app into.
@@ -85,7 +85,7 @@ async def _prompt_slack_team(ui: OAuthInteraction) -> str | None:
 
 
 async def _preseed_slack_client_info(storage: FileTokenStorage) -> None:
-    """Write the hardcoded Slack `client_info` to `storage` if not current."""
+    """Write the harzjcoded Slack `client_info` to `storage` if not current."""
     existing = await storage.get_client_info()
     redirect_uris = existing.redirect_uris if existing is not None else None
     current_redirect = str(redirect_uris[0]) if redirect_uris else None
@@ -141,7 +141,7 @@ class SlackProvider(OAuthProvider):
         """
         del redirect_uri
         return OAuthClientMetadata(
-            client_name="deepagents-code",
+            client_name="zjcode",
             redirect_uris=[AnyUrl(_SLACK_REDIRECT_URI)],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],

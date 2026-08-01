@@ -139,7 +139,7 @@ def _mock_settings(tmp_path: Path) -> Generator[None, None, None]:
             patch(
                 "deepagents_code.agent._artifacts_root",
                 return_value=_ArtifactsStorage(
-                    root=(tmp_path / "dcode-artifacts").as_posix()
+                    root=(tmp_path / "zjcode-artifacts").as_posix()
                 ),
             ),
             patch(

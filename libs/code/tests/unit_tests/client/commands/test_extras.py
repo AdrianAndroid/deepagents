@@ -1,4 +1,4 @@
-"""Tests for the `dcode install` command and shared install helpers."""
+"""Tests for the `zjcode install` command and shared install helpers."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from deepagents_code.client.commands.extras import (
 
 
 class TestInstallCommandDispatch:
-    """Tests for `dcode install` dispatch and shared install helpers."""
+    """Tests for `zjcode install` dispatch and shared install helpers."""
 
     def test_missing_name_shows_help(self) -> None:
         args = argparse.Namespace(install_target=None)
@@ -42,7 +42,7 @@ class TestInstallCommandDispatch:
         install.assert_called_once_with(name="daytona", package=False, yes=True)
 
     def test_install_accepts_global_yes_and_package_flags(self) -> None:
-        """Root flags preceding the command (e.g. `dcode --yes install`) work."""
+        """Root flags preceding the command (e.g. `zjcode --yes install`) work."""
         args = argparse.Namespace(
             install_target="langchain-custom",
             install_package=False,
@@ -111,7 +111,7 @@ class TestInstallCliParsing:
     def test_parse_install(self) -> None:
         from deepagents_code.main import parse_args
 
-        with patch.object(sys, "argv", ["dcode", "install", "daytona", "--yes"]):
+        with patch.object(sys, "argv", ["zjcode", "install", "daytona", "--yes"]):
             args = parse_args()
         assert args.command == "install"
         assert args.install_target == "daytona"
@@ -124,7 +124,7 @@ class TestInstallCliParsing:
         with patch.object(
             sys,
             "argv",
-            ["dcode", "install", "langchain-custom", "--package", "--yes"],
+            ["zjcode", "install", "langchain-custom", "--package", "--yes"],
         ):
             args = parse_args()
         assert args.command == "install"
@@ -143,7 +143,7 @@ class TestInstallCliMain:
         mock_stdin.isatty.return_value = False
         mock_stdin.read.return_value = ""
         with (
-            patch.object(sys, "argv", ["dcode", "install", "quickjs", "--yes"]),
+            patch.object(sys, "argv", ["zjcode", "install", "quickjs", "--yes"]),
             patch.object(sys, "stdin", mock_stdin),
             patch("deepagents_code.main.check_cli_dependencies"),
             patch("deepagents_code.config.console", MagicMock(), create=True),

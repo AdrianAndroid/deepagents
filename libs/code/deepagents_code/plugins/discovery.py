@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_local_marketplace(path: str | Path) -> PluginMarketplace:
-    """Add a local marketplace to dcode state.
+    """Add a local marketplace to zjcode state.
 
     Args:
         path: Marketplace root directory.

@@ -114,13 +114,13 @@ def _read_marker(stderr: str, prefix: str) -> object:
     ("argv", "expected"),
     [
         (["help"], "Start interactive thread"),
-        (["agents"], "dcode agents <command>"),
-        (["skills"], "dcode skills <command>"),
-        (["threads"], "dcode threads <command>"),
-        (["mcp"], "dcode mcp <command>"),
-        (["config", "-h"], "dcode config [options]"),
-        (["auth"], "dcode auth <command>"),
-        (["tools"], "dcode tools <command>"),
+        (["agents"], "zjcode agents <command>"),
+        (["skills"], "zjcode skills <command>"),
+        (["threads"], "zjcode threads <command>"),
+        (["mcp"], "zjcode mcp <command>"),
+        (["config", "-h"], "zjcode config [options]"),
+        (["auth"], "zjcode auth <command>"),
+        (["tools"], "zjcode tools <command>"),
     ],
 )
 def test_help_only_commands_skip_runtime_imports(

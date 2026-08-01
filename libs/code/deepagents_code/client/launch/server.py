@@ -37,7 +37,7 @@ _EPHEMERAL_PORT = 0
 The server is internal and ephemeral — callers reach it via `ServerProcess.url`,
 never a typed-in address — so it deliberately avoids binding the well-known
 `langgraph dev` default (2024). Leaving 2024 free lets users run their own
-`langgraph dev` projects alongside `deepagents-code` without a port collision.
+`langgraph dev` projects alongside `zjcode` without a port collision.
 """
 
 _HEALTH_POLL_INTERVAL_LOCAL = 0.1
@@ -406,7 +406,7 @@ def _server_process_group(pid: int) -> int | None:
     Returns `None` — meaning "signal only the root process" — on Windows (no
     POSIX process groups) and whenever the server is not the leader of its own
     dedicated group. As a defensive check, the `pgid == os.getpgid(0)` clause
-    also refuses to return dcode's own group, so the group handed back can never
+    also refuses to return zjcode's own group, so the group handed back can never
     be the one whose termination would take down the TUI.
 
     Args:
@@ -486,7 +486,7 @@ def _terminate_server_process(process: subprocess.Popen[Any]) -> None:
     root — so a child that outlives the `langgraph dev` root is still escalated
     to SIGKILL rather than orphaned. On Windows (or if the server is not its own
     group leader) only the root process is signaled. `_server_process_group`
-    guarantees dcode's own process group is never targeted.
+    guarantees zjcode's own process group is never targeted.
 
     Args:
         process: The running server subprocess to terminate.

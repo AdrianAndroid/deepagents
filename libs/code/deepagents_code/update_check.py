@@ -1,4 +1,4 @@
-"""Update lifecycle for `deepagents-code`.
+"""Update lifecycle for `zjcode`.
 
 Handles version checking against PyPI (with caching), install-method detection,
 auto-upgrade execution, config-driven opt-in/out, notification throttling, and
@@ -43,7 +43,7 @@ from deepagents_code.model_config import DEFAULT_CONFIG_PATH, DEFAULT_STATE_DIR
 logger = logging.getLogger(__name__)
 
 CACHE_FILE: Path = DEFAULT_STATE_DIR / "latest_version.json"
-"""On-disk cache of the latest published dcode/SDK versions and SDK release times.
+"""On-disk cache of the latest published zjcode/SDK versions and SDK release times.
 
 Populated by `get_latest_version`; reads short-circuit on the cached payload
 when it is younger than `CACHE_TTL`. SDK upload timestamps are stored under
@@ -81,7 +81,7 @@ _RELEASE_PRERELEASE_PINS_KEY = "release_prerelease_pins"
 """`CACHE_FILE` key mapping a release version to its targeted pre-release pins.
 
 Values are lists of exact pin strings (e.g. `["deepagents==0.7.0a7"]`) that a
-stable `deepagents-code` release mandates as direct, unconditional dependencies.
+stable `zjcode` release mandates as direct, unconditional dependencies.
 An empty list means the release needs no pre-release admission.
 
 This intentionally replaces (rather than reuses) the older
@@ -107,18 +107,18 @@ _UV_TARGETED_PRERELEASE_STRATEGY: UvPrereleaseStrategy = "if-necessary-or-explic
 Unlike the global `allow` strategy, `if-necessary-or-explicit` only admits a
 pre-release when a constraint pins it exactly (explicit) or no stable release
 can satisfy the requirement (if-necessary). Combined with a constraints file
-listing the exact SDK pin, it lets a stable dcode target install its required
+listing the exact SDK pin, it lets a stable zjcode target install its required
 pre-release dependency without widening the candidate set for unrelated
 optional providers — the bug behind #4524, where a global `allow` pulled in an
 unbuildable `litellm` RC.
 """
 
-_PRERELEASE_CONSTRAINTS_FILE_PREFIX = "dcode-prereleases-"
+_PRERELEASE_CONSTRAINTS_FILE_PREFIX = "zjcode-prereleases-"
 """Temp-file prefix for the targeted pre-release uv constraints file."""
 
 InstallMethod = Literal["uv", "brew", "other", "unknown"]
 
-FALLBACK_UPGRADE_COMMAND = "uv tool install -U deepagents-code"
+FALLBACK_UPGRADE_COMMAND = "uv tool install -U zjcode"
 """Generic upgrade hint used when install-method detection fails.
 
 Callers that surface an upgrade command in user-facing text should prefer
@@ -136,23 +136,23 @@ _UPGRADE_COMMANDS: dict[InstallMethod, str] = {
     # Use `uv tool install -U` instead of `uv tool upgrade`: the latter
     # *respects* the requirement string baked into the uv tool receipt by the
     # original install (or by any prior `dependency_refresh_command` that
-    # wrote `deepagents-code==<old_version>` into the receipt). When that
+    # wrote `zjcode==<old_version>` into the receipt). When that
     # requirement is pinned, `uv tool upgrade` "succeeds" but re-installs the
     # same pinned version, silently leaving the user behind latest. A bare
-    # `uv tool install -U deepagents-code` rewrites the receipt's requirement
-    # to an unpinned `deepagents-code` and re-resolves to the latest stable
+    # `uv tool install -U zjcode` rewrites the receipt's requirement
+    # to an unpinned `zjcode` and re-resolves to the latest stable
     # release, which is what users running `/update` actually want.
     # `dependency_refresh_command` builds the inverse command for the
     # explicit "stay on this version, refresh deps" flow.
     "uv": FALLBACK_UPGRADE_COMMAND,
-    "brew": "brew upgrade deepagents-code",
+    "brew": "brew upgrade zjcode",
 }
 """Upgrade commands keyed by install method.
 
 `perform_upgrade` runs only the command matching the detected install method;
 no fallback chain. Unknown non-editable installs are refused rather than
 upgraded with a different package manager, because that can update a separate
-environment from the one currently providing `dcode`.
+environment from the one currently providing `zjcode`.
 """
 
 _UV_PRERELEASE_UPGRADE_COMMAND = f"{FALLBACK_UPGRADE_COMMAND} --prerelease allow"
@@ -165,7 +165,7 @@ reason documented on `_UPGRADE_COMMANDS`.
 _PRERELEASE_UNSUPPORTED_MESSAGE = (
     "Pre-release updates aren't supported for this install. Reinstall with "
     "pre-releases enabled:\n"
-    '  curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_PRERELEASE="allow" bash'
+    '  curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_PRERELEASE="allow" bash'
 )
 """User-facing reason a pre-release upgrade is refused on non-uv installs.
 
@@ -179,7 +179,7 @@ _UPGRADE_TIMEOUT = 120  # seconds
 _TERMINATE_WAIT_TIMEOUT = 5  # seconds
 """Cap on reaping a killed install subprocess so cleanup cannot hang launch."""
 
-INSTALL_SCRIPT_COMMAND = "curl -LsSf https://langch.in/dcode | bash"
+INSTALL_SCRIPT_COMMAND = "curl -LsSf https://langch.in/zjcode | bash"
 """Promoted public install command for Deep Agents Code."""
 
 UPDATE_LOG_DIR: Path = DEFAULT_STATE_DIR / "update_logs"
@@ -227,7 +227,7 @@ def is_installed_version_at_least(version: str) -> bool:
     try:
         from importlib.metadata import PackageNotFoundError, version as pkg_version
 
-        installed = _parse_version(pkg_version("deepagents-code"))
+        installed = _parse_version(pkg_version("zjcode"))
         target = _parse_version(version)
     except (InvalidVersion, PackageNotFoundError):
         return False
@@ -374,7 +374,7 @@ def _canonical_prerelease_pin(raw: object) -> str | None:
 
     Marker-bearing pins are intentionally out of the supported contract: the uv
     tool receipt may target a different interpreter than the one currently
-    running dcode, so evaluating `python_version`/`sys_platform` markers here
+    running zjcode, so evaluating `python_version`/`sys_platform` markers here
     could resolve them against the wrong environment. Rather than guess, the
     initial contract is limited to unconditional exact pins (which covers the
     real-world `deepagents==0.7.0a7` SDK pin); widening it later must evaluate
@@ -531,7 +531,7 @@ def get_latest_version(
     bypass_cache: bool = False,
     include_prereleases: bool = False,
 ) -> str | None:
-    """Fetch the latest deepagents-code version from PyPI, with caching.
+    """Fetch the latest zjcode version from PyPI, with caching.
 
     Results are cached to `CACHE_FILE` to avoid repeated network calls.
     The cache stores both the latest stable and pre-release versions so a
@@ -569,7 +569,7 @@ def get_latest_version(
     except ImportError:
         logger.warning(
             "requests package not installed — update checks disabled. "
-            "Install with: uv tool install --reinstall -U deepagents-code "
+            "Install with: uv tool install --reinstall -U zjcode "
             "--with requests"
         )
         return cached_version
@@ -646,7 +646,7 @@ def release_prerelease_pins(
 ) -> list[str]:
     """Return the targeted pre-release pins installing `version` requires.
 
-    A stable `deepagents-code` release may mandate an exact pre-release
+    A stable `zjcode` release may mandate an exact pre-release
     dependency (for example `deepagents==0.7.0a7`). This resolves those pins from
     the release's PyPI metadata so command builders can pass them to uv as
     first-party constraints — admitting *only* the named pre-release rather than
@@ -654,7 +654,7 @@ def release_prerelease_pins(
     allow`.
 
     Args:
-        version: `deepagents-code` version to inspect.
+        version: `zjcode` version to inspect.
         bypass_cache: Skip cached release metadata and fetch PyPI directly.
 
     Returns:
@@ -753,7 +753,7 @@ def release_requires_prereleases(
     pre-release dependency.
 
     Args:
-        version: `deepagents-code` version to inspect.
+        version: `zjcode` version to inspect.
         bypass_cache: Skip cached release metadata and fetch PyPI directly.
     """
     return bool(release_prerelease_pins(version, bypass_cache=bypass_cache))
@@ -1221,7 +1221,7 @@ def is_update_available(
     bypass_cache: bool = False,
     include_prereleases: bool | None = None,
 ) -> tuple[bool, str | None]:
-    """Check whether a newer version of deepagents-code is available.
+    """Check whether a newer version of zjcode is available.
 
     When the installed version is a pre-release (e.g. `0.0.35a1`),
     pre-release versions on PyPI are included in the comparison so alpha
@@ -1310,7 +1310,7 @@ def _resolve_include_prereleases(
 
 
 def detect_install_method() -> InstallMethod:
-    """Detect how `deepagents-code` was installed.
+    """Detect how `zjcode` was installed.
 
     Checks `sys.prefix` against known paths for uv and Homebrew.
 
@@ -1342,7 +1342,7 @@ def upgrade_command(
     include_prereleases: bool | None = None,
     version: str | None = None,
 ) -> str:
-    """Return the shell command to upgrade `deepagents-code`.
+    """Return the shell command to upgrade `zjcode`.
 
     Falls back to the documented uv command for display-only guidance.
 
@@ -1354,11 +1354,11 @@ def upgrade_command(
             `None`, follows the installed version's channel. When `True`,
             returns the uv pre-release command regardless of `method`, since
             only uv can be steered onto the pre-release channel.
-        version: Optional exact `deepagents-code` version pin for uv guidance.
+        version: Optional exact `zjcode` version pin for uv guidance.
     """
     include_prereleases = _resolve_include_prereleases(include_prereleases)
     if version is not None:
-        requirement = _dcode_extras_requirement((), version=version)
+        requirement = _zjcode_extras_requirement((), version=version)
         cmd = f"uv tool install -U {requirement}"
         if include_prereleases:
             cmd += " --prerelease allow"
@@ -1400,11 +1400,11 @@ _DEPENDENCY_REFRESH_UNSUPPORTED: dict[InstallMethod, str] = {
     "unknown": "Editable install detected — skipping dependency refresh.",
     "brew": (
         "Homebrew install detected — dependency-only refresh is not "
-        "supported without upgrading deepagents-code."
+        "supported without upgrading zjcode."
     ),
     "other": (
         "Unsupported install method detected — cannot refresh dependencies "
-        "without knowing which environment provides `dcode`."
+        "without knowing which environment provides `zjcode`."
     ),
 }
 """Why each non-uv install method can't do a dependency-only refresh."""
@@ -1415,8 +1415,8 @@ def dependency_refresh_supported(
 ) -> tuple[bool, str | None]:
     """Return whether a dependency-only refresh is possible for the install.
 
-    A dependency refresh reinstalls the *current* `deepagents-code` version with
-    upgraded dependency resolution (`uv tool install -U deepagents-code==<v>`).
+    A dependency refresh reinstalls the *current* `zjcode` version with
+    upgraded dependency resolution (`uv tool install -U zjcode==<v>`).
     Only uv-managed installs can express that without crossing to a newer app
     version, so callers should refuse before prompting or shelling out. This is
     the single source of truth for both the gate in the TUI and the refusal in
@@ -1438,9 +1438,9 @@ def dependency_refresh_supported(
 
 @dataclass(frozen=True)
 class ShadowedDcode:
-    """A different dcode entry point is winning on PATH than the one we upgraded.
+    """A different zjcode entry point is winning on PATH than the one we upgraded.
 
-    Returned by `detect_shadowed_dcode` after a successful upgrade so the TUI can
+    Returned by `detect_shadowed_zjcode` after a successful upgrade so the TUI can
     warn the user that re-launching will pick up the wrong binary. The most
     common cause is a pre-uv install (e.g. a leftover from a previous
     `pipx`/`pip`-based install) earlier on `PATH` than the uv tool shims.
@@ -1453,8 +1453,8 @@ class ShadowedDcode:
     """
 
     shadowing_bin: Path
-    """Absolute path to the `dcode` (or `deepagents-code`) binary the user's
-    `PATH` currently resolves first — the file their next `dcode` will run.
+    """Absolute path to the `zjcode` (or `zjcode`) binary the user's
+    `PATH` currently resolves first — the file their next `zjcode` will run.
 
     Reported as the un-followed `shutil.which` result rather than its symlink
     target, since that's the file the user needs to either delete or demote
@@ -1473,7 +1473,7 @@ class ShadowedDcode:
 
         If the shadowing binary already lives in the upgraded bin dir there is
         no shadow, and a warning built from it would tell the user a binary
-        shadows itself. `detect_shadowed_dcode` returns `None` in that case, so
+        shadows itself. `detect_shadowed_zjcode` returns `None` in that case, so
         this only fires on a misconstructed instance.
 
         Raises:
@@ -1488,16 +1488,16 @@ class ShadowedDcode:
 
     @property
     def upgraded_bin(self) -> Path:
-        """Absolute path to the upgraded `dcode` shim uv installed.
+        """Absolute path to the upgraded `zjcode` shim uv installed.
 
-        Keeps the `dcode` entry-point name owned by the type rather than
+        Keeps the `zjcode` entry-point name owned by the type rather than
         re-derived at each call site (mirrors `DependencyChange.kind`).
         """
-        return self.upgraded_bin_dir / "dcode"
+        return self.upgraded_bin_dir / "zjcode"
 
 
 def _uv_tool_bin_dir() -> Path | None:
-    """Return the bin directory uv installed the running `dcode` shim into.
+    """Return the bin directory uv installed the running `zjcode` shim into.
 
     Mirrors uv's documented executable-directory precedence so a custom
     layout (e.g. `XDG_BIN_HOME` set on Linux) is compared against the same
@@ -1563,19 +1563,19 @@ def _uv_tool_bin_dir() -> Path | None:
     return None
 
 
-def detect_shadowed_dcode() -> ShadowedDcode | None:
-    """Return the shadowing dcode entry point on the user's PATH, if any.
+def detect_shadowed_zjcode() -> ShadowedDcode | None:
+    """Return the shadowing zjcode entry point on the user's PATH, if any.
 
     After a successful `uv tool upgrade`, the upgraded binary only takes effect
     on the next launch if the user's `PATH` resolves to uv's tool bin dir for
-    `dcode` (and `deepagents-code`). A pre-uv install earlier on `PATH` will
+    `zjcode` (and `zjcode`). A pre-uv install earlier on `PATH` will
     silently win and report the old version, which looks like "the upgrade
     didn't work" to the user.
 
     This compares each supported console script against uv's tool bin dir. A
     mismatch means a different binary will run next launch for that entry point.
 
-    Caveat: a `dcode` symlink that lives in some unrelated bin dir but
+    Caveat: a `zjcode` symlink that lives in some unrelated bin dir but
     points *into* the upgraded tool venv (e.g. a manually-created
     convenience symlink) is reported as shadowing even though the next
     launch would actually run the upgraded entry point. Comparing
@@ -1596,14 +1596,14 @@ def detect_shadowed_dcode() -> ShadowedDcode | None:
         return None
     # Check every supported entry point. One healthy command name does not
     # prove another command name cannot still be shadowed earlier on PATH.
-    for name in ("dcode", "deepagents-code"):
+    for name in ("zjcode",):
         resolved = shutil.which(name)
         if resolved is None:
             continue
         # Compare the *PATH-entry directory* against uv's bin dir, NOT the
         # symlink target. uv exposes its tool entry points as symlinks under
-        # the user's bin dir (e.g. `~/.local/bin/dcode` -> the tool venv at
-        # `~/.local/share/uv/tools/deepagents-code/bin/dcode`). Following the
+        # the user's bin dir (e.g. `~/.local/bin/zjcode` -> the tool venv at
+        # `~/.local/share/uv/tools/zjcode/bin/zjcode`). Following the
         # link would make every healthy uv install look shadowed, because the
         # resolved parent is the tool venv's bin dir rather than the
         # PATH-visible one. Take the parent of the un-followed `which`
@@ -1619,7 +1619,7 @@ def detect_shadowed_dcode() -> ShadowedDcode | None:
             # Couldn't canonicalize the PATH-entry directory (e.g. a stale
             # symlink, a vanished mount). Returning `None` here would
             # silently hide a real shadow, so continue to the next candidate
-            # name if any; if this was the last (`deepagents-code`), the loop
+            # name if any; if this was the last (`zjcode`), the loop
             # falls through to `None` — an indeterminate result we'd rather
             # surface to a developer than mask, hence `warning`, not `debug`.
             logger.warning(
@@ -1641,28 +1641,28 @@ def detect_shadowed_dcode() -> ShadowedDcode | None:
     return None
 
 
-def detect_shadowed_dcode_safe() -> ShadowedDcode | None:
-    """Best-effort `detect_shadowed_dcode` that never raises.
+def detect_shadowed_zjcode_safe() -> ShadowedDcode | None:
+    """Best-effort `detect_shadowed_zjcode` that never raises.
 
     The shadow check only ever runs to decorate an already-successful upgrade,
     so a defect in detection — or an unexpected error escaping the narrow
-    `OSError` guards inside `detect_shadowed_dcode` — must not turn a working
+    `OSError` guards inside `detect_shadowed_zjcode` — must not turn a working
     upgrade into a user-facing failure. Any unexpected exception is logged and
     treated as "no shadow detected", matching the fail-open bias the detector
     already applies internally.
 
     Returns:
-        Whatever `detect_shadowed_dcode` returns, or `None` if it raised.
+        Whatever `detect_shadowed_zjcode` returns, or `None` if it raised.
     """
     try:
-        return detect_shadowed_dcode()
+        return detect_shadowed_zjcode()
     except Exception:
         logger.warning("Shadow detection failed after upgrade", exc_info=True)
         return None
 
 
-def format_shadowed_dcode_warning(shadow: ShadowedDcode) -> str:
-    """Render a user-facing warning for a shadowed-dcode situation.
+def format_shadowed_zjcode_warning(shadow: ShadowedDcode) -> str:
+    """Render a user-facing warning for a shadowed-zjcode situation.
 
     Shared by the `/update` slash command, the update-notification "Install
     now" action, and the pre-launch auto-update path so the wording stays
@@ -1670,29 +1670,29 @@ def format_shadowed_dcode_warning(shadow: ShadowedDcode) -> str:
 
     Args:
         shadow: The shadowing-binary description returned by
-            `detect_shadowed_dcode`.
+            `detect_shadowed_zjcode`.
 
     Returns:
         A plain-text, multi-line warning suitable for either the TUI message
             stream or a Rich `console.print`.
     """
-    fix_command = format_shadowed_dcode_fix_command(shadow)
+    fix_command = format_shadowed_zjcode_fix_command(shadow)
     indented_command = fix_command.replace("\n", "\n  ")
     return (
-        "Update installed, but another `dcode` is earlier on your PATH and "
+        "Update installed, but another `zjcode` is earlier on your PATH and "
         "will keep running the old version on relaunch:\n"
         f"  Shadowing binary: {shadow.shadowing_bin}\n"
         f"  Upgraded shim:    {shadow.upgraded_bin}\n"
-        "After closing dcode, run this to make the upgraded shim win in this "
+        "After closing zjcode, run this to make the upgraded shim win in this "
         "terminal:\n"
         f"  {indented_command}\n"
-        "Then relaunch dcode. To make the fix permanent, add the PATH change "
-        "to your shell profile, or uninstall the older dcode if you no longer "
+        "Then relaunch zjcode. To make the fix permanent, add the PATH change "
+        "to your shell profile, or uninstall the older zjcode if you no longer "
         "need it."
     )
 
 
-def format_shadowed_dcode_fix_command(shadow: ShadowedDcode) -> str:
+def format_shadowed_zjcode_fix_command(shadow: ShadowedDcode) -> str:
     """Return a session-scoped shell command to prefer the upgraded shim.
 
     The command targets the shell that matches the current platform: PowerShell
@@ -1701,7 +1701,7 @@ def format_shadowed_dcode_fix_command(shadow: ShadowedDcode) -> str:
 
     Args:
         shadow: The shadowing-binary description returned by
-            `detect_shadowed_dcode`.
+            `detect_shadowed_zjcode`.
 
     Returns:
         A copy-pasteable shell command that updates only the current terminal
@@ -1961,7 +1961,7 @@ async def perform_upgrade(
     include_prereleases: bool | None = None,
     target_version: str | None = None,
 ) -> tuple[bool, str]:
-    """Attempt to upgrade `deepagents-code` using the detected install method.
+    """Attempt to upgrade `zjcode` using the detected install method.
 
     Only tries the detected method — does not fall back to other package
     managers to avoid cross-environment contamination.
@@ -1974,7 +1974,7 @@ async def perform_upgrade(
             release's dependency metadata. Pre-release upgrades require the uv
             install method; returns failure otherwise.
         target_version: Release version being installed, used to detect stable
-            dcode releases that intentionally depend on pre-release packages.
+            zjcode releases that intentionally depend on pre-release packages.
 
     Returns:
         `(success, output)` — *output* is the combined stdout/stderr.
@@ -1991,19 +1991,19 @@ async def perform_upgrade(
     if method == "other":
         return False, (
             "Unsupported install method detected — cannot auto-update without "
-            "knowing which environment provides `dcode`. Reinstall with "
-            "`uv tool install -U deepagents-code` or upgrade with the package "
+            "knowing which environment provides `zjcode`. Reinstall with "
+            "`uv tool install -U zjcode` or upgrade with the package "
             "manager originally used for this install."
         )
     resolved_include_prereleases = _resolve_include_prereleases(include_prereleases)
-    # Targeted pre-release admission: a *stable* dcode target that mandates an
+    # Targeted pre-release admission: a *stable* zjcode target that mandates an
     # exact pre-release dependency (e.g. `deepagents==0.7.0a7`). Rather than opt
     # the whole resolution into pre-releases with a global `--prerelease allow`
     # — which let an unrelated optional provider float to an unbuildable RC in
     # #4524 — pin that dependency in a uv constraints file and use the scoped
     # `if-necessary-or-explicit` strategy so only the named pre-release is
     # admitted. Kept separate from the explicit pre-release *channel* below,
-    # where the user deliberately follows dcode's own pre-release feed.
+    # where the user deliberately follows zjcode's own pre-release feed.
     targeted_pins: list[str] = []
     pin_target_version: str | None = None
     if not resolved_include_prereleases and include_prereleases is None:
@@ -2127,10 +2127,10 @@ async def perform_dependency_refresh(
     log_path: Path | None = None,
     include_prereleases: bool | None = None,
 ) -> tuple[bool, str]:
-    """Refresh dependencies while keeping `deepagents-code` on this version.
+    """Refresh dependencies while keeping `zjcode` on this version.
 
-    Runs `uv tool install -U deepagents-code==<current>` instead of
-    `uv tool upgrade deepagents-code`, so compatible dependency releases can be
+    Runs `uv tool install -U zjcode==<current>` instead of
+    `uv tool upgrade zjcode`, so compatible dependency releases can be
     picked up without crossing to a newer app version. Only uv-managed installs
     are supported; other install methods cannot safely express this operation.
 
@@ -2177,7 +2177,7 @@ async def perform_dependency_refresh_dry_run(
 
     `uv tool install` has no `--dry-run`, so this targets the running tool
     environment with `uv pip install --dry-run --python <sys.executable>`. It
-    uses the same pinned `deepagents-code` requirement, installed extras, and
+    uses the same pinned `zjcode` requirement, installed extras, and
     preserved `--with` packages as the real refresh command.
 
     Args:
@@ -2427,7 +2427,7 @@ def _uv_tool_python(tool_root: Path | None = None) -> str | None:
 
 def _uv_tool_with_packages(
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
     tool_root: Path | None = None,
 ) -> tuple[str, ...]:
     """Return package names recorded as uv tool `--with` requirements.
@@ -2487,17 +2487,17 @@ def _uv_tool_with_packages(
     return tuple(sorted(packages))
 
 
-def _dcode_extras_requirement(
+def _zjcode_extras_requirement(
     extras: Iterable[str],
     *,
     version: str | None = None,
 ) -> str:
-    """Return the validated `deepagents-code[...]` requirement for a uv install.
+    """Return the validated `zjcode[...]` requirement for a uv install.
 
     Shared by the extra- and package-install commands so already-installed
-    extras survive a `uv tool install` reinstall — a bare `deepagents-code`
+    extras survive a `uv tool install` reinstall — a bare `zjcode`
     request would replace the tool and drop them. Returns plain
-    `deepagents-code` when no extras or version are selected; otherwise the
+    `zjcode` when no extras or version are selected; otherwise the
     shell-quoted requirement form, which keeps zsh from globbing brackets.
 
     Args:
@@ -2506,11 +2506,11 @@ def _dcode_extras_requirement(
             caller-supplied extras (`install_extras_command`) and a
             redundant re-check for extras read from distribution metadata
             (`install_package_command`).
-        version: Optional exact `deepagents-code` version pin.
+        version: Optional exact `zjcode` version pin.
 
     Returns:
-        Shell-safe requirement token, e.g. `deepagents-code` or
-            `'deepagents-code[baseten,nvidia]==1.0.0'`.
+        Shell-safe requirement token, e.g. `zjcode` or
+            `'zjcode[baseten,nvidia]==1.0.0'`.
 
     Raises:
         ValueError: If any extra fails PEP 508 validation.
@@ -2528,11 +2528,11 @@ def _dcode_extras_requirement(
         try:
             parsed = Version(version)
         except InvalidVersion as exc:
-            msg = f"Invalid deepagents-code version {version!r}"
+            msg = f"Invalid zjcode version {version!r}"
             raise ValueError(msg) from exc
         version_suffix = f"=={parsed}"
     extras_part = f"[{','.join(names)}]" if names else ""
-    requirement = f"deepagents-code{extras_part}{version_suffix}"
+    requirement = f"zjcode{extras_part}{version_suffix}"
     if not names and version is None:
         return requirement
     return shlex.quote(requirement)
@@ -2552,7 +2552,7 @@ def _uv_tool_install_command(
     """Return the receipt-preserving `uv tool install -U` command.
 
     Args:
-        version: Optional exact `deepagents-code` version pin.
+        version: Optional exact `zjcode` version pin.
         include_prereleases: Whether to include alpha/beta/rc releases. When
             `None`, follows the installed version's channel. Ignored when
             `constraints_path` or `prerelease_strategy` is set (targeted
@@ -2600,9 +2600,9 @@ def _uv_tool_install_command(
     extras = set(installed_extra_names(distribution_name, strict=True))
     extras.update(extras_to_add)
     try:
-        requirement = _dcode_extras_requirement(extras, version=version)
+        requirement = _zjcode_extras_requirement(extras, version=version)
     except ValueError as exc:
-        if str(exc).startswith("Invalid deepagents-code version"):
+        if str(exc).startswith("Invalid zjcode version"):
             raise
         msg = f"Distribution metadata yielded an invalid extra name: {exc}"
         raise ExtrasIntrospectionError(msg) from exc
@@ -2710,23 +2710,23 @@ def _prerelease_constraints_file(pins: Sequence[str]) -> Iterator[Path | None]:
 def upgrade_install_command(
     *,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
     version: str | None = None,
     constraints_path: Path | None = None,
     prerelease_strategy: UvPrereleaseStrategy | None = None,
 ) -> str:
-    """Return the uv command that upgrades dcode while clearing stale pins.
+    """Return the uv command that upgrades zjcode while clearing stale pins.
 
     Built specifically to avoid the `uv tool upgrade` receipt-pin trap: when
-    the tool was originally installed via `uv tool install deepagents-code==X.Y.Z`
+    the tool was originally installed via `uv tool install zjcode==X.Y.Z`
     — or when a prior `dependency_refresh_command` rewrote the receipt with a
-    version-pinned requirement — `uv tool upgrade deepagents-code` will only
+    version-pinned requirement — `uv tool upgrade zjcode` will only
     re-resolve *within* that pin and silently keep the user on the same
-    version. Re-running `uv tool install -U deepagents-code[<extras>]` (no
+    version. Re-running `uv tool install -U zjcode[<extras>]` (no
     version pin) rewrites the receipt's requirement to unpinned so the next
     upgrade can actually move forward. Callers can still pass `version` when
     the resolver must allow pre-release dependencies for a stable app target;
-    that prevents the root `deepagents-code` package from floating to a newer
+    that prevents the root `zjcode` package from floating to a newer
     app pre-release. Installed extras and `--with` packages are preserved to
     mirror `dependency_refresh_command`.
 
@@ -2767,12 +2767,12 @@ def dependency_refresh_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> str:
-    """Return the uv command that refreshes deps for the current dcode version.
+    """Return the uv command that refreshes deps for the current zjcode version.
 
     Args:
-        version: Exact `deepagents-code` version to keep installed.
+        version: Exact `zjcode` version to keep installed.
         include_prereleases: Whether to include alpha/beta/rc releases. When
             `None`, follows the installed version's channel.
         distribution_name: Name of the installed distribution to inspect for
@@ -2799,19 +2799,19 @@ def dependency_refresh_dry_run_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
     python: str | None = None,
 ) -> str:
     """Return the uv command that plans a dependency refresh without installing.
 
     Args:
-        version: Exact `deepagents-code` version to keep installed.
+        version: Exact `zjcode` version to keep installed.
         include_prereleases: Whether to include alpha/beta/rc releases. When
             `None`, follows the installed version's channel.
         distribution_name: Name of the installed distribution to inspect for
             already-installed extras and uv receipt requirements.
         python: Python executable for the target environment. Defaults to the
-            running interpreter, which is the current dcode tool environment.
+            running interpreter, which is the current zjcode tool environment.
 
     Returns:
         Shell command string suitable for execution via the shell.
@@ -2827,7 +2827,7 @@ def dependency_refresh_dry_run_command(
         msg = "Could not determine the running Python executable"
         raise ToolRequirementIntrospectionError(msg)
     extras = installed_extra_names(distribution_name, strict=True)
-    requirement = _dcode_extras_requirement(extras, version=version)
+    requirement = _zjcode_extras_requirement(extras, version=version)
     cmd = (
         "uv pip install --dry-run --python "
         f"{shlex.quote(target_python)} -U {requirement}"
@@ -2843,9 +2843,9 @@ def dependency_refresh_dry_run_command(
 def install_package_command(
     package: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> str:
-    """Return the shell command that adds a package to the dcode tool env.
+    """Return the shell command that adds a package to the zjcode tool env.
 
     The result is built for *execution* (via `perform_install_package`), not for
     display — surfacing raw `uv tool` invocations to the user is intentionally
@@ -2856,10 +2856,10 @@ def install_package_command(
 
     Delegates to `_uv_tool_install_command` (the same builder the extras path
     uses), passing the new package as a `--with` requirement. That builder folds
-    already-installed extras into the pinned `deepagents-code[...]` requirement,
+    already-installed extras into the pinned `zjcode[...]` requirement,
     and preserves the uv-managed Python interpreter and the receipt's existing
     `--with` packages. Without this, reinstalling to add a second package would
-    replace the tool with a plain `deepagents-code` (dropping extras the user
+    replace the tool with a plain `zjcode` (dropping extras the user
     added through `/install <extra>`), rebuild with only the newest `--with`
     package (dropping previously configured custom providers), or silently
     downgrade when the latest stable app depends on prerelease packages.
@@ -2902,32 +2902,32 @@ def install_package_command(
 
 
 def install_extras_command(extras: Iterable[str]) -> str:
-    """Return the install-script command that installs dcode extras.
+    """Return the install-script command that installs zjcode extras.
 
     Args:
         extras: Extra names to include in the tool reinstall. Validated by
-            `_dcode_extras_requirement`, which raises `ValueError` on any name
+            `_zjcode_extras_requirement`, which raises `ValueError` on any name
             that fails PEP 508 validation.
 
     Returns:
         Shell command string suitable for display in error messages.
     """
     names = sorted(extras)
-    _dcode_extras_requirement(names)
+    _zjcode_extras_requirement(names)
     if not names:
         return INSTALL_SCRIPT_COMMAND
     extras_env = shlex.quote(",".join(names))
     return (
-        f"curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_EXTRAS={extras_env} bash"
+        f"curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_EXTRAS={extras_env} bash"
     )
 
 
 def install_extra_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> str:
-    """Return the install-script command that adds `extra` to dcode.
+    """Return the install-script command that adds `extra` to zjcode.
 
     The promoted install path is the install script (see `scripts/install.sh`).
     This helper is display-only and avoids uv receipt introspection so
@@ -3012,11 +3012,11 @@ def safe_install_extra_recovery_command(extra: str, *, fallback: str) -> str:
 def _install_extra_uv_tool_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> str:
-    """Return the receipt-preserving uv command that installs one dcode extra.
+    """Return the receipt-preserving uv command that installs one zjcode extra.
 
-    Pins the running `deepagents-code` version and allows prerelease dependency
+    Pins the running `zjcode` version and allows prerelease dependency
     resolution so adding an extra cannot make uv backtrack to an older app release.
     Passes `reinstall=True` so the upgrade rebuilds the tool environment from
     scratch rather than patching it in place; see `_uv_tool_install_command`'s
@@ -3061,7 +3061,7 @@ def editable_extra_hint(extra: str) -> str:
     """
     return (
         "Rerun your `uv tool install --editable` command with "
-        f"`--with 'deepagents-code[{extra}]'` added so the extra is "
+        f"`--with 'zjcode[{extra}]'` added so the extra is "
         "resolved against the editable source."
     )
 
@@ -3076,7 +3076,7 @@ def editable_package_hint(package: str) -> str:
     """
     return (
         f"Add '{package}' to your editable checkout's environment (the one your "
-        "editable install of dcode runs from), then relaunch."
+        "editable install of zjcode runs from), then relaunch."
     )
 
 
@@ -3086,12 +3086,12 @@ async def perform_install_extra(
     progress: UpgradeProgressCallback | None = None,
     log_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Add `extra` to the installed dcode tool environment.
+    """Add `extra` to the installed zjcode tool environment.
 
-    Runs `uv tool install --reinstall -U 'deepagents-code[<extras>]==<current>'
+    Runs `uv tool install --reinstall -U 'zjcode[<extras>]==<current>'
     --prerelease allow`, preserving any extras that are already installed.
     Editable installs are refused — the caller should rerun their
-    `uv tool install --editable` command with `--with 'deepagents-code[<extra>]'`
+    `uv tool install --editable` command with `--with 'zjcode[<extra>]'`
     added so the extra is resolved against the editable source.
 
     Args:
@@ -3127,14 +3127,14 @@ async def perform_install_extra(
     if method == "other":
         return False, (
             "Unsupported install method detected — cannot add extras without "
-            "knowing which environment provides `dcode`. Reinstall with "
+            "knowing which environment provides `zjcode`. Reinstall with "
             f"`{install_extra_command(extra)}` to switch to a uv-managed tool "
             "install with extras."
         )
 
     if not shutil.which("uv"):
         return False, (
-            "`uv` not found on PATH. Reinstall dcode following the docs, or "
+            "`uv` not found on PATH. Reinstall zjcode following the docs, or "
             "install uv (https://docs.astral.sh/uv/) so extras can be added."
         )
 
@@ -3157,11 +3157,11 @@ async def perform_install_package(
     progress: UpgradeProgressCallback | None = None,
     log_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Add an arbitrary `package` to the installed dcode tool environment.
+    """Add an arbitrary `package` to the installed zjcode tool environment.
 
-    Runs `uv tool install --reinstall -U 'deepagents-code[<extras>]==<current>'
+    Runs `uv tool install --reinstall -U 'zjcode[<extras>]==<current>'
     --with <package> --prerelease allow`, the escape hatch for a provider whose
-    package is not a `deepagents-code` extra (e.g. a custom or in-house
+    package is not a `zjcode` extra (e.g. a custom or in-house
     `class_path` model). Already-installed extras are preserved so the reinstall
     does not drop them.
     Editable installs are refused
@@ -3196,13 +3196,13 @@ async def perform_install_package(
     if method == "brew":
         return False, (
             "Homebrew install detected — packages can't be added to a brew "
-            "install. Reinstall dcode as a uv-managed tool (see the "
+            "install. Reinstall zjcode as a uv-managed tool (see the "
             "installation docs) to enable adding packages."
         )
     if method == "other":
         return False, (
             "Unsupported install method detected — cannot add packages without "
-            "knowing which environment provides `dcode`. Reinstall dcode "
+            "knowing which environment provides `zjcode`. Reinstall zjcode "
             "as a uv-managed tool (see the installation docs) to enable "
             "adding packages."
         )
@@ -3210,7 +3210,7 @@ async def perform_install_package(
     if not shutil.which("uv"):
         return False, (
             "Package installs require uv, which was not found. Reinstall "
-            "dcode following the installation docs so packages can be "
+            "zjcode following the installation docs so packages can be "
             "added."
         )
 
@@ -3434,7 +3434,7 @@ def _note_install_baseline() -> None:
     """Pre-acknowledge the auto-update default notice for a fresh install.
 
     The migration notice (`should_announce_auto_update_default`) is intended to
-    warn users who ran dcode *before* auto-update became the opt-out default; a
+    warn users who ran zjcode *before* auto-update became the opt-out default; a
     brand-new install never experienced the old behavior, so the notice is
     meaningless to it. Call this on the first launch ever (see
     `should_show_whats_new`) so the notice never leaks into a new install — the

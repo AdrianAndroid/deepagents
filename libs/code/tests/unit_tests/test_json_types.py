@@ -23,7 +23,7 @@ def test_plugin_json_types_are_compatibility_reexports() -> None:
 
 def test_json_adapters_validate_recursive_values() -> None:
     """Cached adapters validate recursive JSON values and objects."""
-    value = {"nested": [1, True, None, {"name": "dcode"}]}
+    value = {"nested": [1, True, None, {"name": "zjcode"}]}
 
     assert JSON_VALUE_ADAPTER.validate_python(value) == value
     assert JSON_OBJECT_ADAPTER.validate_python(value) == value

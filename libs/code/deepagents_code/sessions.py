@@ -311,7 +311,7 @@ async def _table_exists(conn: aiosqlite.Connection, table: str) -> bool:
         return await cursor.fetchone() is not None
 
 
-_THREADS_LIST_INDEX = "idx_dcode_threads_list"
+_THREADS_LIST_INDEX = "idx_zjcode_threads_list"
 """Covering index that makes the `list_threads` GROUP BY an index-only scan.
 
 LangGraph's `SqliteSaver` stores each checkpoint's full state blob inline in the
@@ -683,7 +683,7 @@ def _thread_freshness(thread: ThreadInfo) -> str | None:
     writes-reconstructed `message_count` includes pending writes on the latest
     checkpoint, which in principle can change without a new checkpoint ID — so
     this token does not capture intra-checkpoint write churn. In practice that
-    is benign: dcode only mutates `messages` through the agent graph, and every
+    is benign: zjcode only mutates `messages` through the agent graph, and every
     batch of message writes culminates in a new checkpoint (each superstep,
     `aupdate_state`, interrupt, and cancellation all advance
     `latest_checkpoint_id`). The only window where a cached count can lag is
@@ -986,14 +986,14 @@ async def _load_message_counts_from_writes_batch(
     subgraph (subagent) writes under the same `thread_id` are excluded.
 
     Folding the *entire* write history (rather than walking the head
-    checkpoint's parent chain) is intentional and matches what dcode shows when
+    checkpoint's parent chain) is intentional and matches what zjcode shows when
     a thread is opened: it reads state via `aget_state` without a
     `checkpoint_id`, which applies pending writes (`apply_pending_writes=True`),
     so the latest checkpoint's not-yet-committed `messages` writes are part of
-    the user-visible list and must be counted. dcode only ever appends to the
+    the user-visible list and must be counted. zjcode only ever appends to the
     latest checkpoint (no time travel, no `checkpoint_id`-targeted
     `aupdate_state`), so histories are linear and the full fold equals the
-    head-of-chain reconstruction. A forked/abandoned branch (which dcode does
+    head-of-chain reconstruction. A forked/abandoned branch (which zjcode does
     not create) is the only case where this could over-count.
 
     Args:
@@ -1105,7 +1105,7 @@ def _count_messages_from_deltas(deltas: list[Any]) -> int:
     `add_messages` raise (the target ID may be absent at that buffer position),
     and we do not rely on unproven count-equivalence of batched removal. In
     practice the two folds still agree on the count for these histories; the
-    sequential fold simply guarantees it. Such deletes are rare in linear dcode
+    sequential fold simply guarantees it. Such deletes are rare in linear zjcode
     histories, so the common case stays on the fast path.
 
     Returns:

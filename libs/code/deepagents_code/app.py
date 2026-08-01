@@ -112,6 +112,7 @@ from deepagents_code.tui.widgets.messages import (
     ErrorMessage,
     QueuedUserMessage,
     RubricResultMessage,
+    SessionSeparator,
     SkillMessage,
     ToolCallMessage,
     ToolGroupSummary,
@@ -2209,7 +2210,18 @@ def _build_agent_error_body(
     """
     from deepagents_code.client.remote_client import agent_error_type
 
-    if agent_error_type(exc) != "PermissionDeniedError":
+    err_type = agent_error_type(exc)
+
+    if err_type == "BadRequestError":
+        return (
+            f"{text}\n\n"
+            "The request was rejected by the model provider. If you pasted an "
+            "image, it may be too large or in an unsupported format. The "
+            "failed message has been removed from the conversation so you can "
+            "continue. Try a smaller image or use `/clear` to start fresh."
+        )
+
+    if err_type != "PermissionDeniedError":
         return text
     if key_env:
         detail = (
@@ -2690,7 +2702,7 @@ class _GoalGradeObservation:
 
 
 class DeepAgentsApp(App):
-    """Main Textual application for deepagents-code."""
+    """Main Textual application for zjcode."""
 
     TITLE = "Deep Agents"
     """Textual application title."""
@@ -3132,7 +3144,7 @@ class DeepAgentsApp(App):
         self._mcp_unauthenticated = sum(
             1 for s in (mcp_server_info or []) if s.needs_attention()
         )
-        """MCP servers awaiting a `dcode mcp login` run."""
+        """MCP servers awaiting a `zjcode mcp login` run."""
 
         self._mcp_errored = sum(
             1 for s in (mcp_server_info or []) if s.status == "error"
@@ -3274,7 +3286,7 @@ class DeepAgentsApp(App):
             days = installed_days_old()
             if days is None:
                 # The cache changed between the staleness gate and this read
-                # (e.g. a concurrent `dcode` process). Drop the banner rather
+                # (e.g. a concurrent `zjcode` process). Drop the banner rather
                 # than render "installed version is None days old".
                 self._installation_stale = False
             else:
@@ -5409,7 +5421,7 @@ class DeepAgentsApp(App):
         swallowed (logged at WARNING): the affected module simply cold-loads
         on first use instead. This guard is load-bearing when the installed
         package is replaced in place mid-session — e.g. a concurrent
-        `uv tool upgrade deepagents-code`, which rewrites the tool
+        `uv tool upgrade zjcode`, which rewrites the tool
         environment's files. A module that hasn't been imported yet can be
         transiently absent on disk during that swap, and the deferred import
         then raises `ModuleNotFoundError`. Letting that propagate would crash
@@ -5601,7 +5613,7 @@ class DeepAgentsApp(App):
                 self.notify(
                     f"Update available: v{latest}{release_age}. "
                     f"Currently installed: {cli_version}{installed_age}. "
-                    "Quit and relaunch dcode to install the update "
+                    "Quit and relaunch zjcode to install the update "
                     "automatically.",
                     severity="information",
                     timeout=12,
@@ -5742,7 +5754,7 @@ class DeepAgentsApp(App):
         Parses optional `--prerelease` and `--deps` flags from the raw command
         line; any other option is rejected with a usage message. `--deps`
         re-resolves dependencies to their newest in-range versions even when
-        `deepagents-code` itself is already current.
+        `zjcode` itself is already current.
 
         Args:
             command: The raw slash-command line as typed, including any options.
@@ -5773,12 +5785,12 @@ class DeepAgentsApp(App):
             from deepagents_code.update_check import (
                 _PRERELEASE_UNSUPPORTED_MESSAGE,
                 dependency_refresh_supported,
-                detect_shadowed_dcode_safe,
+                detect_shadowed_zjcode_safe,
                 format_age_suffix,
                 format_dependency_changes,
                 format_installed_age_suffix,
                 format_release_age_parenthetical,
-                format_shadowed_dcode_warning,
+                format_shadowed_zjcode_warning,
                 is_update_available,
                 parse_dependency_changes,
                 perform_dependency_refresh_dry_run,
@@ -5845,7 +5857,7 @@ class DeepAgentsApp(App):
                         f"Already on the latest version (v{cli_version}{age_suffix}).",
                     ),
                 )
-                # dcode is current, but its dependencies may have newer in-range
+                # zjcode is current, but its dependencies may have newer in-range
                 # releases. Compute a dry-run plan first so the confirmation only
                 # appears when there are concrete updates to apply. Keep the support
                 # gate before the check so brew/other users aren't asked about an
@@ -5937,30 +5949,30 @@ class DeepAgentsApp(App):
                 self._update_available = (False, None)
                 # uv may have installed the upgraded shim into a directory that
                 # isn't first on the user's PATH (e.g. a leftover pre-uv
-                # `dcode` from a former `pipx` install). Detect that before
+                # `zjcode` from a former `pipx` install). Detect that before
                 # mounting the success line so we don't follow a green
                 # "relaunch to use the new version" with a warning that
                 # relaunching will keep the old version. Use the
                 # never-raises wrapper so a detector defect can't turn a
                 # successful upgrade into a "/update failed" message.
-                shadow = await asyncio.to_thread(detect_shadowed_dcode_safe)
+                shadow = await asyncio.to_thread(detect_shadowed_zjcode_safe)
                 if shadow is None:
                     await self._mount_message(
                         AppMessage(
-                            f"Updated to v{latest}. Quit and relaunch dcode "
+                            f"Updated to v{latest}. Quit and relaunch zjcode "
                             "to use the new version."
                         ),
                     )
                 else:
                     await self._mount_message(
-                        ErrorMessage(format_shadowed_dcode_warning(shadow)),
+                        ErrorMessage(format_shadowed_zjcode_warning(shadow)),
                     )
                 # The upgrade re-resolves the whole environment, so surface any
-                # dependency bumps that rode along with the dcode release.
+                # dependency bumps that rode along with the zjcode release.
                 dep_changes = [
                     change
                     for change in parse_dependency_changes(output)
-                    if change.name != "deepagents-code"
+                    if change.name != "zjcode"
                 ]
                 if dep_changes:
                     await self._mount_message(
@@ -5992,7 +6004,7 @@ class DeepAgentsApp(App):
     ) -> None:
         """Re-resolve dependencies to their newest in-range versions.
 
-        Reinstalls the current `deepagents-code` version with an upgraded
+        Reinstalls the current `zjcode` version with an upgraded
         dependency resolution, then reports which dependencies actually moved.
         Used by the `/update --deps` and already-current refresh flows. Editable
         installs are rejected by the caller before this runs; the refresh is
@@ -6003,7 +6015,7 @@ class DeepAgentsApp(App):
         Args:
             include_prereleases: Whether to include alpha/beta/rc releases;
                 `None` follows the installed version's channel.
-            app_update_version: Newer `deepagents-code` version discovered by
+            app_update_version: Newer `zjcode` version discovered by
                 the caller, if dependency refresh is intentionally staying on
                 the current app version.
         """
@@ -6045,15 +6057,15 @@ class DeepAgentsApp(App):
                 "format may have drifted.",
             )
         self_changes = [
-            change for change in changes if change.name == "deepagents-code"
+            change for change in changes if change.name == "zjcode"
         ]
-        dep_changes = [change for change in changes if change.name != "deepagents-code"]
+        dep_changes = [change for change in changes if change.name != "zjcode"]
         if not dep_changes and not self_changes:
             if app_update_version is not None:
                 await self._mount_message(
                     AppMessage(
                         "Dependencies are already up to date. "
-                        "A deepagents-code update is available: "
+                        "A zjcode update is available: "
                         f"v{app_update_version}.",
                     ),
                 )
@@ -6066,7 +6078,7 @@ class DeepAgentsApp(App):
         message_parts: list[str] = []
         if self_changes:
             message_parts.append(
-                f"Updated deepagents-code:\n{format_dependency_changes(self_changes)}"
+                f"Updated zjcode:\n{format_dependency_changes(self_changes)}"
             )
         if dep_changes:
             message_parts.append(
@@ -6074,11 +6086,11 @@ class DeepAgentsApp(App):
             )
         if app_update_version is not None:
             message_parts.append(
-                f"A deepagents-code update is available: v{app_update_version}."
+                f"A zjcode update is available: v{app_update_version}."
             )
         await self._mount_message(
             AppMessage(
-                "\n".join(message_parts) + "\nQuit and relaunch dcode to use them.",
+                "\n".join(message_parts) + "\nQuit and relaunch zjcode to use them.",
             ),
         )
 
@@ -6091,8 +6103,8 @@ class DeepAgentsApp(App):
         """Ask whether `/update --deps` should take an app update first.
 
         Args:
-            current: Currently running `deepagents-code` version.
-            latest: Latest available `deepagents-code` version.
+            current: Currently running `zjcode` version.
+            latest: Latest available `zjcode` version.
 
         Returns:
             `True` only when the user explicitly chooses the app update; `False`
@@ -6186,8 +6198,8 @@ class DeepAgentsApp(App):
         """Handle the `/install <extra>` slash command.
 
         Adds an optional extra (e.g. `daytona`, `fireworks`) to the installed
-        dcode tool by re-running
-        `uv tool install --reinstall -U 'deepagents-code[<extra>]'`.
+        zjcode tool by re-running
+        `uv tool install --reinstall -U 'zjcode[<extra>]'`.
         Refuses unknown extras unless the user passes a `--force` token.
 
         Args:
@@ -6234,7 +6246,7 @@ class DeepAgentsApp(App):
     async def _install_extra(
         self, extra: str, *, force: bool = False, auto_restart: bool = False
     ) -> bool:
-        """Install a `deepagents-code` extra, mounting progress and restart offer.
+        """Install a `zjcode` extra, mounting progress and restart offer.
 
         Shared by the `/install <extra>` command and the model selector's
         install-on-select flow. Mounts its own status/error messages and offers
@@ -6403,7 +6415,7 @@ class DeepAgentsApp(App):
                 await self._mount_message(
                     AppMessage(
                         f"Installed extra '{extra}', but this app is connected "
-                        "to a remote LangGraph server. Relaunch dcode to load it, "
+                        "to a remote LangGraph server. Relaunch zjcode to load it, "
                         "then select the model again."
                     ),
                 )
@@ -6418,7 +6430,7 @@ class DeepAgentsApp(App):
             return False
 
         if not restart_capable:
-            next_step = "Exit and relaunch dcode to use the new dependencies."
+            next_step = "Exit and relaunch zjcode to use the new dependencies."
             await self._mount_message(
                 AppMessage(f"Installed extra '{extra}'. {next_step}"),
             )
@@ -6439,10 +6451,10 @@ class DeepAgentsApp(App):
         return True
 
     async def _handle_install_package(self, package: str, *, force: bool) -> None:
-        """Install an arbitrary package into the dcode tool env via `uv --with`.
+        """Install an arbitrary package into the zjcode tool env via `uv --with`.
 
         Backs `/install <package> --package`, the escape hatch for a provider
-        whose package is not a `deepagents-code` extra (e.g. a custom
+        whose package is not a `zjcode` extra (e.g. a custom
         `class_path` model). Arbitrary packages have no curated allowlist, so a
         non-blocking confirmation modal gates pulling in third-party code.
         `--force` (or `--yes`) bypasses the prompt.
@@ -6523,7 +6535,7 @@ class DeepAgentsApp(App):
         await self._mount_message(
             AppMessage(
                 f"Installed package '{package}'. Run `/restart` to load it "
-                "now, or relaunch dcode.",
+                "now, or relaunch zjcode.",
             ),
         )
         # Scheduled off the message pump so the restart modal stays responsive
@@ -6621,14 +6633,14 @@ class DeepAgentsApp(App):
             age_suffix = await asyncio.to_thread(format_age_suffix, cli_version)
             cli_annotation = format_cli_version_annotation(report.cli)
             lines.append(
-                f"deepagents-code version: {cli_version}{age_suffix}{cli_annotation}"
+                f"zjcode version: {cli_version}{age_suffix}{cli_annotation}"
             )
         except ImportError:
             logger.debug("deepagents_code._version module not found")
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
         except Exception:
             logger.warning("Unexpected error looking up app version", exc_info=True)
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
 
         if report.sdk.status == "resolved":
             from deepagents_code.update_check import format_sdk_age_suffix
@@ -6663,8 +6675,8 @@ class DeepAgentsApp(App):
 
         available, latest = self._update_available
         if available and latest:
-            manual_hint = "Run /update or `dcode update` to install it."
-            hint = "Update it using the method that installed this copy of dcode."
+            manual_hint = "Run /update or `zjcode update` to install it."
+            hint = "Update it using the method that installed this copy of zjcode."
             upgrade_supported = False
             try:
                 # Imported function-locally on purpose: tests patch these on the
@@ -6680,7 +6692,7 @@ class DeepAgentsApp(App):
                 upgrade_supported = method in {"uv", "brew"}
                 if upgrade_supported:
                     if await asyncio.to_thread(is_auto_update_enabled):
-                        hint = "Quit and relaunch dcode to install it automatically."
+                        hint = "Quit and relaunch zjcode to install it automatically."
                     else:
                         hint = manual_hint
             except Exception:
@@ -9029,7 +9041,7 @@ class DeepAgentsApp(App):
         if not os.environ.get("TAVILY_API_KEY"):
             self.notify(
                 "Saved your Tavily key, but couldn't activate it this "
-                "session. Restart dcode, or re-add it with /auth.",
+                "session. Restart zjcode, or re-add it with /auth.",
                 severity="warning",
                 markup=False,
             )
@@ -9930,7 +9942,7 @@ class DeepAgentsApp(App):
                 AppMessage(
                     "The `langsmith` package is not installed. "
                     "Install it with "
-                    "`uv tool install --reinstall -U deepagents-code "
+                    "`uv tool install --reinstall -U zjcode "
                     "--with langsmith` "
                     "to enable `/trace`.",
                 ),
@@ -11353,7 +11365,7 @@ class DeepAgentsApp(App):
             "  /goal clear\n"
             "  /goal model [provider:model|clear]\n"
             "  /goal max-iterations <N|clear>\n\n"
-            "Use /goal when you have a plain-language objective; dcode will "
+            "Use /goal when you have a plain-language objective; zjcode will "
             "draft a checklist for it. Once applied, the goal stays active for "
             "this thread until paused, completed, blocked, or cleared. "
             "Follow-up prompts continue working toward that goal."
@@ -14227,6 +14239,7 @@ class DeepAgentsApp(App):
         Args:
             message: The user's message
         """
+        await self._mount_message(SessionSeparator())
         # Mount the user message, tracking it so it can be dimmed on interrupt.
         # Everything routed here is literal agent text (slash/shell commands go
         # through `_handle_command`/`_handle_shell_command`), so disable mode
@@ -19161,7 +19174,7 @@ class DeepAgentsApp(App):
             cli_version="0.1.0",
             release_age=" (released 2 days ago)",
             installed_age="",
-            upgrade_cmd="uv tool upgrade deepagents-code",
+            upgrade_cmd="uv tool upgrade zjcode",
         )
         self._notice_registry.add(update_notification)
         self._update_modal_pending.set()
@@ -19839,9 +19852,9 @@ class DeepAgentsApp(App):
         from deepagents_code.update_check import (
             clear_update_notified,
             create_update_log_path,
-            detect_shadowed_dcode_safe,
-            format_shadowed_dcode_fix_command,
-            format_shadowed_dcode_warning,
+            detect_shadowed_zjcode_safe,
+            format_shadowed_zjcode_fix_command,
+            format_shadowed_zjcode_warning,
             mark_update_notified,
             perform_upgrade,
         )
@@ -19895,19 +19908,19 @@ class DeepAgentsApp(App):
                 )
                 if success:
                     self._notice_registry.remove(entry.key)
-                    # Same shadowing risk as `/update`: if a stale `dcode` is
+                    # Same shadowing risk as `/update`: if a stale `zjcode` is
                     # earlier on PATH, the user's next launch will silently
                     # run the old version. Surface that loudly even when only
                     # a toast is visible. Keep the modal itself out of the
                     # success state when relaunching would keep using the old
                     # binary.
-                    shadow = await asyncio.to_thread(detect_shadowed_dcode_safe)
+                    shadow = await asyncio.to_thread(detect_shadowed_zjcode_safe)
                     if shadow is not None:
-                        warning = format_shadowed_dcode_warning(shadow)
+                        warning = format_shadowed_zjcode_warning(shadow)
                         if progress_modal_visible:
                             screen.mark_warning(
                                 warning,
-                                copy_text=format_shadowed_dcode_fix_command(shadow),
+                                copy_text=format_shadowed_zjcode_fix_command(shadow),
                             )
                         self.notify(
                             warning,
@@ -19921,7 +19934,7 @@ class DeepAgentsApp(App):
                         return
                     self.notify(
                         f"Updated to v{payload.latest}. "
-                        "Quit and relaunch dcode to use the new version.",
+                        "Quit and relaunch zjcode to use the new version.",
                         severity="information",
                         timeout=10,
                         markup=False,
@@ -19989,7 +20002,7 @@ class DeepAgentsApp(App):
         """
         steps = (
             ("Debug mode: no package manager command was started.", 0.3),
-            (f"Resolving deepagents-code v{payload.latest}...", 0.8),
+            (f"Resolving zjcode v{payload.latest}...", 0.8),
             ("Looking up compatible build tags...", 0.2),
             ("Downloading wheel metadata...", 0.5),
             ("Downloading deepagents_code-9.9.9-py3-none-any.whl...", 0.2),
@@ -20538,7 +20551,7 @@ class DeepAgentsApp(App):
                 AppMessage(
                     "No MCP login is queued in this session. "
                     "If you logged in during an earlier run, relaunch "
-                    "dcode to pick up the token. "
+                    "zjcode to pick up the token. "
                     "Run `/mcp reconnect force` to restart anyway.",
                 ),
             )
@@ -20574,7 +20587,7 @@ class DeepAgentsApp(App):
             logger.exception("Failed to mount MCP reconnect force-confirm modal")
             self.notify(
                 "Couldn't open the reconnect confirmation. Try again, or "
-                "relaunch dcode to pick up the new MCP token.",
+                "relaunch zjcode to pick up the new MCP token.",
                 severity="warning",
                 markup=False,
             )
@@ -20956,7 +20969,7 @@ class DeepAgentsApp(App):
             # token would never reach the MCP tool factory.
             self.notify(
                 "Cannot log into MCP servers against a remote server. "
-                "Relaunch dcode locally to authenticate.",
+                "Relaunch zjcode locally to authenticate.",
                 severity="warning",
                 markup=False,
             )
@@ -21301,7 +21314,7 @@ class DeepAgentsApp(App):
         # Clear the pending flag up front so deferred state can't leak
         # past a no-op early return — e.g. the server died between defer
         # and `/mcp reconnect`. The token is on disk; the user must
-        # relaunch dcode to pick it up, and `/mcp reconnect` shouldn't
+        # relaunch zjcode to pick it up, and `/mcp reconnect` shouldn't
         # keep claiming there's something to do.
         self._pending_mcp_login_reconnect = False
         self._pending_mcp_disable_reconnect_servers.clear()
@@ -21310,7 +21323,7 @@ class DeepAgentsApp(App):
         if self._server_kwargs is None or self._server_proc is None:
             self.notify(
                 "Cannot restart the LangGraph server automatically; "
-                "relaunch dcode to pick up the new MCP token.",
+                "relaunch zjcode to pick up the new MCP token.",
                 severity="warning",
                 markup=False,
             )
@@ -21329,8 +21342,8 @@ class DeepAgentsApp(App):
     def _ensure_restart_prompt_loaded() -> None:
         """Load the restart-prompt modal before any in-place self-upgrade.
 
-        `/install` runs `uv tool install --reinstall -U 'deepagents-code[...]'`, which
-        rewrites deepagents-code's own on-disk package tree while this process
+        `/install` runs `uv tool install --reinstall -U 'zjcode[...]'`, which
+        rewrites zjcode's own on-disk package tree while this process
         is running. Modules already in `sys.modules` keep working from memory,
         but a *first* import after the rewrite reads the mutated (or
         partially-written) tree and raises `ModuleNotFoundError`.
@@ -21380,7 +21393,7 @@ class DeepAgentsApp(App):
 
         Provider/sandbox extras and `--package` installs are imported by the
         app-owned LangGraph server subprocess, so a `/restart` loads them
-        without exiting the TUI. When dcode owns that subprocess and is idle,
+        without exiting the TUI. When zjcode owns that subprocess and is idle,
         prompt to run the restart immediately instead of making the user type
         `/restart`.
 
@@ -21401,7 +21414,7 @@ class DeepAgentsApp(App):
         await self._offer_server_restart(
             label=label,
             verb="Installed",
-            relaunch_hint=f"Relaunch dcode to load '{label}'.",
+            relaunch_hint=f"Relaunch zjcode to load '{label}'.",
             busy_hint=(
                 f"Run `/restart` to load '{label}' once the current task finishes."
             ),
@@ -21435,7 +21448,7 @@ class DeepAgentsApp(App):
             prompt_body=(
                 "Restart the server to enable web search, or defer with `/restart`."
             ),
-            relaunch_hint="Relaunch dcode to enable web search with your Tavily key.",
+            relaunch_hint="Relaunch zjcode to enable web search with your Tavily key.",
             busy_hint=(
                 "Run `/restart` to enable web search once the current task finishes."
             ),
@@ -21496,7 +21509,7 @@ class DeepAgentsApp(App):
             from deepagents_code.tui.widgets.restart_prompt import RestartPromptScreen
         except ModuleNotFoundError:
             # `/install` runs `uv tool install --reinstall -U
-            # 'deepagents-code[...]'`, which can rewrite deepagents-code's own
+            # 'zjcode[...]'`, which can rewrite zjcode's own
             # on-disk package tree mid-session
             # (see `_ensure_restart_prompt_loaded`). A first import of the modal
             # here may then fail with `ModuleNotFoundError`. Degrade to the
@@ -21670,7 +21683,7 @@ class DeepAgentsApp(App):
                 AppMessage(
                     "Cannot restart: this app is connected to a remote "
                     "LangGraph server (no owned subprocess). Configuration "
-                    "was reloaded; relaunch dcode to fully restart.",
+                    "was reloaded; relaunch zjcode to fully restart.",
                 ),
             )
             return
@@ -21711,7 +21724,7 @@ class DeepAgentsApp(App):
                         "starting. Configuration was reloaded; update "
                         "credentials with `/auth` if needed, then pick a model "
                         "with `/model` to try again. You can also relaunch "
-                        "dcode.\n\n"
+                        "zjcode.\n\n"
                         f"Last error: {self._server_startup_error}",
                     ),
                 )
@@ -21719,7 +21732,7 @@ class DeepAgentsApp(App):
                 await self._mount_message(
                     AppMessage(
                         "Cannot restart yet because the server is not running. "
-                        "Configuration was reloaded; relaunch dcode to start "
+                        "Configuration was reloaded; relaunch zjcode to start "
                         "again.",
                     ),
                 )
@@ -22379,7 +22392,7 @@ class DeepAgentsApp(App):
         if self._server_kwargs is None or self._server_proc is None:
             self.notify(
                 "Switched cwd locally, but this session cannot restart its server. "
-                "Relaunch dcode from the thread directory if tools look stale.",
+                "Relaunch zjcode from the thread directory if tools look stale.",
                 severity="warning",
                 timeout=10,
                 markup=False,
@@ -22476,7 +22489,7 @@ class DeepAgentsApp(App):
                 self.notify(
                     "Server restart failed and the previous directory could not "
                     "be restored. The session may be in the wrong directory — "
-                    "please restart dcode.",
+                    "please restart zjcode.",
                     severity="error",
                     timeout=15,
                     markup=False,
@@ -22675,7 +22688,7 @@ class DeepAgentsApp(App):
             self.notify(
                 "Could not restore the previous working directory after a failed "
                 "thread switch. The session may be in the wrong directory — please "
-                "restart dcode.",
+                "restart zjcode.",
                 severity="error",
                 timeout=15,
                 markup=False,

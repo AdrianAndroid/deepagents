@@ -6,7 +6,7 @@ emits a compact marker after the turn — no matter how the turn ended
 
 Sibling `session_end_summary` covers process-level shutdown. This module
 covers the per-turn level, where "the answer just cut off" happens while
-the dcode process is still alive.
+the zjcode process is still alive.
 
 Design constraints:
 - **Zero configuration**: always on; no env vars, no toml switch.

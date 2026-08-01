@@ -178,7 +178,7 @@ class TestThreadFunctions:
         """`list_threads` creates the covering index and the plan uses it.
 
         Regression guard for the `threads list` slowdown on large profiles: the
-        GROUP BY must be an index-only scan of `idx_dcode_threads_list`, not a
+        GROUP BY must be an index-only scan of `idx_zjcode_threads_list`, not a
         full scan of the blob-bearing checkpoints table.
         """
         with patch.object(sessions, "get_db_path", return_value=temp_db):
@@ -192,7 +192,7 @@ class TestThreadFunctions:
                     "SELECT name FROM sqlite_master WHERE type='index'"
                 )
             }
-            assert "idx_dcode_threads_list" in index_names
+            assert "idx_zjcode_threads_list" in index_names
 
             plan = " ".join(
                 str(row[3])
@@ -209,7 +209,7 @@ class TestThreadFunctions:
             )
             # Index-only scan of the covering index, not the PK autoindex (which
             # would drag the checkpoint state blobs through I/O).
-            assert "idx_dcode_threads_list" in plan
+            assert "idx_zjcode_threads_list" in plan
             assert "sqlite_autoindex_checkpoints_1" not in plan
         finally:
             conn.close()

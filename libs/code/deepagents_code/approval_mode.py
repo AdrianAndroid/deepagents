@@ -313,7 +313,7 @@ def yolo_acknowledgement_path() -> Path:
     """Return the installation-local acknowledgement file path.
 
     Returns:
-        Path under the private dcode state directory.
+        Path under the private zjcode state directory.
     """
     from deepagents_code.model_config import DEFAULT_STATE_DIR
 
@@ -336,7 +336,7 @@ def _approval_state_thread_lock(path: Path) -> threading.Lock:
     """Return the process-local mutation lock for an approval-state path.
 
     Each `_approval_state_lock` builds a fresh `FileLock(thread_local=False)`, so
-    the cross-process lock alone does not serialize threads within one dcode
+    the cross-process lock alone does not serialize threads within one zjcode
     process. This threading lock guarantees only one in-process thread runs the
     read-merge-write at a time, independent of the filelock backend's cross-thread
     behavior.
@@ -436,7 +436,7 @@ def _write_approval_state(
     the load and this write so concurrent savers cannot clobber each other.
 
     Args:
-        path: Destination path under the private dcode state directory.
+        path: Destination path under the private zjcode state directory.
         payload: JSON-serializable mapping to persist.
         failure_label: Human-readable label for the warning log on OSError.
 

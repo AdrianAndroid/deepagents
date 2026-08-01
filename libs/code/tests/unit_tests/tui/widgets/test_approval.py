@@ -543,7 +543,7 @@ class TestAutoOptionEligibility:
         """The hidden-Auto layout renders `1.`/`2.` rows, never skipping to `3.`.
 
         The display number is prefixed in `_update_options`, not baked into the
-        labels, so a regression to hardcoded numbering would show `3. Reject` in
+        labels, so a regression to harzjcoded numbering would show `3. Reject` in
         a 2-option menu.
         """
         menu = ApprovalMenu(
@@ -584,7 +584,7 @@ class TestAutoOptionEligibility:
     ) -> None:
         """Selecting after wraparound in the 2-option layout resolves cleanly.
 
-        Guards against a regression to a hardcoded ``% 3`` modulus, which would
+        Guards against a regression to a harzjcoded ``% 3`` modulus, which would
         leave ``_selected == 2`` and raise ``IndexError`` on selection.
         """
         menu, future = wired_menu(

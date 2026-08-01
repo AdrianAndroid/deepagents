@@ -9,7 +9,7 @@ import json
 import os
 import shutil
 import sqlite3
-import subprocess  # noqa: S404  # Used only to probe resolved dcode Python launchers.
+import subprocess  # noqa: S404  # Used only to probe resolved zjcode Python launchers.
 import sys
 import warnings
 from pathlib import Path
@@ -50,7 +50,7 @@ def _ensure_runtime() -> None:
         raise SystemExit(msg)
 
     candidates: list[Path] = []
-    for command in ("dcode", "deepagents-code"):
+    for command in ("zjcode", "zjcode"):
         executable = shutil.which(command)
         if not executable:
             continue
@@ -70,7 +70,7 @@ def _ensure_runtime() -> None:
             continue
         seen.add(candidate_key)
         try:
-            check = subprocess.run(  # noqa: S603  # Runs a resolved dcode interpreter.
+            check = subprocess.run(  # noqa: S603  # Runs a resolved zjcode interpreter.
                 [
                     str(candidate),
                     "-c",
@@ -97,7 +97,7 @@ def _ensure_runtime() -> None:
                 env,
             )
 
-    msg = "Could not import Deep Agents Code dependencies or locate dcode on PATH."
+    msg = "Could not import Deep Agents Code dependencies or locate zjcode on PATH."
     raise SystemExit(msg)
 
 

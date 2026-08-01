@@ -40,7 +40,7 @@ def _update_entry(
         body=f"v{latest} is available.",
         actions=(NotificationAction(ActionId.INSTALL, "Install now", primary=True),),
         payload=UpdateAvailablePayload(
-            latest=latest, upgrade_cmd="uv tool upgrade deepagents-code"
+            latest=latest, upgrade_cmd="uv tool upgrade zjcode"
         ),
     )
 

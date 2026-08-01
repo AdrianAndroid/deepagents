@@ -615,9 +615,9 @@ def _build_orphaned_tracing_disabled_notice() -> str:
     if shutil.which("langsmith"):
         return (
             f"{base} Set LANGSMITH_API_KEY or run `langsmith auth login`, "
-            "then restart dcode."
+            "then restart zjcode."
         )
-    return f"{base} Set LANGSMITH_API_KEY, then restart dcode."
+    return f"{base} Set LANGSMITH_API_KEY, then restart zjcode."
 
 
 def consume_orphaned_tracing_disabled_notice() -> str | None:
@@ -756,7 +756,7 @@ def _apply_default_langsmith_project() -> None:
 
     When tracing is active but neither the prefixed override nor a base
     `LANGSMITH_PROJECT` is set, ingestion would land in the SDK's `default`
-    project while `get_langsmith_project_name` advertises `deepagents-code`.
+    project while `get_langsmith_project_name` advertises `zjcode`.
     Set the default explicitly so the displayed/looked-up name matches where
     traces are actually ingested (and `/trace` resolves once a run flushes).
     """
@@ -1249,7 +1249,7 @@ def _get_deepagents_version() -> str | None:
 
     Editable installs can leave package metadata behind the source checkout, so
     this uses the shared resolver that prefers the editable source marker. A
-    sibling monorepo workspace whose marker trails dcode's exact pin reports the
+    sibling monorepo workspace whose marker trails zjcode's exact pin reports the
     pinned release baseline with a `+editable` suffix.
 
     Returns:
@@ -1301,7 +1301,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
     path: str | None = None
 
     try:
-        dist = distribution("deepagents-code")
+        dist = distribution("zjcode")
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)
@@ -1324,7 +1324,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
 
 
 def _is_editable_install() -> bool:
-    """Check if deepagents-code is installed in editable mode.
+    """Check if zjcode is installed in editable mode.
 
     Uses PEP 610 `direct_url.json` metadata to detect editable installs.
 
@@ -1594,7 +1594,7 @@ def _get_repository_metadata() -> RepositoryMetadata | None:
 CODING_AGENT_PURPOSE = "coding"
 """Fixed `ls_agent_purpose` literal identifying the coding-agent trace class."""
 
-CODING_AGENT_INTEGRATION = "deepagents-code"
+CODING_AGENT_INTEGRATION = "zjcode"
 """Stable `ls_integration` id for this plugin (unchanged for backward-compat)."""
 
 CODING_AGENT_RUNTIME = "Deep Agents Code"
@@ -1624,9 +1624,9 @@ def build_coding_agent_metadata(
 
     Because Deep Agents Code is itself the runtime — there is no separate CLI
     package — `ls_integration_version` and `ls_agent_runtime_version` both come
-    from the `deepagents-code` package version (`__version__`). The underlying
+    from the `zjcode` package version (`__version__`). The underlying
     `deepagents` SDK version is surfaced separately as
-    `dcode_client_deepagents_version` by `build_stream_config`.
+    `zjcode_client_deepagents_version` by `build_stream_config`.
 
     Scope-restricted contract keys are intentionally NOT produced here:
     `approval_policy` (root/interrupted only) and `ls_subagent_id` /
@@ -1716,21 +1716,21 @@ def build_stream_config(
     rather than leaked. (Subagent runs still inherit the parent/root `thread_id`
     and all required keys, satisfying the contract's grouping rule.)
 
-    Also injects the dcode version into `metadata["lc_versions"]` so LangSmith
+    Also injects the zjcode version into `metadata["lc_versions"]` so LangSmith
     traces can be correlated with specific releases. `create_deep_agent` supplies
     the SDK version through the compiled graph config, and LangChain merges
     nested metadata dictionaries so both versions survive at stream time.
 
-    Also records `dcode_client_deepagents_version` as a dcode-client diagnostic.
+    Also records `zjcode_client_deepagents_version` as a zjcode-client diagnostic.
     This describes the Deep Agents package installed alongside the TUI, which
     can differ from a remote graph's Deep Agents runtime version. For sibling
     monorepo packages, a `+editable` suffix identifies workspace HEAD relative
     to the pinned published SDK baseline.
 
-    Also records `dcode_experimental=True` when `DEEPAGENTS_CODE_EXPERIMENTAL`
+    Also records `zjcode_experimental=True` when `DEEPAGENTS_CODE_EXPERIMENTAL`
     is enabled, so experimental runs are filterable in trace metadata.
 
-    Also records `dcode_auto_approve=True` when auto-approve ("YOLO") mode is
+    Also records `zjcode_auto_approve=True` when auto-approve ("YOLO") mode is
     active, so runs that ran tools without HITL approval are filterable in trace
     metadata. This is a diagnostic key, not the contract-scoped `approval_policy`
     key (see above), so it is safe to stamp trace-wide.
@@ -1739,15 +1739,15 @@ def build_stream_config(
         thread_id: The app session thread identifier. Set both on
             `configurable.thread_id` and as the top-level `metadata.thread_id`
             used by the contract for grouping turns.
-        assistant_id: The dcode agent identifier, if any. When set, it is
-            surfaced in trace metadata under `dcode_agent_name` and
+        assistant_id: The zjcode agent identifier, if any. When set, it is
+            surfaced in trace metadata under `zjcode_agent_name` and
             `agent_name`.
         sandbox_type: Sandbox provider name for trace metadata, or `None` if no
             sandbox is active.
         turn_id: Stable per-turn id for the current user prompt, or `None`.
         turn_number: 1-based per-thread turn index, or `None`.
         auto_approve: Whether auto-approve ("YOLO") mode is active for this turn.
-            When `True`, `dcode_auto_approve=True` is recorded in trace metadata.
+            When `True`, `zjcode_auto_approve=True` is recorded in trace metadata.
 
     Returns:
         Config dict with `configurable` and `metadata` keys.
@@ -1774,26 +1774,26 @@ def build_stream_config(
 
     # Mark experimental runs so they are filterable in trace metadata.
     if is_env_truthy(EXPERIMENTAL):
-        metadata["dcode_experimental"] = True
+        metadata["zjcode_experimental"] = True
 
     # Mark auto-approve ("YOLO") runs so they are filterable in trace metadata.
     if auto_approve:
-        metadata["dcode_auto_approve"] = True
+        metadata["zjcode_auto_approve"] = True
 
     # Legacy / diagnostic keys preserved for backward-compatibility during the
     # coding-agent-v1 rollout (not part of the contract).
     metadata["lc_versions"] = {
-        "deepagents-code": _format_lc_version(
+        "zjcode": _format_lc_version(
             __version__, editable=_is_editable_install()
         )
     }
     deepagents_version = _get_deepagents_version()
     if deepagents_version is not None:
-        metadata["dcode_client_deepagents_version"] = deepagents_version
+        metadata["zjcode_client_deepagents_version"] = deepagents_version
     if assistant_id:
         metadata.update(
             {
-                "dcode_agent_name": assistant_id,
+                "zjcode_agent_name": assistant_id,
                 "agent_name": assistant_id,
                 "updated_at": datetime.now(UTC).isoformat(),
             }
@@ -2149,7 +2149,7 @@ forwards to the run, and `create_model` pops it before constructing the model.
 This lets the CLI value ride the existing `model_params`/`extra_kwargs` carrier
 to the one place that authoritatively resolves the provider, where it can be
 folded under the provider's *resolved* retry-param name (see
-`_resolve_retry_param_name`) rather than a hardcoded `max_retries`.
+`_resolve_retry_param_name`) rather than a harzjcoded `max_retries`.
 
 The key is internal-only: it is popped before reaching any model constructor and
 is never serialized or surfaced to users. It is deliberately unlikely to collide
@@ -2271,7 +2271,7 @@ _RELOADABLE_FIELDS = (
     "nvidia_api_key",
     "tavily_api_key",
     "google_cloud_project",
-    "deepagents_langchain_project",
+    "zjcode_langchain_project",
     "project_root",
     "shell_allow_list",
     "extra_skills_dirs",
@@ -2295,7 +2295,7 @@ automatically.
 
 @dataclass
 class Settings:
-    """Global settings and environment detection for deepagents-code.
+    """Global settings and environment detection for zjcode.
 
     This class is initialized once at startup and provides access to:
     - Available models and API keys
@@ -2322,7 +2322,7 @@ class Settings:
     google_cloud_project: str | None
     """Google Cloud project ID for VertexAI authentication."""
 
-    deepagents_langchain_project: str | None
+    zjcode_langchain_project: str | None
     """LangSmith project name for deepagents agent tracing."""
 
     user_langchain_project: str | None
@@ -2447,7 +2447,7 @@ class Settings:
             SHELL_ALLOW_LIST,
         )
 
-        deepagents_langchain_project = resolve_env_var(LANGSMITH_PROJECT)
+        zjcode_langchain_project = resolve_env_var(LANGSMITH_PROJECT)
         # Use the saved original, not the current `LANGSMITH_PROJECT` that
         # bootstrap may have overridden for agent traces.
         user_langchain_project = _bootstrap_state.original_langsmith_project
@@ -2482,7 +2482,7 @@ class Settings:
             nvidia_api_key=nvidia_key,
             tavily_api_key=tavily_key,
             google_cloud_project=google_cloud_project,
-            deepagents_langchain_project=deepagents_langchain_project,
+            zjcode_langchain_project=zjcode_langchain_project,
             user_langchain_project=user_langchain_project,
             project_root=project_root,
             shell_allow_list=shell_allow_list,
@@ -2551,7 +2551,7 @@ class Settings:
             "nvidia_api_key": _resolve_env_var_from(env, "NVIDIA_API_KEY"),
             "tavily_api_key": _resolve_env_var_from(env, "TAVILY_API_KEY"),
             "google_cloud_project": _resolve_env_var_from(env, "GOOGLE_CLOUD_PROJECT"),
-            "deepagents_langchain_project": _resolve_env_var_from(
+            "zjcode_langchain_project": _resolve_env_var_from(
                 env,
                 LANGSMITH_PROJECT,
             ),
@@ -2645,10 +2645,10 @@ class Settings:
 
         # Sync the LANGSMITH_PROJECT env var so LangSmith tracing picks up
         # the change
-        new_project = refreshed["deepagents_langchain_project"]
+        new_project = refreshed["zjcode_langchain_project"]
         if new_project:
             os.environ["LANGSMITH_PROJECT"] = str(new_project)
-        elif previous["deepagents_langchain_project"]:
+        elif previous["zjcode_langchain_project"]:
             # Override was previously active but new value is unset; restore the
             # user's original project. With no original, drop the override and
             # re-apply the default so ingestion keeps matching the name
@@ -3107,10 +3107,10 @@ def get_langsmith_project_name() -> str | None:
 
     Checks for the required API key and tracing environment variables.
     When both are present, resolves the project name with priority:
-    `settings.deepagents_langchain_project` (from
+    `settings.zjcode_langchain_project` (from
     `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `LANGSMITH_PROJECT` from the
     environment (note: this may already have been overridden at bootstrap time
-    to match `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `'deepagents-code'`.
+    to match `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `'zjcode'`.
 
     Returns:
         Project name string when LangSmith tracing is active, None otherwise.
@@ -3128,7 +3128,7 @@ def get_langsmith_project_name() -> str | None:
         return None
 
     return (
-        _get_settings().deepagents_langchain_project
+        _get_settings().zjcode_langchain_project
         or os.environ.get("LANGSMITH_PROJECT")
         or LANGSMITH_PROJECT_DEFAULT
     )
@@ -3456,7 +3456,7 @@ def _get_langsmith_replica_projects_from(env: dict[str, str]) -> list[str]:
 def get_langsmith_replica_project() -> str | None:
     """The single extra LangSmith project to mirror agent runs to, if configured.
 
-    dcode agent runs execute inside the LangGraph server subprocess, so the only
+    zjcode agent runs execute inside the LangGraph server subprocess, so the only
     way to mirror them to another project is the server's own replica path: the
     SDK forwards a `langsmith_tracing` project in the run-create request, and the
     server wraps the run in a `tracing_context` whose write replicas are that
@@ -3504,7 +3504,7 @@ def _get_first_langsmith_replica_project(extras: list[str]) -> str | None:
 _TRACING_BRIDGED_ENABLE_ENV_VARS = ("LANGSMITH_TRACING", "LANGCHAIN_TRACING_V2")
 """Tracing flags bootstrap propagates from a `DEEPAGENTS_CODE_` prefix.
 
-`dcode doctor` runs before `_ensure_bootstrap` bridges these to their canonical
+`zjcode doctor` runs before `_ensure_bootstrap` bridges these to their canonical
 names, so it must resolve them prefix-aware (via `resolve_env_var`) to predict
 the runtime's effective state. The remaining flags in `_TRACING_ENABLE_ENV_VARS`
 are not bridged, so only their canonical form takes effect.
@@ -3748,7 +3748,7 @@ class TracingStatus:
     """Offline snapshot of LangSmith tracing configuration for diagnostics.
 
     Carries only presence/identity facts — never API keys or other secret
-    values — so it is safe to render in `dcode doctor` output.
+    values — so it is safe to render in `zjcode doctor` output.
     """
 
     enabled: bool
@@ -3781,7 +3781,7 @@ class TracingStatus:
         `enabled` and `explicitly_disabled` model a tri-state (enabled /
         explicitly disabled / not configured), so both being true is
         meaningless. Fail loud at construction rather than letting the illegal
-        state flow through to the `dcode doctor` renderer.
+        state flow through to the `zjcode doctor` renderer.
 
         Raises:
             ValueError: If both `enabled` and `explicitly_disabled` are true.
@@ -3797,7 +3797,7 @@ def get_tracing_status() -> TracingStatus:
     Reads only the local environment and the active LangSmith profile; never
     contacts the network and never exposes secret values. All fields are
     resolved prefix-/profile-aware so the report matches what the runtime does
-    after bootstrap, even though `dcode doctor` runs before it.
+    after bootstrap, even though `zjcode doctor` runs before it.
 
     Returns:
         A `TracingStatus` snapshot describing the current tracing setup.
@@ -3877,9 +3877,9 @@ def _assemble_langsmith_thread_url(project_url: str, thread_id: str) -> str:
         thread_id: Thread identifier to append.
 
     Returns:
-        Full thread URL with the `deepagents-code` utm tag.
+        Full thread URL with the `zjcode` utm tag.
     """
-    return f"{project_url.rstrip('/')}/t/{thread_id}?utm_source=deepagents-code"
+    return f"{project_url.rstrip('/')}/t/{thread_id}?utm_source=zjcode"
 
 
 def fetch_langsmith_project_url_or_raise(project_name: str) -> str:
@@ -4224,7 +4224,7 @@ def _get_default_model_spec() -> str:
     raise NoCredentialsConfiguredError(msg)
 
 
-_OPENROUTER_APP_URL = "https://pypi.org/project/deepagents-code/"
+_OPENROUTER_APP_URL = "https://pypi.org/project/zjcode/"
 """Default `app_url` (maps to `HTTP-Referer`) for OpenRouter attribution.
 
 See https://openrouter.ai/docs/app-attribution for details.
@@ -4321,7 +4321,7 @@ def _get_provider_kwargs(
         if api_key_env:
             logger.debug(
                 "No api_key_env in config.toml for '%s';"
-                " using hardcoded provider env var",
+                " using harzjcoded provider env var",
                 provider,
             )
     if api_key_env:
@@ -4683,7 +4683,7 @@ def create_model(
             being forwarded verbatim to the constructor.
         profile_overrides: Extra profile fields from `--profile-override`.
 
-            Merged on top of config file profile overrides (dcode wins).
+            Merged on top of config file profile overrides (zjcode wins).
 
     Returns:
         A `ModelResult` containing the model and its metadata.

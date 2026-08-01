@@ -497,10 +497,10 @@ class TestNoMcpArg:
 
 
 class TestConfigCommandDispatch:
-    """Tests for `cli_main()` dispatch of `dcode config` subcommands."""
+    """Tests for `cli_main()` dispatch of `zjcode config` subcommands."""
 
     def test_config_command_exits_before_stdin_pipe(self) -> None:
-        """`dcode config` is headless and must not read stdin."""
+        """`zjcode config` is headless and must not read stdin."""
         from deepagents_code.main import cli_main
 
         with (
@@ -537,10 +537,10 @@ class TestConfigCommandDispatch:
 
 
 class TestMcpCommandDispatch:
-    """Tests for `cli_main()` dispatch of `dcode mcp` subcommands."""
+    """Tests for `cli_main()` dispatch of `zjcode mcp` subcommands."""
 
     def test_mcp_login_uses_top_level_mcp_config_as_fallback(self) -> None:
-        """`dcode --mcp-config PATH mcp login NAME` propagates PATH to login."""
+        """`zjcode --mcp-config PATH mcp login NAME` propagates PATH to login."""
         from deepagents_code.main import cli_main
 
         with (
@@ -610,7 +610,7 @@ class TestMcpCommandDispatch:
     def test_mcp_config_subcommand_prints_discovery_paths(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """`dcode mcp config` prints each discovery path."""
+        """`zjcode mcp config` prints each discovery path."""
         from deepagents_code.main import cli_main
 
         with (
@@ -628,7 +628,7 @@ class TestMcpCommandDispatch:
         assert "<project-root>/.mcp.json" in out
 
     def test_mcp_login_subcommand_mcp_config_only(self) -> None:
-        """`dcode mcp login NAME --mcp-config PATH` passes PATH through.
+        """`zjcode mcp login NAME --mcp-config PATH` passes PATH through.
 
         Covers the subcommand-only path (no top-level value) so a future
         reorder of the `or`-precedence in dispatch fails loudly.

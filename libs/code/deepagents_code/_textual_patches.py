@@ -89,6 +89,7 @@ try:
         IGNORE_SEQUENCE,
     )
     from textual._xterm_parser import XTermParser  # noqa: PLC2701
+    from textual.keys import _character_to_key  # noqa: PLC2701
 
     _original = XTermParser._sequence_to_key_events
 except (ImportError, AttributeError) as exc:  # pragma: no cover - defensive
@@ -168,6 +169,44 @@ else:
         fields[:2] = [field.split(":", 1)[0] for field in fields[:2]]
         return f"\x1b[{';'.join(fields)}{terminator}"
 
+    # Kitty associated-text field carrying colon-separated code points that
+    # Textual 8.2.8's `_parse_extended_key` cannot decode (it does
+    # `int(text_str)` which fails on `126:47`). When the native parser returns
+    # `None` for such a sequence, we decode each code point ourselves.
+    _KITTY_COLON_TEXT_KEY = re.compile(
+        r"\x1b\[(\d+)(?:;(\d+))?;(\d+(?::\d+)*)u"
+    )
+
+    def _kitty_colon_text_events(sequence: str) -> list[events.Key] | None:
+        """Decode colon-separated associated-text code points into key events.
+
+        When the associated-text field contains colon-separated code points
+        (e.g. `126:47` for `~` and `/`), Textual's native parser fails because
+        `int("126:47")` raises `ValueError`. This fallback splits the field,
+        decodes each code point, and emits a `Key` event per character.
+
+        Returns:
+            A list of `Key` events, or `None` if `sequence` does not carry
+            colon-separated associated text.
+        """
+        match = _KITTY_COLON_TEXT_KEY.fullmatch(sequence)
+        if match is None:
+            return None
+        text_field = match.group(3)
+        if ":" not in text_field:
+            return None
+        codepoints = text_field.split(":")
+        result: list[events.Key] = []
+        for cp_str in codepoints:
+            try:
+                cp = int(cp_str)
+            except ValueError:
+                continue
+            char = chr(cp)
+            key_name = _character_to_key(char)
+            result.append(events.Key(key_name, char))
+        return result if result else None
+
     def _lock_key_event(sequence: str) -> events.Key | None:
         """Return a text-free lock-key event for a kitty lock-key sequence.
 
@@ -229,6 +268,12 @@ else:
                 character = sequence if len(sequence) == 1 else None
                 yield from _emit_alt(keys, character)
                 return
+        # Fallback for colon-separated associated text that Textual 8.2.8
+        # cannot decode natively (e.g. `\x1b[58;2;126:47u`).
+        colon_events = _kitty_colon_text_events(sequence)
+        if colon_events is not None:
+            yield from colon_events
+            return
         yield from _original(self, sequence, alt=alt)
 
     try:

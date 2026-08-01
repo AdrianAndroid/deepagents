@@ -44,7 +44,7 @@ _ANSI_THEMES: Final[frozenset[str]] = frozenset({"ansi-dark", "ansi-light"})
 """Theme names whose color palette is determined by the terminal emulator
 rather than by the app, so link styles use bold instead of a parsed color."""
 
-_LANGSMITH_UTM_SOURCE: Final[str] = "deepagents-code"
+_LANGSMITH_UTM_SOURCE: Final[str] = "zjcode"
 """UTM source tag appended to LangSmith project URLs in the welcome banner."""
 
 
@@ -392,7 +392,7 @@ class WelcomeBanner(Static):
 
         parts: list[str | tuple[str, str | TStyle]] = [
             (f"{get_glyphs().cursor} ", title_style),
-            ("dcode", "bold"),
+            ("zjcode", "bold"),
         ]
         if not self._hide_version:
             parts.append((f"  v{__version__}", "dim"))

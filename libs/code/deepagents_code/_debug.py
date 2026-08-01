@@ -35,7 +35,7 @@ LOG_LEVELS = {
 
 The single source of truth for level names and their numeric values, shared with
 the Debug Console's level filter so severity ordering is never re-derived from
-hardcoded integers.
+harzjcoded integers.
 """
 
 

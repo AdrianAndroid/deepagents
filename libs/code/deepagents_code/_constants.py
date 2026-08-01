@@ -18,7 +18,7 @@ FS_TOOL_NAMES: Final[frozenset[str]] = frozenset(
 )
 """Mirror of the SDK's `FsToolName` literal members.
 
-Hardcoded here rather than derived from `deepagents.FsToolName` because
+Harzjcoded here rather than derived from `deepagents.FsToolName` because
 `deepagents` must not be imported on the arg-parsing hot path (see AGENTS.md
 "Startup performance"); this module is dependency-free and safe for `main.py` to
 import. Consumers (`main._parse_allow_fs_tools_flag`,
@@ -30,7 +30,7 @@ renamed SDK filesystem tool fails a test instead of silently diverging.
 SDK_DEFAULT_RUBRIC_MAX_ITERATIONS: Final[int] = 3
 """Default `RubricMiddleware.max_iterations`, shown without importing the SDK.
 
-Hardcoded rather than read from `deepagents.middleware.rubric.RubricMiddleware`
+Harzjcoded rather than read from `deepagents.middleware.rubric.RubricMiddleware`
 because this module is dependency-free and importing the SDK for a display
 string would violate the startup-performance rule (see AGENTS.md). This is a
 hand-maintained duplicate that can rot if the SDK bumps its default, so

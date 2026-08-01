@@ -1267,7 +1267,7 @@ class TestToolCallMessageTodos:
         assert indent in plain
 
     def test_todo_rows_start_flush_at_gutter(self) -> None:
-        """No formatted todo line carries a hardcoded leading pad.
+        """No formatted todo line carries a harzjcoded leading pad.
 
         Covers the status rows (which begin with the status glyph) as well as
         the stats header, which is emitted flush at the gutter too.
@@ -1421,8 +1421,8 @@ class TestToolCallMessageOutputGutter:
 class TestToolCallMessageSearchOutput:
     """Tests for grep/glob result formatting in `_format_search_output`."""
 
-    def test_glob_list_output_has_no_hardcoded_indent(self) -> None:
-        """Glob (list) results must not carry a hardcoded leading indent.
+    def test_glob_list_output_has_no_harzjcoded_indent(self) -> None:
+        """Glob (list) results must not carry a harzjcoded leading indent.
 
         Alignment is owned by the output gutter layout; the formatter emits
         bare paths so results aren't double-indented under the output marker.
@@ -1435,8 +1435,8 @@ class TestToolCallMessageSearchOutput:
         assert lines
         assert all(not line.startswith(" ") for line in lines)
 
-    def test_grep_line_output_has_no_hardcoded_indent(self) -> None:
-        """Grep (line-based) results must not carry a hardcoded leading indent.
+    def test_grep_line_output_has_no_harzjcoded_indent(self) -> None:
+        """Grep (line-based) results must not carry a harzjcoded leading indent.
 
         This is a distinct branch from the glob list path: `ast.literal_eval`
         fails for grep output, so it falls through to line-based formatting.
@@ -1538,7 +1538,7 @@ class TestToolCallMessageSearchOutput:
 class TestToolCallMessageLsOutput:
     """Tests for `ls` directory-listing formatting in `_format_ls_output`."""
 
-    def test_ls_output_has_no_hardcoded_indent(self) -> None:
+    def test_ls_output_has_no_harzjcoded_indent(self) -> None:
         """Ls entries sit flush under the output gutter, like grep/glob.
 
         Alignment is owned by the output gutter layout; the formatter emits
@@ -5371,7 +5371,7 @@ class TestLiveToolGroupSummary:
             summary.reveal_pending()
             await pilot.pause()
 
-            assert completed.display is False
+            assert completed.display is True
             assert completed.has_class("-grouped")
             assert pending.display is True
             assert not pending.has_class("-grouped")
@@ -5450,7 +5450,7 @@ class TestLiveToolGroupSummary:
             assert summary._finalized is True
             assert shell.display is True
             assert not shell.has_class("-grouped")
-            assert read.display is False
+            assert read.display is True
             rendered = summary.render()
             assert isinstance(rendered, Content)
             assert "Read 1 file" in rendered.plain

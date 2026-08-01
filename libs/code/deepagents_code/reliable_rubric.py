@@ -81,7 +81,7 @@ def _is_transient_grader_transport_error(exc: BaseException) -> bool:
 
 
 def _without_internal_control_messages(state: RubricState) -> RubricState:
-    """Remove dcode control turns before the SDK builds grader evidence.
+    """Remove zjcode control turns before the SDK builds grader evidence.
 
     Returns:
         Original state when unchanged, otherwise a shallow copy with filtered

@@ -112,7 +112,7 @@ class TestArchiveReadGuard:
 
 
 class TestCLICompactionMiddleware:
-    """Cover dcode's explicit `/offload` behavior layered over the SDK tool."""
+    """Cover zjcode's explicit `/offload` behavior layered over the SDK tool."""
 
     @staticmethod
     def _summarization() -> MagicMock:

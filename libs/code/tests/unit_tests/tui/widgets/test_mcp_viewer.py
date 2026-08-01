@@ -67,7 +67,7 @@ def _mixed_status_info() -> list[MCPServerInfo]:
             name="github",
             transport="http",
             status="unauthenticated",
-            error="Run: dcode mcp login github",
+            error="Run: zjcode mcp login github",
         ),
         MCPServerInfo(
             name="notion",
@@ -1777,7 +1777,7 @@ class TestMCPViewerScreen:
             assert "github" in unauth_text
             assert "unauthenticated" in unauth_text
             # The header now invites in-TUI login instead of telling the
-            # user to leave the app and run `dcode mcp login`.
+            # user to leave the app and run `zjcode mcp login`.
             assert "Enter to log in" in unauth_text
 
             assert "notion" in pending_text
@@ -2187,7 +2187,7 @@ class TestModuleLevelHelpers:
             name="github",
             transport="http",
             status="unauthenticated",
-            error="Run: dcode mcp login github",
+            error="Run: zjcode mcp login github",
         )
         # Server name matches but tools=() → or None collapses to None
         assert _visible_tools_for(info, ["github"]) is None
@@ -2202,6 +2202,6 @@ class TestModuleLevelHelpers:
             name="github",
             transport="http",
             status="unauthenticated",
-            error="Run: dcode mcp login github",
+            error="Run: zjcode mcp login github",
         )
         assert _visible_tools_for(info, []) == ()

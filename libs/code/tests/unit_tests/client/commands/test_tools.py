@@ -1,4 +1,4 @@
-"""Tests for the `dcode tools` command group."""
+"""Tests for the `zjcode tools` command group."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def _run_text(args: argparse.Namespace, *, width: int = 200) -> tuple[int, str]:
 
 
 class TestToolsInstall:
-    """Tests for `dcode tools install` dispatch."""
+    """Tests for `zjcode tools install` dispatch."""
 
     def test_install_success_text(self, tmp_path: Path) -> None:
         installed = tmp_path / "[/green]" / "rg"
@@ -186,7 +186,7 @@ _SAMPLE_CATALOG = ToolCatalog(groups=_SAMPLE_GROUPS, unavailable=(), mcp_error=N
 
 
 class TestToolsList:
-    """Tests for `dcode tools list` dispatch."""
+    """Tests for `zjcode tools list` dispatch."""
 
     def test_list_text_output(self) -> None:
         args = argparse.Namespace(tools_command="list", output_format="text")

@@ -15,7 +15,7 @@ from deepagents_code.app import DeepAgentsApp
 from deepagents_code.tui.widgets.messages import AppMessage, ErrorMessage
 
 MANUAL_EXTRA_COMMAND = (
-    "curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_EXTRAS=quickjs bash"
+    "curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_EXTRAS=quickjs bash"
 )
 
 
@@ -84,7 +84,7 @@ async def test_install_slash_provider_extra_no_owned_server_recommends_relaunch(
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         contents = " ".join(str(m._content) for m in app_msgs)
         assert "Installed extra 'fireworks'" in contents
-        assert "Relaunch dcode" in contents
+        assert "Relaunch zjcode" in contents
         # No owned subprocess to respawn, so `/restart` is not recommended.
         assert "/restart" not in contents
 
@@ -93,7 +93,7 @@ async def test_offer_restart_busy_recommends_restart_not_relaunch() -> None:
     """An owned-but-busy server points at `/restart`, never a relaunch.
 
     `/restart` respawns the owned subprocess (same effect as a relaunch,
-    without exiting), so a "relaunch dcode" hint would be redundant noise.
+    without exiting), so a "relaunch zjcode" hint would be redundant noise.
     """
     app = DeepAgentsApp()
     app._server_proc = MagicMock()
@@ -125,7 +125,7 @@ async def test_offer_restart_no_owned_server_recommends_relaunch() -> None:
         str(c.args[0]._content)
         for c in app._mount_message.await_args_list  # ty: ignore
     )
-    assert "Relaunch dcode" in contents
+    assert "Relaunch zjcode" in contents
     assert "/restart" not in contents
 
 
@@ -167,7 +167,7 @@ async def test_install_slash_provider_extra_skips_redundant_hint_when_prompted()
     app = DeepAgentsApp()
     async with app.run_test() as pilot:
         await pilot.pause()
-        # Pretend dcode owns an idle server so the one-keypress prompt is offered.
+        # Pretend zjcode owns an idle server so the one-keypress prompt is offered.
         app._server_proc = MagicMock()
         app._server_kwargs = {"model_name": "fireworks:fake"}
         app._agent_running = False
@@ -215,7 +215,7 @@ async def test_install_slash_standalone_extra_recommends_relaunch() -> None:
         )
         rendered = str(success._content)
         assert "/restart" not in rendered
-        assert "relaunch dcode" in rendered.lower()
+        assert "relaunch zjcode" in rendered.lower()
         assert "--interpreter" not in rendered
 
 
@@ -312,7 +312,7 @@ async def test_install_slash_failure_surfaces_log_path_and_manual_cmd() -> None:
         assert "Install failed" in joined
         assert "resolver: conflict" in joined
         assert "/tmp/deepagents-install.log" in joined
-        assert "curl -LsSf https://langch.in/dcode" in joined
+        assert "curl -LsSf https://langch.in/zjcode" in joined
         assert "DEEPAGENTS_CODE_EXTRAS=quickjs bash" in joined
         assert "quickjs" in joined
 
@@ -349,7 +349,7 @@ async def test_install_slash_exception_surfaces_log_path_and_manual_cmd() -> Non
         assert "OSError" in joined
         assert "disk full" in joined
         assert "/tmp/deepagents-install.log" in joined
-        assert "curl -LsSf https://langch.in/dcode" in joined
+        assert "curl -LsSf https://langch.in/zjcode" in joined
         assert "DEEPAGENTS_CODE_EXTRAS=quickjs bash" in joined
         assert "quickjs" in joined
 
@@ -360,7 +360,7 @@ async def test_install_slash_failure_renders_recovery_bracket_literally() -> Non
     The TUI mounts recovery commands as Textual `Content`, so — unlike the
     Rich-markup CLI path — the bracket must not be backslash-escaped.
     """
-    uv_cmd = "uv tool install -U 'deepagents-code[quickjs]'"
+    uv_cmd = "uv tool install -U 'zjcode[quickjs]'"
     app = DeepAgentsApp()
     async with app.run_test() as pilot:
         await pilot.pause()
@@ -387,8 +387,8 @@ async def test_install_slash_failure_renders_recovery_bracket_literally() -> Non
             await app._handle_command("/install quickjs")
             await pilot.pause()
         joined = "\n".join(str(m._content) for m in app.query(ErrorMessage))
-        assert "deepagents-code[quickjs]" in joined
-        assert "deepagents-code\\[quickjs]" not in joined
+        assert "zjcode[quickjs]" in joined
+        assert "zjcode\\[quickjs]" not in joined
 
 
 async def test_install_slash_failure_recovery_error_keeps_prior_command() -> None:
@@ -1070,8 +1070,8 @@ async def test_install_restart_raising_removes_transient_and_propagates() -> Non
 async def test_offer_restart_survives_missing_restart_prompt_module() -> None:
     """A missing `restart_prompt` module must degrade, not crash the TUI.
 
-    `/install` runs `uv tool install -U 'deepagents-code[...]'`, which rewrites
-    deepagents-code's own on-disk tree mid-session. A first import of the
+    `/install` runs `uv tool install -U 'zjcode[...]'`, which rewrites
+    zjcode's own on-disk tree mid-session. A first import of the
     restart modal on the post-install path then reads the half-replaced tree
     and raises `ModuleNotFoundError`. The handler must degrade to the manual
     `/restart` hint instead of letting the import crash the app.
@@ -1123,7 +1123,7 @@ async def test_install_restart_prompt_responsive_through_message_pump() -> None:
     app = DeepAgentsApp()
     async with app.run_test() as pilot:
         await pilot.pause()
-        # Pretend dcode owns an idle server so the one-keypress prompt is offered.
+        # Pretend zjcode owns an idle server so the one-keypress prompt is offered.
         app._server_proc = MagicMock()
         app._server_kwargs = {"model_name": "fireworks:fake"}
         app._agent_running = False

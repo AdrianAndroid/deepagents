@@ -321,7 +321,7 @@ class TestAutoApproveHeadlessValidation:
         """`--auto-approve` must still be honored on an interactive launch.
 
         The guard rejects only when `args.non_interactive_message` is also set.
-        Without that conjunct it would wrongly reject `dcode -m ... -y`; this
+        Without that conjunct it would wrongly reject `zjcode -m ... -y`; this
         pins the interactive path so a dropped conjunct fails loudly instead of
         silently breaking the flag's primary use. Also asserts the resolved
         value flows through to the TUI (`auto_approve=True`).
@@ -517,7 +517,7 @@ class TestSandboxArgument:
         assert "/install <package-name> --package" in err
         assert "[sandboxes.providers.acme]" in err
         # The error must not fabricate a specific package name.
-        assert "acme-dcode-sandbox" not in err
+        assert "acme-zjcode-sandbox" not in err
 
     def test_config_provider_accepted(
         self, mock_argv: MockArgvType, tmp_path: Path
@@ -1882,7 +1882,7 @@ class TestUpdateSubcommand:
     def test_editable_install_skips_upgrade(self) -> None:
         """Editable install exits 0 without calling `is_update_available`/upgrade.
 
-        A regression here would run `uv tool upgrade deepagents-code` on an
+        A regression here would run `uv tool upgrade zjcode` on an
         editable checkout and clobber the dev install with a PyPI copy.
         """
         code, is_update_mock, perform_upgrade_mock = self._run_update(
@@ -1970,7 +1970,7 @@ class TestUpdateSubcommand:
         )
 
     def test_prerelease_update_includes_prereleases(self) -> None:
-        """`dcode update --prerelease` opts into alpha/beta/rc releases."""
+        """`zjcode update --prerelease` opts into alpha/beta/rc releases."""
         code, is_update_mock, perform_upgrade_mock = self._run_update(
             editable=False,
             is_update_available_return=(True, "99.0.0rc1"),
@@ -1989,7 +1989,7 @@ class TestUpdateSubcommand:
         )
 
     def test_prerelease_update_flag_includes_prereleases(self) -> None:
-        """`dcode --update --prerelease` uses the same prerelease path."""
+        """`zjcode --update --prerelease` uses the same prerelease path."""
         code, is_update_mock, perform_upgrade_mock = self._run_update(
             editable=False,
             is_update_available_return=(True, "99.0.0rc1"),
@@ -2009,7 +2009,7 @@ class TestUpdateSubcommand:
         )
 
     def test_prerelease_before_update_includes_prereleases(self) -> None:
-        """`dcode --prerelease update` preserves the top-level prerelease flag."""
+        """`zjcode --prerelease update` preserves the top-level prerelease flag."""
         code, is_update_mock, perform_upgrade_mock = self._run_update(
             editable=False,
             is_update_available_return=(True, "99.0.0rc1"),
@@ -2055,7 +2055,7 @@ class TestUpdateSubcommand:
         """An unexpected crash during `--prerelease` keeps the pre-release hint.
 
         The last-resort handler prints a manual upgrade command. A regression
-        that hardcoded the stable command would nudge a user who requested a
+        that harzjcoded the stable command would nudge a user who requested a
         pre-release onto the stable channel — the exact silent downgrade this
         flag guards against, via an error side-door.
         """
@@ -2108,7 +2108,7 @@ class TestUpdateSubcommand:
 
 
 class TestInstallExtraSubcommand:
-    """Control-flow tests for `dcode --install <extra>`."""
+    """Control-flow tests for `zjcode --install <extra>`."""
 
     @staticmethod
     def _run_install(
@@ -2136,7 +2136,7 @@ class TestInstallExtraSubcommand:
         mock_stdin.read.return_value = ""
         command_mock = MagicMock(
             return_value=(
-                "curl -LsSf https://langch.in/dcode | "
+                "curl -LsSf https://langch.in/zjcode | "
                 f"DEEPAGENTS_CODE_EXTRAS={extra} bash"
             ),
         )
@@ -2263,7 +2263,7 @@ class TestInstallExtraSubcommand:
         else:
             perform_mock.return_value = perform_return
         default_script_cmd = (
-            f"curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_EXTRAS={extra} bash"
+            f"curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_EXTRAS={extra} bash"
         )
         command_mock = MagicMock(return_value=command_return or default_script_cmd)
         if command_side_effect is not None:
@@ -2336,13 +2336,13 @@ class TestInstallExtraSubcommand:
         assert "Install failed" in text
         assert "resolver: conflict" in text
         assert "/tmp/deepagents-install.log" in text
-        assert "curl -LsSf https://langch.in/dcode" in text
+        assert "curl -LsSf https://langch.in/zjcode" in text
         assert "DEEPAGENTS_CODE_EXTRAS=quickjs bash" in text
         assert "quickjs" in text
 
     def test_failure_escapes_uv_recovery_command_markup(self) -> None:
         """Failed uv recovery commands preserve extras rendered by Rich."""
-        command = "uv tool install -U 'deepagents-code[quickjs]'"
+        command = "uv tool install -U 'zjcode[quickjs]'"
         code, _perform, console_mock = self._run_install_capture(
             "quickjs",
             perform_return=(False, "resolver: conflict"),
@@ -2350,14 +2350,14 @@ class TestInstallExtraSubcommand:
         )
         assert code == 1
         text = self._printed_text(console_mock)
-        assert "deepagents-code\\[quickjs]" in text
+        assert "zjcode\\[quickjs]" in text
 
     def test_failure_recovery_command_error_keeps_prior_command(self) -> None:
         """A recovery-command error on a failed install keeps the prior command.
 
         The command resolved before the failure is shown instead of crashing.
         """
-        resolved = "uv tool install -U 'deepagents-code[quickjs]'"
+        resolved = "uv tool install -U 'zjcode[quickjs]'"
         code, _perform, console_mock = self._run_install_capture(
             "quickjs",
             perform_return=(False, "resolver: conflict"),
@@ -2369,7 +2369,7 @@ class TestInstallExtraSubcommand:
         assert "Install failed" in text
         # Falls back to the install_extra_command value resolved before the
         # failure, with its bracket escaped for Rich.
-        assert "deepagents-code\\[quickjs]" in text
+        assert "zjcode\\[quickjs]" in text
 
     def test_keyboard_interrupt_exits_130(self) -> None:
         """Ctrl-C during install exits 130 with an Aborted message."""
@@ -2391,7 +2391,7 @@ class TestInstallExtraSubcommand:
         assert "RuntimeError" in text
         assert "disk full" in text
         assert "/tmp/deepagents-install.log" in text
-        assert "curl -LsSf https://langch.in/dcode" in text
+        assert "curl -LsSf https://langch.in/zjcode" in text
         assert "DEEPAGENTS_CODE_EXTRAS=quickjs bash" in text
         assert "quickjs" in text
 
@@ -2407,7 +2407,7 @@ class TestInstallExtraSubcommand:
         assert "RuntimeError" in text
         assert "metadata broken" in text
         assert "Run manually: " in text
-        assert "curl -LsSf https://langch.in/dcode" in text
+        assert "curl -LsSf https://langch.in/zjcode" in text
         assert "DEEPAGENTS_CODE_EXTRAS=quickjs bash" in text
 
     def test_interactive_decline_aborts(self) -> None:
@@ -2423,7 +2423,7 @@ class TestInstallExtraSubcommand:
 
 
 class TestInstallPackageSubcommand:
-    """Control-flow tests for `dcode --install <pkg> --package`."""
+    """Control-flow tests for `zjcode --install <pkg> --package`."""
 
     @staticmethod
     def _run_install_package(
@@ -2735,7 +2735,7 @@ class TestAllowFsToolsArgument:
     def test_help_lists_every_fs_tool_name(self, mock_argv: MockArgvType) -> None:
         """The `--allow-fs-tools` help text must name every SDK filesystem tool.
 
-        The help string hardcodes the tool-name list (`deepagents` must not be
+        The help string harzjcodes the tool-name list (`deepagents` must not be
         imported on the arg-parsing path), so — unlike `_FS_TOOL_NAMES`, which a
         drift test pins — it could silently go stale when the SDK adds a tool.
         Spy the argparse registration to capture that specific help string and

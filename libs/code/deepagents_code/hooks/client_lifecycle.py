@@ -327,11 +327,11 @@ class ClientHookService:
         *,
         title: str | None = None,
     ) -> NotificationDecision:
-        """Invoke one explicitly supported dcode notification event.
+        """Invoke one explicitly supported zjcode notification event.
 
         Args:
             context: Current client session context.
-            kind: Supported dcode notification kind.
+            kind: Supported zjcode notification kind.
             message: User-facing notification text.
             title: Optional notification title.
 

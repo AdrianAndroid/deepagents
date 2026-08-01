@@ -1,6 +1,6 @@
 """Session-end summary writer.
 
-Records why a dcode session ended (`completed` / `interrupted` / `error`) and
+Records why a zjcode session ended (`completed` / `interrupted` / `error`) and
 how long it ran, then emits the result to three sinks on shutdown:
 
 1. `stderr` — a human-readable panel printed after all UI teardown.

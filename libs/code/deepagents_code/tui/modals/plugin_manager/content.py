@@ -134,7 +134,7 @@ def _will_install_lines(row: _PluginRow) -> list[str]:
         ]
     return [
         "No supported components (skills/MCP).",
-        "agents/, commands/, and hooks/ are not loaded by deepagents-code.",
+        "agents/, commands/, and hooks/ are not loaded by zjcode.",
     ]
 
 

@@ -92,7 +92,7 @@ class InstallPackageConfirmScreen(ModalScreen[bool]):
             yield Static(
                 Content.from_markup(
                     "Installing [bold]$name[/bold] runs third-party code in "
-                    "the dcode environment.",
+                    "the zjcode environment.",
                     name=self._package,
                 ),
                 classes="install-confirm-body",
@@ -175,7 +175,7 @@ class InstallProviderConfirmScreen(ModalScreen[bool]):
 
         Args:
             provider: The provider whose integration is missing.
-            extra: The `deepagents-code` extra that installs the provider.
+            extra: The `zjcode` extra that installs the provider.
             model_spec: The selected `provider:model` spec, surfaced in the body
                 by the model selector. Omitted by the `/auth` manager, which
                 installs a provider so a key can be added rather than to switch
@@ -203,17 +203,17 @@ class InstallProviderConfirmScreen(ModalScreen[bool]):
         )
         if self._model_spec is not None:
             body = Content.from_markup(
-                "To use [bold]$model[/bold], dcode needs to "
+                "To use [bold]$model[/bold], zjcode needs to "
                 "install the [bold]$extra[/bold] integration. This will add "
-                "the provider package to your dcode environment.",
+                "the provider package to your zjcode environment.",
                 model=self._model_spec,
                 extra=self._extra,
             )
         else:
             body = Content.from_markup(
-                "To add a key for [bold]$provider[/bold], dcode "
+                "To add a key for [bold]$provider[/bold], zjcode "
                 "needs to install the [bold]$extra[/bold] integration. This "
-                "will add the provider package to your dcode environment.",
+                "will add the provider package to your zjcode environment.",
                 provider=provider,
                 extra=self._extra,
             )

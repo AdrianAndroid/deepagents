@@ -163,7 +163,7 @@ def _get_harness_tool_descriptions(
     Returns:
         Copy of the matching harness profile's tool-description overrides.
     """
-    # deepagents-code exactly pins the SDK, and these are the same resolution
+    # zjcode exactly pins the SDK, and these are the same resolution
     # helpers used by `create_deep_agent` for its filesystem middleware.
     from deepagents.profiles.harness.harness_profiles import (
         _get_harness_profile,  # noqa: PLC2701  # Mirrors SDK profile lookup.
@@ -204,7 +204,7 @@ def _inject_fs_tools_into_subagents(
             matching the SDK's own `"runnable" in spec` discriminator in
             `deepagents.middleware.subagents`) is present. Such a spec is used
             as-is by the SDK and its `middleware`
-            key is never read, so we cannot enforce the restriction on it. dcode
+            key is never read, so we cannot enforce the restriction on it. zjcode
             adds only raw `SubAgent` dicts today, but the declared type admits
             compiled specs: fail loud rather than silently exposing an
             unrestricted filesystem via `task` delegation.
@@ -1114,7 +1114,7 @@ Discovery is fail-closed: only directories containing this marker are listed by
 the `/agent` picker. Real agents always create it (empty on first use when
 memory is enabled), so empty folders stay out of the picker without being
 named. Known app-owned directory names are still denylisted so a forced
-invocation such as `dcode -a plugins` cannot stamp the marker into app state
+invocation such as `zjcode -a plugins` cannot stamp the marker into app state
 and surface that directory as a selectable agent.
 """
 
@@ -1125,14 +1125,14 @@ def _reserved_agent_dir_names() -> frozenset[str]:
 
     These directories are created by the app for its own use and must never
     appear in the agent picker — even if they contain an `AGENTS.md` file
-    (e.g. after `dcode -a plugins` stamps the marker via memory setup):
+    (e.g. after `zjcode -a plugins` stamps the marker via memory setup):
 
     - `bin/` holds the managed `rg` binary (`managed_tools.BIN_DIR`).
     - `plugins/` holds installed plugin state (`plugins.store`).
     - `conversation_history/` holds offloaded per-thread archives (`offload`).
 
     Each name is derived from its owning module so it stays a single source of
-    truth rather than being hardcoded here. The result is cached since the
+    truth rather than being harzjcoded here. The result is cached since the
     reserved set is constant for the process.
     """
     from deepagents_code.managed_tools import BIN_DIR
@@ -1306,7 +1306,7 @@ def reset_agent(
             console.print(
                 f"[bold red]Error:[/bold red] Source agent '{source_agent}' not found "
                 "or has no AGENTS.md\n"
-                "  Available agents: dcode agents list"
+                "  Available agents: zjcode agents list"
             )
             raise SystemExit(1)
 
@@ -1374,11 +1374,11 @@ _FS_TOOL_USAGE_INSTRUCTIONS: tuple[tuple[FsToolName, str], ...] = (
     ("edit_file", "- `edit_file` over `sed`/`awk`"),
     ("write_file", "- `write_file` over `echo`/heredoc"),
 )
-"""dcode filesystem-tool preferences included in the generated prompt."""
+"""zjcode filesystem-tool preferences included in the generated prompt."""
 
 
 def _build_fs_tool_prompt_guidance(fs_tools: list[FsToolName] | None) -> str:
-    """Build dcode prompt guidance for the enabled filesystem tools.
+    """Build zjcode prompt guidance for the enabled filesystem tools.
 
     Args:
         fs_tools: Filesystem tool allowlist, or `None` for all tools.
@@ -2667,7 +2667,7 @@ def create_cli_agent(
             # Create environment for shell commands.
             # Restore the user's original LANGSMITH_PROJECT so their code traces
             # separately. When they had none, drop the agent's override (the
-            # `deepagents-code` default applied at bootstrap) entirely so shell
+            # `zjcode` default applied at bootstrap) entirely so shell
             # commands don't inherit it.
             shell_env = os.environ.copy()
             if settings.user_langchain_project is not None:
@@ -2712,7 +2712,7 @@ def create_cli_agent(
                 "enable_interpreter."
             )
             raise ValueError(msg)
-        # Lazy import keeps `dcode -v` fast — see AGENTS.md startup-perf rule.
+        # Lazy import keeps `zjcode -v` fast — see AGENTS.md startup-perf rule.
         from langchain_core._api import (  # noqa: PLC2701  # re-exported in _api.__all__
             suppress_langchain_beta_warning,
         )
@@ -2870,9 +2870,9 @@ def create_cli_agent(
         # on the replacement.
         #
         # NOTE: this replacement only carries `backend`/`tools`/descriptions.
-        # The SDK also builds its default with `_permissions`; dcode passes no
+        # The SDK also builds its default with `_permissions`; zjcode passes no
         # filesystem `permissions` to `create_deep_agent` today, so there is
-        # nothing to preserve. If dcode ever adopts filesystem permissions,
+        # nothing to preserve. If zjcode ever adopts filesystem permissions,
         # they must be threaded through here (and into
         # `_inject_fs_tools_into_subagents`) or `--allow-fs-tools` would
         # silently strip them.
@@ -2883,7 +2883,7 @@ def create_cli_agent(
                 custom_tool_descriptions=main_tool_descriptions,
             )
         )
-        # dcode always supplies its own `general-purpose` spec, so the SDK's
+        # zjcode always supplies its own `general-purpose` spec, so the SDK's
         # auto-created-GP middleware inheritance path never fires; the
         # restriction must be injected into each subagent's own `middleware`
         # list, or delegating via `task` could bypass `--allow-fs-tools`.

@@ -10,7 +10,7 @@ Written from inside the graph on successful model turns:
     Powers `/tokens` and the status bar.
 - `_model_spec` / `_model_params` — the model and invocation params effectively
     in use for the turn, written by `ConfigurableModelMiddleware` after a
-    successful model call. Lets `dcode -r` restore the model the resumed thread
+    successful model call. Lets `zjcode -r` restore the model the resumed thread
     was actually using instead of falling back to the user's global default.
 
 Written through the main graph or by the TUI client via `aupdate_state` (see

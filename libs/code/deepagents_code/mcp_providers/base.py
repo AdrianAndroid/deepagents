@@ -84,7 +84,7 @@ class OAuthProvider(ABC):
             Dynamic Client Registration flow.
         """
         return OAuthClientMetadata(
-            client_name="deepagents-code",
+            client_name="zjcode",
             redirect_uris=[AnyUrl(redirect_uri or "http://localhost/callback")],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],

@@ -5,9 +5,9 @@
 __version__ = "0.0.8"  # x-release-please-version
 
 DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
-"""URL for `deepagents-code` documentation (upstream)."""
+"""URL for `zjcode` documentation (upstream)."""
 
-PYPI_URL = "https://pypi.org/pypi/deepagents-code/json"
+PYPI_URL = "https://pypi.org/pypi/zjcode/json"
 """PyPI JSON API endpoint for version checks."""
 
 SDK_PYPI_URL = "https://pypi.org/pypi/deepagents/json"
@@ -22,5 +22,5 @@ CHANGELOG_URL = (
 )
 """URL for the full changelog."""
 
-USER_AGENT = f"deepagents-code/{__version__} update-check"
+USER_AGENT = f"zjcode/{__version__} update-check"
 """User-Agent header sent with PyPI requests."""

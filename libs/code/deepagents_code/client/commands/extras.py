@@ -1,14 +1,14 @@
-"""CLI install path for optional deepagents-code extras.
+"""CLI install path for optional zjcode extras.
 
-`dcode install <name>` installs a curated optional extra (for example a sandbox
-or model-provider dependency) into the current `dcode` environment. The legacy
-global flags `dcode --install <name>` / `--package` / `--yes` remain as
+`zjcode install <name>` installs a curated optional extra (for example a sandbox
+or model-provider dependency) into the current `zjcode` environment. The legacy
+global flags `zjcode --install <name>` / `--package` / `--yes` remain as
 compatible aliases and call the same implementation.
 
 `tools install` is intentionally separate: that group provisions managed host
-binaries (ripgrep), while this command manages Python package extras for dcode.
+binaries (ripgrep), while this command manages Python package extras for zjcode.
 
-Help rendering for `dcode install -h` is served by `ui.show_install_help`, which
+Help rendering for `zjcode install -h` is served by `ui.show_install_help`, which
 does not import this module, so the help path stays light.
 """
 
@@ -33,7 +33,7 @@ def _tail_log_command(log_path: Path | str) -> str:
 
 
 def run_install_command(args: argparse.Namespace) -> int:
-    """Dispatch `dcode install <name>`.
+    """Dispatch `zjcode install <name>`.
 
     Args:
         args: Parsed CLI namespace.
@@ -48,7 +48,7 @@ def run_install_command(args: argparse.Namespace) -> int:
         ui.show_install_help()
         return 2
     # Accept modifiers on the subcommand or as global root flags that precede
-    # it, e.g. `dcode --yes install daytona`.
+    # it, e.g. `zjcode --yes install daytona`.
     package = bool(
         getattr(args, "install_package", False) or getattr(args, "package", False)
     )
@@ -59,12 +59,12 @@ def run_install_command(args: argparse.Namespace) -> int:
 def run_install_request(*, name: str, package: bool, yes: bool) -> int:
     """Install an optional extra or an arbitrary package via `uv --with`.
 
-    Shared by `dcode install` and the legacy `dcode --install` flag.
+    Shared by `zjcode install` and the legacy `zjcode --install` flag.
 
     Args:
         name: Extra or package name to install.
         package: When `True`, install `name` as an arbitrary package rather than
-            a `deepagents-code` extra.
+            a `zjcode` extra.
         yes: Skip interactive confirmation prompts.
 
     Returns:
@@ -119,7 +119,7 @@ def _run_install_package(*, name: str, yes: bool) -> int:
         # confirm before pulling third-party code into the tool env.
         console.print(
             f"This will install the package '{escape(package)}' into "
-            "the dcode environment (this runs third-party "
+            "the zjcode environment (this runs third-party "
             "code).",
             highlight=False,
         )
@@ -181,7 +181,7 @@ def _run_install_package(*, name: str, yes: bool) -> int:
 
 
 def _run_install_extra(*, name: str, yes: bool) -> int:
-    """Install a deepagents-code optional extra into the current env.
+    """Install a zjcode optional extra into the current env.
 
     Returns:
         Process exit code.

@@ -58,7 +58,7 @@ def list_skills(
 ) -> list[ExtendedSkillMetadata]:
     """List skills from built-in, user, and/or project directories.
 
-    This is a dcode-specific wrapper around the prebuilt middleware's skill loading
+    This is a zjcode-specific wrapper around the prebuilt middleware's skill loading
     functionality. It uses `FilesystemBackend` to load skills from local directories.
 
     Precedence order (lowest to highest):
@@ -140,7 +140,7 @@ def list_skills(
                 if source_label == "built-in":
                     extra["metadata"] = {
                         **skill["metadata"],
-                        "deepagents-code-version": _cli_version,
+                        "zjcode-version": _cli_version,
                     }
                 extended = cast("ExtendedSkillMetadata", {**skill, **extra})
                 merge_skill(

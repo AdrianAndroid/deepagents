@@ -1,4 +1,4 @@
-"""Tests for the `dcode auth` CLI subcommands."""
+"""Tests for the `zjcode auth` CLI subcommands."""
 
 from __future__ import annotations
 
@@ -694,7 +694,7 @@ class TestStatus:
         assert code == 1
         err = capsys.readouterr().err
         assert "requires a provider" in err
-        assert "dcode auth list" in err
+        assert "zjcode auth list" in err
 
     def test_status_unknown_provider(self, capsys: pytest.CaptureFixture[str]) -> None:
         """An unrecognized provider is not an error: defer auth to the SDK.
@@ -925,7 +925,7 @@ def test_no_subcommand_shows_help(capsys: pytest.CaptureFixture[str]) -> None:
     """A bare `auth` invocation renders the help screen."""
     code = run_auth_command(_ns(auth_command=None))
     assert code == 0
-    assert "dcode auth <command>" in capsys.readouterr().out
+    assert "zjcode auth <command>" in capsys.readouterr().out
 
 
 # --- Subprocess round-trip (per issue coverage requirements) ----------------

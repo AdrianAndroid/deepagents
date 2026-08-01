@@ -111,7 +111,7 @@ def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     `DEFAULT_STATE_DIR` is patched for code (like `mcp_auth._tokens_dir`)
     that pulls from the import-time-frozen constant in `model_config`.
     Without the second patch, `FileTokenStorage` reads/writes the real
-    `~/.deepagents/.state/mcp-tokens/` directory, which leaks token state
+    `~/.zjcode/.state/mcp-tokens/` directory, which leaks token state
     across tests and causes flakes (e.g. one test's `set_tokens` makes a
     later test's `get_tokens` return non-`None`).
     """
@@ -800,7 +800,7 @@ class TestLoadMcpConfigLenient:
         )
 
         project_root = tmp_path / "proj"
-        project_dir = project_root / ".deepagents"
+        project_dir = project_root / ".zjcode"
         project_dir.mkdir(parents=True)
         lower = project_dir / ".mcp.json"
         lower.write_text('{"mcpServers":{"fs":{"command":"node","args":["a.js"]}}}')
@@ -4584,17 +4584,17 @@ class TestSelectiveProjectMcpTrust:
     async def test_deepagents_subdir_server_loads_via_scoped_approval(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A server defined only in `<root>/.deepagents/.mcp.json` loads.
+        """A server defined only in `<root>/.zjcode/.mcp.json` loads.
 
         This exercises the two independent project-root derivations together:
         the approval is keyed to `<root>` (write side), while the runtime
-        reconstructs the root from the `.deepagents` config path via
-        `project_root_for_mcp_config_path` (read side). If that `.deepagents`
+        reconstructs the root from the `.zjcode` config path via
+        `project_root_for_mcp_config_path` (read side). If that `.zjcode`
         unwrap drifted from the write-side root, the scoped approval would
         silently stop matching for the entire subdir-config layout.
         """
         project = tmp_path / "project"
-        nested = project / ".deepagents"
+        nested = project / ".zjcode"
         nested.mkdir(parents=True)
         servers = {"docs": self._stdio()}
         (nested / ".mcp.json").write_text(json.dumps({"mcpServers": servers}))
@@ -4621,7 +4621,7 @@ class TestSelectiveProjectMcpTrust:
         from deepagents_code import model_config
 
         project = tmp_path / "project"
-        nested = project / ".deepagents"
+        nested = project / ".zjcode"
         nested.mkdir(parents=True)
         servers = {"docs": self._stdio()}
         (nested / ".mcp.json").write_text(json.dumps({"mcpServers": servers}))
@@ -4797,7 +4797,7 @@ class TestSelectiveProjectMcpTrust:
     ) -> None:
         """Rejecting an override cannot reveal an approved shadowed server."""
         project = tmp_path / "project"
-        nested = project / ".deepagents"
+        nested = project / ".zjcode"
         nested.mkdir(parents=True)
         approved = self._stdio("echo")
         changed = self._stdio("python")
@@ -4922,9 +4922,9 @@ class TestSelectiveProjectMcpTrust:
         # Attacker-committed project config with a valid self-approval: if the
         # loader read project-dir config for approvals, "evil" would load.
         self._write_user_approvals(project / "config.toml", project, servers, ["evil"])
-        (project / ".deepagents").mkdir()
+        (project / ".zjcode").mkdir()
         self._write_user_approvals(
-            project / ".deepagents" / "config.toml", project, servers, ["evil"]
+            project / ".zjcode" / "config.toml", project, servers, ["evil"]
         )
         # User has no allowlist of their own.
         user_config = tmp_path / "config.toml"
@@ -4953,7 +4953,7 @@ class TestSelectiveProjectMcpTrust:
         user_config.write_text('[mcp]\nenabled_project_servers = ["docs"]\n')
 
         home = project.parent / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
             "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
@@ -4983,7 +4983,7 @@ class TestSelectiveProjectMcpTrust:
         user_config.write_text("[mcp]\n")
 
         home = project.parent / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setenv("DEEPAGENTS_CODE_ENABLED_PROJECT_MCP_SERVERS", "docs")
         monkeypatch.setattr(
@@ -5025,7 +5025,7 @@ class TestSelectiveProjectMcpTrust:
         )
 
         home = project.parent / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
             "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
@@ -5419,7 +5419,7 @@ class TestSelectiveProjectMcpTrust:
         user_config = tmp_path / "config.toml"
         user_config.write_text("[mcp]\n", encoding="utf-8")
         home = project.parent / "home"
-        (home / ".deepagents").mkdir(parents=True, exist_ok=True)
+        (home / ".zjcode").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
             "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
@@ -5455,11 +5455,11 @@ class TestProjectRootForMcpConfigPath:
         assert project_root_for_mcp_config_path(root / ".mcp.json") == root
 
     def test_deepagents_subdir_config(self, tmp_path: Path) -> None:
-        """`<root>/.deepagents/.mcp.json` resolves to `<root>`, not the subdir."""
+        """`<root>/.zjcode/.mcp.json` resolves to `<root>`, not the subdir."""
         from deepagents_code.mcp_tools import project_root_for_mcp_config_path
 
         root = tmp_path / "proj"
-        nested = root / ".deepagents" / ".mcp.json"
+        nested = root / ".zjcode" / ".mcp.json"
         assert project_root_for_mcp_config_path(nested) == root
 
     def test_relative_path_uses_fallback_base(self, tmp_path: Path) -> None:
@@ -5472,11 +5472,11 @@ class TestProjectRootForMcpConfigPath:
         )
 
     def test_relative_deepagents_path_uses_fallback_base(self, tmp_path: Path) -> None:
-        """A relative `.deepagents/.mcp.json` anchors to the base, then unwraps."""
+        """A relative `.zjcode/.mcp.json` anchors to the base, then unwraps."""
         from deepagents_code.mcp_tools import project_root_for_mcp_config_path
 
         base = tmp_path / "proj"
-        rel = Path(".deepagents") / ".mcp.json"
+        rel = Path(".zjcode") / ".mcp.json"
         assert project_root_for_mcp_config_path(rel, fallback=base) == base
 
 

@@ -9,7 +9,7 @@ trace-wide metadata block lands on.
 The vendored validator is a copy of the shared
 `coding-agent-v1/validator.json`; keep it in sync when the contract changes.
 End-to-end acceptance is a live trace validated with `validate-thread.mjs`
-(the `deepagents-code` profile), not these hermetic unit tests.
+(the `zjcode` profile), not these hermetic unit tests.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _validate(
 ) -> tuple[list[str], list[str]]:
     """Mirror validate-thread.mjs's per-run rules for one metadata dict.
 
-    This re-implements the external `validate-thread.mjs` (`deepagents-code`
+    This re-implements the external `validate-thread.mjs` (`zjcode`
     profile) rules in Python because that validator lives in another toolchain
     and can't be imported here; keep this in lock-step with it when the contract
     changes. It is intentionally a slight over-approximation: it treats each of
@@ -174,7 +174,7 @@ class TestContractValueSemantics:
             user_id=None,
         )
         assert metadata["ls_agent_purpose"] == "coding"
-        assert metadata["ls_integration"] == "deepagents-code"
+        assert metadata["ls_integration"] == "zjcode"
         assert metadata["ls_agent_runtime"] == "Deep Agents Code"
         assert metadata["ls_trace_schema_version"] == "coding-agent-v1"
         assert metadata["thread_id"] == "t1"

@@ -1454,7 +1454,7 @@ class TestPreservedLogNotice:
 
 
 class TestServerSessionIsolation:
-    """Tests that `start()` detaches the server from dcode's terminal."""
+    """Tests that `start()` detaches the server from zjcode's terminal."""
 
     @staticmethod
     def _make_server(tmp_path: Path) -> ServerProcess:
@@ -1552,14 +1552,14 @@ class TestServerProcessGroup:
         )
         assert _server_process_group(4321) is None
 
-    def test_returns_none_when_group_is_dcodes_own(
+    def test_returns_none_when_group_is_zjcodes_own(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The server's group is never signaled when it equals dcode's own."""
+        """The server's group is never signaled when it equals zjcode's own."""
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.sys.platform", "linux"
         )
-        # Both the server and dcode (pid 0) resolve to the same group.
+        # Both the server and zjcode (pid 0) resolve to the same group.
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.os.getpgid",
             lambda _pid: 4321,
@@ -1567,7 +1567,7 @@ class TestServerProcessGroup:
         assert _server_process_group(4321) is None
 
     def test_returns_dedicated_group(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A dedicated leader group distinct from dcode's is returned."""
+        """A dedicated leader group distinct from zjcode's is returned."""
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.sys.platform", "linux"
         )
@@ -1608,7 +1608,7 @@ class TestTerminateServerProcess:
 
     @staticmethod
     def _patch_own_group(monkeypatch: pytest.MonkeyPatch) -> None:
-        """Make pid 4321 a dedicated group leader distinct from dcode's."""
+        """Make pid 4321 a dedicated group leader distinct from zjcode's."""
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.sys.platform", "linux"
         )
@@ -1742,14 +1742,14 @@ class TestTerminateServerProcess:
         assert _wait_for_process_group_exit(process, 4321, 1) is True
         process.wait.assert_called_once_with()
 
-    def test_never_signals_dcodes_process_group(
+    def test_never_signals_zjcodes_process_group(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When the server shares dcode's group, only the root proc is signaled."""
+        """When the server shares zjcode's group, only the root proc is signaled."""
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.sys.platform", "linux"
         )
-        # Server pid and dcode (pid 0) resolve to the same group id.
+        # Server pid and zjcode (pid 0) resolve to the same group id.
         monkeypatch.setattr(
             "deepagents_code.client.launch.server.os.getpgid",
             lambda _pid: 4321,

@@ -49,8 +49,8 @@ def _validate_name(name: str) -> tuple[bool, str]:
     if len(name) > MAX_SKILL_NAME_LENGTH:
         return False, "cannot exceed 64 characters"
 
-    # Check for path traversal sequences (dcode-specific; the SDK validates
-    # against the directory name instead, but dcode accepts user input
+    # Check for path traversal sequences (zjcode-specific; the SDK validates
+    # against the directory name instead, but zjcode accepts user input
     # directly so we need explicit path-safety checks)
     if ".." in name or "/" in name or "\\" in name:
         return False, "cannot contain path components"
@@ -195,7 +195,7 @@ def _list(
             )
             console.print(
                 "\n[dim]Create a project skill:\n"
-                "  dcode skills create my-skill --project[/dim]",
+                "  zjcode skills create my-skill --project[/dim]",
                 style=theme.MUTED,
             )
             return
@@ -245,7 +245,7 @@ def _list(
                 style=theme.MUTED,
             )
             console.print(
-                "\n[dim]Create your first skill:\n  dcode skills create my-skill[/dim]",
+                "\n[dim]Create your first skill:\n  zjcode skills create my-skill[/dim]",
                 style=theme.MUTED,
             )
             return
@@ -503,7 +503,7 @@ def _create(
         "\n"
         f"  nano {skill_md}\n"
         "\n"
-        "  See examples/skills/ in the deepagents-code repo for example skills:\n"
+        "  See examples/skills/ in the zjcode repo for example skills:\n"
         "   - web-research: Structured research workflow\n"
         "   - langgraph-docs: LangGraph documentation lookup\n"
         "\n"

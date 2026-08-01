@@ -564,7 +564,7 @@ class TestWritePyproject:
 
         dependency = _runtime_package_dependency(package_root)
 
-        assert dependency == f"deepagents-code @ {package_root.as_uri()}"
+        assert dependency == f"zjcode @ {package_root.as_uri()}"
 
     def test_runtime_dependency_default_uses_package_project_root(
         self, monkeypatch: pytest.MonkeyPatch
@@ -587,7 +587,7 @@ class TestWritePyproject:
 
         dependency = _runtime_package_dependency()
 
-        assert dependency == f"deepagents-code @ {project_root.as_uri()}"
+        assert dependency == f"zjcode @ {project_root.as_uri()}"
 
     def test_runtime_dependency_ignores_cwd_when_package_root_unknown(
         self, tmp_path: Path, monkeypatch
@@ -613,7 +613,7 @@ class TestWritePyproject:
         ):
             dependency = _runtime_package_dependency()
 
-        assert dependency == "deepagents-code==9.9.9"
+        assert dependency == "zjcode==9.9.9"
         assert "file://" not in dependency
 
     def test_runtime_pyproject_excludes_langgraph_cli_dependency(
@@ -622,13 +622,13 @@ class TestWritePyproject:
         """The runtime project should rely on the app package dependency only."""
         with patch(
             "deepagents_code.client.launch.server_manager._runtime_package_dependency",
-            return_value="deepagents-code==1.2.3",
+            return_value="zjcode==1.2.3",
         ):
             _write_pyproject(tmp_path)
 
         content = (tmp_path / "pyproject.toml").read_text()
 
-        assert '"deepagents-code==1.2.3"' in content
+        assert '"zjcode==1.2.3"' in content
         assert "langgraph-cli[inmem]" not in content
 
     def test_runtime_dependency_uses_installed_distribution_for_wheel(
@@ -643,7 +643,7 @@ class TestWritePyproject:
         ):
             dependency = _runtime_package_dependency(site_packages)
 
-        assert dependency == "deepagents-code==1.2.3"
+        assert dependency == "zjcode==1.2.3"
         assert "file://" not in dependency
 
 

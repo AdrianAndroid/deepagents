@@ -640,7 +640,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
             provider: Provider name (e.g., `"anthropic"`).
             env_var: Canonical env var the SDK reads, shown as helper text.
                 May be `None` for providers that don't use one of the
-                hardcoded env-var bindings (rare; the prompt still works).
+                harzjcoded env-var bindings (rare; the prompt still works).
             reason: Optional context, e.g.,
                 `"Required to use anthropic:claude-opus-4-8"`.
             allow_empty_submit: Whether pressing Enter on an empty key dismisses
@@ -804,7 +804,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                     "This scoped env var takes priority. A saved key will be used "
                     f"only when {env_var} is unset."
                     if is_scoped_env
-                    else ("Paste a key below to use a different key for dcode.")
+                    else ("Paste a key below to use a different key for zjcode.")
                 )
                 yield Static(
                     Content.assemble(
@@ -848,7 +848,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
             storage_note: Content | None
             if self._is_langsmith:
                 storage_note = Content.from_markup(
-                    "dcode stores the above key locally and turns on "
+                    "zjcode stores the above key locally and turns on "
                     "LangSmith tracing. To pause tracing without removing the key, "
                     "set [bold]DEEPAGENTS_CODE_LANGSMITH_TRACING=false[/bold]."
                 )
@@ -859,7 +859,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 storage_note = None
             else:
                 storage_note = Content.from_markup(
-                    "dcode stores the above key locally and uses it "
+                    "zjcode stores the above key locally and uses it "
                     "when you select [bold]$provider[/bold] models.",
                     provider=provider_label,
                 )
@@ -880,7 +880,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                         "Alternatively, environment variables can be used in place "
                         "of the key stored above. Set ",
                         (f"DEEPAGENTS_CODE_{self._env_var}", TStyle(bold=True)),
-                        " for a dcode-only key; it has the highest priority. Set ",
+                        " for a zjcode-only key; it has the highest priority. Set ",
                         (self._env_var, TStyle(bold=True)),
                         " to share a key with other provider SDK tools; it is used "
                         "only when no scoped or stored key exists. After setting one "
@@ -959,7 +959,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 yield project_label
                 project_input = Input(
                     value=self._existing_project,
-                    placeholder="LANGSMITH_PROJECT (default: deepagents-code)",
+                    placeholder="LANGSMITH_PROJECT (default: zjcode)",
                     id="auth-prompt-project",
                 )
                 project_input.display = self._advanced_visible
@@ -967,7 +967,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 project_hint_widget = Static(
                     Content.from_markup(
                         "Route agent traces to this LangSmith project. "
-                        "Leave blank to use the default [bold]deepagents-code[/bold]."
+                        "Leave blank to use the default [bold]zjcode[/bold]."
                     ),
                     classes="auth-prompt-meta",
                     id="auth-prompt-project-hint",
@@ -1077,7 +1077,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 (
                     (
                         "Subscription plans (Claude Pro/Max, Claude Code) cannot "
-                        "be used for Anthropic calls in dcode. Only a "
+                        "be used for Anthropic calls in zjcode. Only a "
                         "standard API key with pay-as-you-go billing works here."
                     ),
                     "italic $text-muted",
@@ -1745,7 +1745,7 @@ class AuthManagerScreen(ModalScreen[None]):
 
         Args:
             provider: The uninstalled provider the user selected.
-            extra: The `deepagents-code` extra that installs `provider`.
+            extra: The `zjcode` extra that installs `provider`.
         """
         from deepagents_code.tui.widgets.install_confirm import (
             InstallProviderConfirmScreen,

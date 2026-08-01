@@ -87,7 +87,7 @@ def show_help() -> None:
     banner_color = theme.PRIMARY_DEV if _is_editable_install() else theme.PRIMARY
     console.print()
     console.print(
-        f"[bold {banner_color}]deepagents-code[/bold {banner_color}]"
+        f"[bold {banner_color}]zjcode[/bold {banner_color}]"
         f" v{__version__}{install_type}"
     )
     console.print()
@@ -98,31 +98,31 @@ def show_help() -> None:
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
     console.print(
-        "  dcode [OPTIONS]                           Start interactive thread"
+        "  zjcode [OPTIONS]                           Start interactive thread"
     )
-    console.print("  dcode agents <list|reset>                 Manage agents")
-    console.print("  dcode skills <list|create|info|delete>    Manage agent skills")
+    console.print("  zjcode agents <list|reset>                 Manage agents")
+    console.print("  zjcode skills <list|create|info|delete>    Manage agent skills")
     console.print(
-        "  dcode threads <list|delete>               Manage conversation threads"
+        "  zjcode threads <list|delete>               Manage conversation threads"
     )
-    console.print("  dcode mcp <login>                         Manage MCP servers")
+    console.print("  zjcode mcp <login>                         Manage MCP servers")
     console.print(
-        "  dcode config [get <key>|path]             Inspect configuration",
+        "  zjcode config [get <key>|path]             Inspect configuration",
         markup=False,
     )
     console.print(
-        "  dcode auth <list|set|remove|status|path>  Manage provider credentials"
+        "  zjcode auth <list|set|remove|status|path>  Manage provider credentials"
     )
     console.print(
-        "  dcode update                              Check for and install updates"
+        "  zjcode update                              Check for and install updates"
     )
     console.print(
-        "  dcode doctor                              Print install diagnostics"
+        "  zjcode doctor                              Print install diagnostics"
     )
     console.print(
-        "  dcode tools <install|list>                Manage managed tools (ripgrep)"
+        "  zjcode tools <install|list>                Manage managed tools (ripgrep)"
     )
-    console.print("  dcode install NAME                        Install optional extras")
+    console.print("  zjcode install NAME                        Install optional extras")
     console.print()
 
     console.print("[bold]Options:[/bold]", style=theme.PRIMARY)
@@ -166,7 +166,7 @@ def show_help() -> None:
     console.print(
         "  --mcp-config PATH          Load MCP tools from config file"
         " (merged on top of auto-discovered configs;"
-        " run `dcode mcp config` to list discovery paths)"
+        " run `zjcode mcp config` to list discovery paths)"
     )
     console.print("  --no-mcp                   Disable all MCP tool loading")
     console.print(
@@ -246,33 +246,33 @@ def show_help() -> None:
     )
     console.print("  --yes                      Skip install confirmation prompts")
     console.print("  --acp                      Run as an ACP server over stdio")
-    console.print("  -v, --version              Show dcode and SDK versions")
+    console.print("  -v, --version              Show zjcode and SDK versions")
     console.print("  -h, --help                 Show this help message and exit")
     console.print()
 
     console.print("[bold]Non-Interactive Mode:[/bold]", style=theme.PRIMARY)
     console.print(
-        "  dcode -n 'Summarize README.md'     # Run task (no local shell access)",
+        "  zjcode -n 'Summarize README.md'     # Run task (no local shell access)",
         style=theme.MUTED,
     )
     console.print(
-        "  dcode -n 'List files' -S recommended  # Use safe commands",
+        "  zjcode -n 'List files' -S recommended  # Use safe commands",
         style=theme.MUTED,
     )
     console.print(
-        "  dcode -n 'Search logs' -S ls,cat,grep # Specify list",
+        "  zjcode -n 'Search logs' -S ls,cat,grep # Specify list",
         style=theme.MUTED,
     )
     console.print(
-        "  dcode -n 'Fix tests' -S all           # Any command",
+        "  zjcode -n 'Fix tests' -S all           # Any command",
         style=theme.MUTED,
     )
     console.print(
-        "  cat prompt.txt | dcode --stdin -q           # Explicit stdin",
+        "  cat prompt.txt | zjcode --stdin -q           # Explicit stdin",
         style=theme.MUTED,
     )
     console.print(
-        "  dcode --skill code-review -m 'review this patch'",
+        "  zjcode --skill code-review -m 'review this patch'",
         style=theme.MUTED,
     )
     console.print()
@@ -285,7 +285,7 @@ def show_list_help() -> None:
     """
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode list [options]")
+    console.print("  zjcode list [options]")
     console.print()
     console.print(
         "List all agents found in ~/.deepagents/. Each agent has its own",
@@ -297,8 +297,8 @@ def show_list_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode list")
-    console.print("  dcode list --json")
+    console.print("  zjcode list")
+    console.print("  zjcode list --json")
     console.print()
 
 
@@ -306,7 +306,7 @@ def show_agents_help() -> None:
     """Show help information for the `agents` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode agents <command> [options]")
+    console.print("  zjcode agents <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls           List all agents")
@@ -315,9 +315,9 @@ def show_agents_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode agents list")
-    console.print("  dcode agents reset --agent NAME")
-    console.print("  dcode agents reset --agent NAME --target SOURCE")
+    console.print("  zjcode agents list")
+    console.print("  zjcode agents reset --agent NAME")
+    console.print("  zjcode agents reset --agent NAME --target SOURCE")
     console.print()
 
 
@@ -325,7 +325,7 @@ def show_reset_help() -> None:
     """Show help information for the `reset` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode reset --agent NAME [--target SRC]")
+    console.print("  zjcode reset --agent NAME [--target SRC]")
     console.print()
     console.print(
         "Restore an agent's AGENTS.md to the built-in default, or copy",
@@ -344,9 +344,9 @@ def show_reset_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode reset --agent NAME")
-    console.print("  dcode reset --agent NAME --target SOURCE")
-    console.print("  dcode reset --agent NAME --dry-run")
+    console.print("  zjcode reset --agent NAME")
+    console.print("  zjcode reset --agent NAME --target SOURCE")
+    console.print("  zjcode reset --agent NAME --dry-run")
     console.print()
 
 
@@ -358,7 +358,7 @@ def show_skills_help() -> None:
     """
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills <command> [options]")
+    console.print("  zjcode skills <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls           List all available skills")
@@ -374,14 +374,14 @@ def show_skills_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills list")
-    console.print("  dcode skills list --project")
-    console.print("  dcode skills create my-skill")
-    console.print("  dcode skills create my-skill --agent myagent")
-    console.print("  dcode skills info my-skill")
-    console.print("  dcode skills delete my-skill")
-    console.print("  dcode skills delete my-skill --force --project")
-    console.print("  dcode skills delete -h")
+    console.print("  zjcode skills list")
+    console.print("  zjcode skills list --project")
+    console.print("  zjcode skills create my-skill")
+    console.print("  zjcode skills create my-skill --agent myagent")
+    console.print("  zjcode skills info my-skill")
+    console.print("  zjcode skills delete my-skill")
+    console.print("  zjcode skills delete my-skill --force --project")
+    console.print("  zjcode skills delete -h")
     console.print()
     console.print(
         "[bold]Skill directories (highest precedence first):[/bold]",
@@ -401,7 +401,7 @@ def show_plugins_help() -> None:
     """Show help information for the `plugin` / `plugins` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode plugin <command> [options]")
+    console.print("  zjcode plugin <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls                      List available plugins")
@@ -414,10 +414,10 @@ def show_plugins_help() -> None:
     console.print("  marketplace remove <name>    Remove a marketplace and its plugins")
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode plugin list")
-    console.print("  dcode plugin marketplace add ./marketplace")
-    console.print("  dcode plugin install quality-review-plugin@company-tools")
-    console.print("  dcode plugin enable quality-review-plugin@company-tools")
+    console.print("  zjcode plugin list")
+    console.print("  zjcode plugin marketplace add ./marketplace")
+    console.print("  zjcode plugin install quality-review-plugin@company-tools")
+    console.print("  zjcode plugin enable quality-review-plugin@company-tools")
     console.print()
 
 
@@ -425,7 +425,7 @@ def show_skills_list_help() -> None:
     """Show help information for the `skills list` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills list [options]")
+    console.print("  zjcode skills list [options]")
     console.print()
     _print_option_section(
         "  --agent NAME            Agent identifier (default: agent)",
@@ -433,9 +433,9 @@ def show_skills_list_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills list")
-    console.print("  dcode skills list --project")
-    console.print("  dcode skills list --json")
+    console.print("  zjcode skills list")
+    console.print("  zjcode skills list --project")
+    console.print("  zjcode skills list --json")
     console.print()
 
 
@@ -443,7 +443,7 @@ def show_skills_create_help() -> None:
     """Show help information for the `skills create` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills create <name> [options]")
+    console.print("  zjcode skills create <name> [options]")
     console.print()
     _print_option_section(
         "  --agent NAME            Agent identifier (default: agent)",
@@ -452,8 +452,8 @@ def show_skills_create_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills create web-research")
-    console.print("  dcode skills create my-skill --project")
+    console.print("  zjcode skills create web-research")
+    console.print("  zjcode skills create my-skill --project")
     console.print()
 
 
@@ -461,7 +461,7 @@ def show_skills_info_help() -> None:
     """Show help information for the `skills info` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills info <name> [options]")
+    console.print("  zjcode skills info <name> [options]")
     console.print()
     _print_option_section(
         "  --agent NAME            Agent identifier (default: agent)",
@@ -469,8 +469,8 @@ def show_skills_info_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills info web-research")
-    console.print("  dcode skills info my-skill --project")
+    console.print("  zjcode skills info web-research")
+    console.print("  zjcode skills info my-skill --project")
     console.print()
 
 
@@ -478,7 +478,7 @@ def show_skills_delete_help() -> None:
     """Show help information for the `skills delete` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills delete <name> [options]")
+    console.print("  zjcode skills delete <name> [options]")
     console.print()
     _print_option_section(
         "  --agent NAME            Agent identifier (default: agent)",
@@ -488,10 +488,10 @@ def show_skills_delete_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills delete old-skill")
-    console.print("  dcode skills delete old-skill --force")
-    console.print("  dcode skills delete old-skill --project")
-    console.print("  dcode skills delete old-skill --dry-run")
+    console.print("  zjcode skills delete old-skill")
+    console.print("  zjcode skills delete old-skill --force")
+    console.print("  zjcode skills delete old-skill --project")
+    console.print("  zjcode skills delete old-skill --dry-run")
     console.print()
 
 
@@ -499,7 +499,7 @@ def show_skills_trust_help() -> None:
     """Show help information for the `skills trust` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills trust <command>")
+    console.print("  zjcode skills trust <command>")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls           List trusted skill directories")
@@ -513,9 +513,9 @@ def show_skills_trust_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode skills trust list")
-    console.print("  dcode skills trust revoke /shared/skills/my-skill")
-    console.print("  dcode skills trust clear")
+    console.print("  zjcode skills trust list")
+    console.print("  zjcode skills trust revoke /shared/skills/my-skill")
+    console.print("  zjcode skills trust clear")
     console.print()
 
 
@@ -523,7 +523,7 @@ def show_update_help() -> None:
     """Show help information for the `update` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode update [options]")
+    console.print("  zjcode update [options]")
     console.print()
     console.print(
         "Check for and install updates from PyPI.",
@@ -534,9 +534,9 @@ def show_update_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode update")
-    console.print("  dcode update --prerelease")
-    console.print("  dcode update --json")
+    console.print("  zjcode update")
+    console.print("  zjcode update --prerelease")
+    console.print("  zjcode update --json")
     console.print()
 
 
@@ -544,7 +544,7 @@ def show_doctor_help() -> None:
     """Show help information for the `doctor` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode doctor [options]", markup=False)
+    console.print("  zjcode doctor [options]", markup=False)
     console.print()
     console.print(
         "Print install health and diagnostics (versions, platform, install",
@@ -559,17 +559,17 @@ def show_doctor_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode doctor")
-    console.print("  dcode doctor --json")
+    console.print("  zjcode doctor")
+    console.print("  zjcode doctor --json")
     console.print()
     console.print(
-        "Tip: Run `dcode config` or `dcode config get <key>` "
+        "Tip: Run `zjcode config` or `zjcode config get <key>` "
         "to drill into config details.",
         style=theme.MUTED,
         highlight=False,
     )
     console.print(
-        "     Run `dcode --version` (or `dcode -v`) for dependency versions.",
+        "     Run `zjcode --version` (or `zjcode -v`) for dependency versions.",
         style=theme.MUTED,
         highlight=False,
     )
@@ -580,7 +580,7 @@ def show_tools_help() -> None:
     """Show help information for the `tools` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools <command> [options]")
+    console.print("  zjcode tools <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  install           Install or repair the managed ripgrep binary")
@@ -589,10 +589,10 @@ def show_tools_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools install")
-    console.print("  dcode tools install --json")
-    console.print("  dcode tools list")
-    console.print("  dcode tools list --json")
+    console.print("  zjcode tools install")
+    console.print("  zjcode tools install --json")
+    console.print("  zjcode tools list")
+    console.print("  zjcode tools list --json")
     console.print()
 
 
@@ -600,7 +600,7 @@ def show_tools_list_help() -> None:
     """Show help information for the `tools list` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools list [options]")
+    console.print("  zjcode tools list [options]")
     console.print()
     console.print(
         "List the tools available to the agent, grouped by source: built-in",
@@ -612,8 +612,8 @@ def show_tools_list_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools list")
-    console.print("  dcode tools list --json")
+    console.print("  zjcode tools list")
+    console.print("  zjcode tools list --json")
     console.print()
 
 
@@ -621,7 +621,7 @@ def show_tools_install_help() -> None:
     """Show help information for the `tools install` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools install [options]")
+    console.print("  zjcode tools install [options]")
     console.print()
     console.print(
         "Download the pinned, SHA-256-verified ripgrep binary into",
@@ -636,8 +636,8 @@ def show_tools_install_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode tools install")
-    console.print("  dcode tools install --json")
+    console.print("  zjcode tools install")
+    console.print("  zjcode tools install --json")
     console.print()
     console.print(
         "Opt out with DEEPAGENTS_CODE_OFFLINE=1 or set",
@@ -656,23 +656,23 @@ def show_install_help() -> None:
     """Show help information for the `install` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode install NAME [options]")
+    console.print("  zjcode install NAME [options]")
     console.print()
     console.print(
-        "Install an optional deepagents-code extra into the current dcode",
+        "Install an optional zjcode extra into the current zjcode",
     )
     console.print(
         "environment (for example a sandbox provider or model provider).",
     )
     console.print(
-        "Distinct from `dcode tools install`, which provisions managed host",
+        "Distinct from `zjcode tools install`, which provisions managed host",
     )
     console.print(
         "binaries such as ripgrep.",
     )
     console.print()
     # Do not use `_print_option_section` here: it appends the shared `--json`
-    # line, and `dcode install` does not accept that flag.
+    # line, and `zjcode install` does not accept that flag.
     console.print("[bold]Options:[/bold]", style=theme.PRIMARY)
     console.print(
         "  --package               Treat NAME as a package added via `uv --with`"
@@ -681,10 +681,10 @@ def show_install_help() -> None:
     console.print(_HELP_OPTION_LINE)
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode install daytona")
-    console.print("  dcode install fireworks")
-    console.print("  dcode install not-listed-yet --yes")
-    console.print("  dcode install langchain-custom --package --yes")
+    console.print("  zjcode install daytona")
+    console.print("  zjcode install fireworks")
+    console.print("  zjcode install not-listed-yet --yes")
+    console.print("  zjcode install langchain-custom --package --yes")
     console.print()
     console.print(
         "In-session equivalent: `/install NAME`. Legacy CLI alias:",
@@ -692,7 +692,7 @@ def show_install_help() -> None:
         highlight=False,
     )
     console.print(
-        "`dcode --install NAME`.",
+        "`zjcode --install NAME`.",
         style=theme.MUTED,
         highlight=False,
     )
@@ -732,7 +732,7 @@ def show_mcp_help() -> None:
     """Show help information for the `mcp` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode mcp <command> [options]")
+    console.print("  zjcode mcp <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  login <server>    Run the OAuth login flow for an MCP server")
@@ -748,9 +748,9 @@ def show_mcp_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode mcp config")
-    console.print("  dcode mcp login notion")
-    console.print("  dcode mcp login linear --mcp-config ./mcp-config.json")
+    console.print("  zjcode mcp config")
+    console.print("  zjcode mcp login notion")
+    console.print("  zjcode mcp login linear --mcp-config ./mcp-config.json")
     console.print()
 
 
@@ -758,7 +758,7 @@ def show_mcp_login_help() -> None:
     """Show help information for the `mcp login` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode mcp login <server> [--mcp-config PATH]")
+    console.print("  zjcode mcp login <server> [--mcp-config PATH]")
     console.print()
     _print_option_section(
         "  --mcp-config PATH       Path to an MCP config JSON file "
@@ -771,8 +771,8 @@ def show_mcp_login_help() -> None:
     console.print(_MCP_CONFIG_FORMAT_EXAMPLE, style=theme.MUTED)
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode mcp login notion")
-    console.print("  dcode mcp login linear --mcp-config ./mcp-config.json")
+    console.print("  zjcode mcp login notion")
+    console.print("  zjcode mcp login linear --mcp-config ./mcp-config.json")
     console.print()
 
 
@@ -780,7 +780,7 @@ def show_mcp_config_help() -> None:
     """Show help information for the `mcp config` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode mcp config")
+    console.print("  zjcode mcp config")
     console.print()
     console.print(
         "Print the MCP config discovery paths in precedence order, marking"
@@ -799,9 +799,9 @@ def show_config_help() -> None:
     """
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode config [options]", markup=False)
-    console.print("  dcode config get <key> [--json]", markup=False)
-    console.print("  dcode config path [--json]", markup=False)
+    console.print("  zjcode config [options]", markup=False)
+    console.print("  zjcode config get <key> [--json]", markup=False)
+    console.print("  zjcode config path [--json]", markup=False)
     console.print()
     console.print("Show effective configuration values and their source.")
     console.print()
@@ -819,10 +819,10 @@ def show_config_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode config")
-    console.print("  dcode config --verbose")
-    console.print("  dcode config get interpreter.memory_limit_mb")
-    console.print("  dcode config path")
+    console.print("  zjcode config")
+    console.print("  zjcode config --verbose")
+    console.print("  zjcode config get interpreter.memory_limit_mb")
+    console.print("  zjcode config path")
     console.print()
 
 
@@ -835,7 +835,7 @@ def show_auth_help() -> None:
     """
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode auth <command> [options]")
+    console.print("  zjcode auth <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls               List providers and their status")
@@ -861,16 +861,16 @@ def show_auth_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode auth list")
-    console.print("  echo $ANTHROPIC_API_KEY | dcode auth set anthropic")
-    console.print("  dcode auth set openai --from-env OPENAI_API_KEY")
+    console.print("  zjcode auth list")
+    console.print("  echo $ANTHROPIC_API_KEY | zjcode auth set anthropic")
+    console.print("  zjcode auth set openai --from-env OPENAI_API_KEY")
     console.print(
-        "  echo $LANGSMITH_API_KEY | dcode auth set langsmith --project my-app"
+        "  echo $LANGSMITH_API_KEY | zjcode auth set langsmith --project my-app"
     )
-    console.print("  echo $LANGSMITH_API_KEY | dcode auth set langsmith --base-url eu")
-    console.print("  dcode auth status anthropic")
-    console.print("  dcode auth remove anthropic")
-    console.print("  dcode auth path")
+    console.print("  echo $LANGSMITH_API_KEY | zjcode auth set langsmith --base-url eu")
+    console.print("  zjcode auth status anthropic")
+    console.print("  zjcode auth remove anthropic")
+    console.print("  zjcode auth path")
     console.print()
 
 
@@ -882,7 +882,7 @@ def show_threads_help() -> None:
     """
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads <command> [options]")
+    console.print("  zjcode threads <command> [options]")
     console.print()
     console.print("[bold]Commands:[/bold]", style=theme.PRIMARY)
     console.print("  list|ls           List all threads")
@@ -891,10 +891,10 @@ def show_threads_help() -> None:
     _print_option_section()
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads list")
-    console.print("  dcode threads list -n 10")
-    console.print("  dcode threads list --agent mybot")
-    console.print("  dcode threads delete abc123")
+    console.print("  zjcode threads list")
+    console.print("  zjcode threads list -n 10")
+    console.print("  zjcode threads list --agent mybot")
+    console.print("  zjcode threads delete abc123")
     console.print()
 
 
@@ -902,15 +902,15 @@ def show_threads_delete_help() -> None:
     """Show help information for the `threads delete` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads delete <ID> [options]")
+    console.print("  zjcode threads delete <ID> [options]")
     console.print()
     _print_option_section(
         "  --dry-run               Show what would happen without making changes",
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads delete abc123")
-    console.print("  dcode threads delete abc123 --dry-run")
+    console.print("  zjcode threads delete abc123")
+    console.print("  zjcode threads delete abc123 --dry-run")
     console.print()
 
 
@@ -918,7 +918,7 @@ def show_threads_list_help() -> None:
     """Show help information for the `threads list` subcommand."""
     console.print()
     console.print("[bold]Usage:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads list [options]")
+    console.print("  zjcode threads list [options]")
     console.print()
     _print_option_section(
         "  --agent NAME              Filter by agent name",
@@ -932,11 +932,11 @@ def show_threads_list_help() -> None:
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
-    console.print("  dcode threads list")
-    console.print("  dcode threads list -n 10")
-    console.print("  dcode threads list --agent mybot")
-    console.print("  dcode threads list --branch main -v")
-    console.print("  dcode threads list --cwd")
-    console.print("  dcode threads list --sort created --limit 50")
-    console.print("  dcode threads list -r")
+    console.print("  zjcode threads list")
+    console.print("  zjcode threads list -n 10")
+    console.print("  zjcode threads list --agent mybot")
+    console.print("  zjcode threads list --branch main -v")
+    console.print("  zjcode threads list --cwd")
+    console.print("  zjcode threads list --sort created --limit 50")
+    console.print("  zjcode threads list -r")
     console.print()

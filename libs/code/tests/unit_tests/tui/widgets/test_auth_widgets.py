@@ -292,7 +292,7 @@ class TestAuthPromptScreen:
             assert "Sign in to Anthropic" in str(instructions.content)
             assert "create or copy an API key" in str(instructions.content)
             assert "Anthropic key page" in str(instructions.content)
-            assert "dcode stores the above key locally" in str(storage_note.content)
+            assert "zjcode stores the above key locally" in str(storage_note.content)
             assert "Advanced (F2)" in str(toggle.content)
             assert base_url_label.display is False
             assert "Base URL override" in str(base_url_label.content)
@@ -315,7 +315,7 @@ class TestAuthPromptScreen:
             assert get_glyphs().checkmark in str(title.content)
             assert "Replace key for OpenAI" in str(title.content)
             assert "set from environment variable OPENAI_API_KEY" in str(status.content)
-            assert "use a different key for dcode" in str(status.content)
+            assert "use a different key for zjcode" in str(status.content)
             content = cast("Content", status.content)
             assert any("$success" in str(span.style) for span in content.spans)
 
@@ -1794,13 +1794,13 @@ api_key_url = "javascript:alert(1)"
             await pilot.pause()
             meta = app.screen.query_one("#auth-prompt-key-meta", Static)
             text = str(meta.content)
-            assert "dcode stores" not in text
+            assert "zjcode stores" not in text
             assert (
                 "Alternatively, environment variables can be used in place "
                 "of the key stored above." in text
             )
             assert "DEEPAGENTS_CODE_OPENAI_API_KEY" in text
-            assert "dcode-only key" in text
+            assert "zjcode-only key" in text
             assert "highest priority" in text
             assert "OPENAI_API_KEY" in text
             assert "share a key with other provider SDK tools" in text

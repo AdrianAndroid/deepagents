@@ -312,7 +312,7 @@ class _ArchiveReadGuard:
 
 
 class CLICompactionMiddleware(SummarizationToolMiddleware):
-    """Add explicit forced compaction and runtime model selection for dcode.
+    """Add explicit forced compaction and runtime model selection for zjcode.
 
     The SDK tool's normal, model-initiated behavior remains unchanged. The
     private `force` input is used only by the user-initiated `/offload` path,
@@ -581,7 +581,7 @@ class CLICompactionMiddleware(SummarizationToolMiddleware):
     def _forced_compact_error(tool_call_id: str, exc: Exception) -> Command:
         """Build a forced-compaction failure result with a stable prefix.
 
-        Owned by dcode so the `/offload` client can detect failures via
+        Owned by zjcode so the `/offload` client can detect failures via
         `COMPACTION_FAILURE_PREFIX`. The tool must return a `ToolMessage` rather
         than raise, so the model (and the client) see the failure as ordinary
         tool output.
@@ -622,7 +622,7 @@ def _create_cli_compaction_middleware(
     model: str | BaseChatModel,
     backend: BackendProtocol,
 ) -> CLICompactionMiddleware:
-    """Create the dcode compaction middleware from the SDK configuration.
+    """Create the zjcode compaction middleware from the SDK configuration.
 
     Args:
         model: Startup model or model specification.

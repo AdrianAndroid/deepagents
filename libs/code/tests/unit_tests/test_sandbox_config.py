@@ -33,9 +33,9 @@ def test_parses_default_and_providers(tmp_path: Path) -> None:
         default = "acme"
 
         [sandboxes.providers.acme]
-        class_path = "acme_dcode_sandbox:AcmeSandboxProvider"
+        class_path = "acme_zjcode_sandbox:AcmeSandboxProvider"
         working_dir = "/workspace"
-        package = "acme-dcode-sandbox"
+        package = "acme-zjcode-sandbox"
 
         [sandboxes.providers.acme.params]
         region = "us-east-1"
@@ -45,9 +45,9 @@ def test_parses_default_and_providers(tmp_path: Path) -> None:
     config = SandboxConfig.load(path)
     assert config.default == "acme"
     acme = config.providers["acme"]
-    assert acme["class_path"] == "acme_dcode_sandbox:AcmeSandboxProvider"
+    assert acme["class_path"] == "acme_zjcode_sandbox:AcmeSandboxProvider"
     assert acme["working_dir"] == "/workspace"
-    assert acme["package"] == "acme-dcode-sandbox"
+    assert acme["package"] == "acme-zjcode-sandbox"
     assert config.get_params("acme") == {"region": "us-east-1", "namespace": "dev"}
 
 
@@ -127,7 +127,7 @@ def test_providers_mapping_is_read_only(tmp_path: Path) -> None:
         tmp_path,
         """
         [sandboxes.providers.acme]
-        class_path = "acme_dcode_sandbox:AcmeSandboxProvider"
+        class_path = "acme_zjcode_sandbox:AcmeSandboxProvider"
         """,
     )
     config = SandboxConfig.load(path)

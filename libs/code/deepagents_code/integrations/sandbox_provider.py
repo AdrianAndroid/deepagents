@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 class SandboxInstallHint:
     """How to install the package that provides a sandbox backend.
 
-    Built-in providers ship as `deepagents-code` extras (`kind="extra"`);
+    Built-in providers ship as `zjcode` extras (`kind="extra"`);
     third-party providers install as arbitrary packages (`kind="package"`).
     The distinction lets error messages emit the correct install command
-    (`/install daytona` vs. `/install acme-dcode-sandbox --package`).
+    (`/install daytona` vs. `/install acme-zjcode-sandbox --package`).
     """
 
     kind: Literal["extra", "package"]
@@ -29,12 +29,12 @@ class SandboxInstallHint:
 
         Args:
             in_app: Whether to render the in-app slash command (`/install`)
-                rather than the CLI command (`dcode install`).
+                rather than the CLI command (`zjcode install`).
 
         Returns:
             The install command string.
         """
-        prefix = "/install" if in_app else "dcode install"
+        prefix = "/install" if in_app else "zjcode install"
         suffix = " --package" if self.kind == "package" else ""
         return f"{prefix} {self.name}{suffix}"
 

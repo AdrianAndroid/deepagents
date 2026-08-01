@@ -1,4 +1,4 @@
-"""Tests for the `dcode mcp` command group."""
+"""Tests for the `zjcode mcp` command group."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class TestSetupMCPParsers:
     """Argument parser wiring for the `mcp` subcommand."""
 
     def test_mcp_login_accepts_server_arg(self) -> None:
-        """The parser recognizes `dcode mcp login <server>`."""
+        """The parser recognizes `zjcode mcp login <server>`."""
         parser = _build_parser()
         ns = parser.parse_args(["mcp", "login", "notion"])
         assert ns.command == "mcp"
@@ -294,7 +294,7 @@ class TestRunMCPLogin:
         """A broken project `.mcp.json` is reported even when login succeeds.
 
         Regression: `resolve_mcp_config` collected parse errors but dropped them
-        on partial success (a user config still loaded), so `dcode mcp login`
+        on partial success (a user config still loaded), so `zjcode mcp login`
         gave no hint that the project file failed to parse. The runtime loader
         reports the same failures as error rows, so this surface must too.
         """

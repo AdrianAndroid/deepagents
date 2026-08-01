@@ -185,7 +185,7 @@ class TestLangsmithLinkHelpers:
     def test_link_appends_utm_source(self) -> None:
         """`_langsmith_project_link` appends the UTM source tag."""
         result = _langsmith_project_link("https://smith.langchain.com/o/org/p/proj")
-        assert "utm_source=deepagents-code" in result
+        assert "utm_source=zjcode" in result
 
     def test_link_style_non_ansi_has_link(self) -> None:
         """Non-ANSI link style carries the project URL as a link."""
@@ -197,7 +197,7 @@ class TestLangsmithLinkHelpers:
             colors=DARK_COLORS,
         )
         assert style.link is not None
-        assert "utm_source=deepagents-code" in style.link
+        assert "utm_source=zjcode" in style.link
 
     def test_link_style_ansi_is_bold(self) -> None:
         """ANSI link style is bold with a link."""
@@ -279,8 +279,8 @@ class TestTitle:
     """Tests for the banner title line."""
 
     def test_shows_product_name(self) -> None:
-        """The banner shows the `dcode` title."""
-        assert "dcode" in _make_banner()._build_banner().plain
+        """The banner shows the `zjcode` title."""
+        assert "zjcode" in _make_banner()._build_banner().plain
 
     def test_shows_version_by_default(self) -> None:
         """The version is shown when not hidden and not editable."""
@@ -606,16 +606,16 @@ class TestTracingLine:
 
     def test_shows_project_name_without_url(self) -> None:
         """The tracing row renders the project name even before the URL resolves."""
-        plain = _make_banner(project_name="dcode-johannes")._build_banner().plain
+        plain = _make_banner(project_name="zjcode-johannes")._build_banner().plain
         assert "tracing:" in plain
-        assert "'dcode-johannes'" in plain
+        assert "'zjcode-johannes'" in plain
 
     def test_project_name_is_clickable_when_url_resolved(self) -> None:
         """The project name is a hyperlink when the URL has been fetched."""
         widget = _make_banner(
-            project_name="dcode-johannes",
+            project_name="zjcode-johannes",
             project_urls={
-                "dcode-johannes": "https://smith.langchain.com/o/org/p/dcode-johannes"
+                "zjcode-johannes": "https://smith.langchain.com/o/org/p/zjcode-johannes"
             },
         )
         content = widget._build_banner()
@@ -623,12 +623,12 @@ class TestTracingLine:
             s for s in content.spans if isinstance(s.style, TStyle) and s.style.link
         ]
         assert any(
-            "dcode-johannes" in content.plain[s.start : s.end] for s in linked_spans
+            "zjcode-johannes" in content.plain[s.start : s.end] for s in linked_spans
         )
 
     def test_project_name_not_clickable_without_url(self) -> None:
         """The project name has no link when the URL has not been fetched."""
-        widget = _make_banner(project_name="dcode-johannes")
+        widget = _make_banner(project_name="zjcode-johannes")
         content = widget._build_banner()
         linked = [
             s for s in content.spans if isinstance(s.style, TStyle) and s.style.link
@@ -644,7 +644,7 @@ class TestTracingLine:
         """`HIDE_LANGSMITH_TRACING` removes the tracing row."""
         plain = (
             _make_banner(
-                project_name="dcode-johannes",
+                project_name="zjcode-johannes",
                 env={HIDE_LANGSMITH_TRACING: "1"},
             )
             ._build_banner()
@@ -654,21 +654,21 @@ class TestTracingLine:
 
     async def test_fetch_and_update_sets_url(self) -> None:
         """`_fetch_and_update` fetches the URL and re-renders the banner."""
-        widget = _make_banner(project_name="dcode-johannes")
+        widget = _make_banner(project_name="zjcode-johannes")
         with (
             patch(
                 _FETCH_URL,
-                return_value="https://smith.langchain.com/o/org/p/dcode-johannes",
+                return_value="https://smith.langchain.com/o/org/p/zjcode-johannes",
             ),
             patch.object(widget, "update"),
         ):
             await widget._fetch_and_update()
-        assert widget._project_urls["dcode-johannes"] is not None
-        assert "dcode-johannes" in widget._project_urls["dcode-johannes"]
+        assert widget._project_urls["zjcode-johannes"] is not None
+        assert "zjcode-johannes" in widget._project_urls["zjcode-johannes"]
 
     async def test_fetch_and_update_handles_timeout(self) -> None:
         """`_fetch_and_update` does not crash on timeout."""
-        widget = _make_banner(project_name="dcode-johannes")
+        widget = _make_banner(project_name="zjcode-johannes")
 
         def _raise_timeout(*_args: object, **_kwargs: object) -> str:
             raise TimeoutError
@@ -688,23 +688,23 @@ class TestReplicaTracingLine:
         """The replica row renders when a primary project and replica are set."""
         plain = (
             _make_banner(
-                project_name="dcode-primary",
-                replica_project="dcode-replica",
+                project_name="zjcode-primary",
+                replica_project="zjcode-replica",
             )
             ._build_banner()
             .plain
         )
         assert "tracing:" in plain
-        assert "'dcode-primary'" in plain
+        assert "'zjcode-primary'" in plain
         assert "replica:" in plain
-        assert "'dcode-replica'" in plain
+        assert "'zjcode-replica'" in plain
 
     def test_hidden_when_show_replica_flag_disabled(self) -> None:
         """The replica row respects `SHOW_LANGSMITH_REPLICA_TRACING`."""
         plain = (
             _make_banner(
-                project_name="dcode-primary",
-                replica_project="dcode-replica",
+                project_name="zjcode-primary",
+                replica_project="zjcode-replica",
                 env={SHOW_LANGSMITH_REPLICA_TRACING: "0"},
             )
             ._build_banner()
@@ -712,14 +712,14 @@ class TestReplicaTracingLine:
         )
         assert "tracing:" in plain
         assert "replica:" not in plain
-        assert "dcode-replica" not in plain
+        assert "zjcode-replica" not in plain
 
     def test_hidden_when_primary_tracing_hidden(self) -> None:
         """Replica tracing is hidden with the primary tracing row."""
         plain = (
             _make_banner(
-                project_name="dcode-primary",
-                replica_project="dcode-replica",
+                project_name="zjcode-primary",
+                replica_project="zjcode-replica",
                 env={HIDE_LANGSMITH_TRACING: "1"},
             )
             ._build_banner()
@@ -727,15 +727,15 @@ class TestReplicaTracingLine:
         )
         assert "tracing:" not in plain
         assert "replica:" not in plain
-        assert "dcode-replica" not in plain
+        assert "zjcode-replica" not in plain
 
     def test_replica_project_is_clickable_when_url_resolved(self) -> None:
         """The replica project is a hyperlink when the URL has been fetched."""
         widget = _make_banner(
-            project_name="dcode-primary",
-            replica_project="dcode-replica",
+            project_name="zjcode-primary",
+            replica_project="zjcode-replica",
             project_urls={
-                "dcode-replica": "https://smith.langchain.com/o/org/p/dcode-replica"
+                "zjcode-replica": "https://smith.langchain.com/o/org/p/zjcode-replica"
             },
         )
         content = widget._build_banner()
@@ -743,18 +743,18 @@ class TestReplicaTracingLine:
             s for s in content.spans if isinstance(s.style, TStyle) and s.style.link
         ]
         assert any(
-            "dcode-replica" in content.plain[s.start : s.end] for s in linked_spans
+            "zjcode-replica" in content.plain[s.start : s.end] for s in linked_spans
         )
 
     async def test_fetch_and_update_sets_primary_and_replica_urls(self) -> None:
         """`_fetch_and_update` fetches URLs for primary and replica projects."""
         widget = _make_banner(
-            project_name="dcode-primary",
-            replica_project="dcode-replica",
+            project_name="zjcode-primary",
+            replica_project="zjcode-replica",
         )
         urls = {
-            "dcode-primary": "https://smith.langchain.com/o/org/p/dcode-primary",
-            "dcode-replica": "https://smith.langchain.com/o/org/p/dcode-replica",
+            "zjcode-primary": "https://smith.langchain.com/o/org/p/zjcode-primary",
+            "zjcode-replica": "https://smith.langchain.com/o/org/p/zjcode-replica",
         }
 
         def _fetch_url(project: str) -> str:

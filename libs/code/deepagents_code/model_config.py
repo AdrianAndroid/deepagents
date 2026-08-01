@@ -1039,7 +1039,9 @@ def get_available_models() -> dict[str, list[str]]:
             )
             continue
         try:
-            profiles = _load_provider_profiles(module_path)
+            profiles = _with_builtin_profiles(
+                provider, _load_provider_profiles(module_path)
+            )
         except ImportError:
             logger.debug(
                 "Could not import profiles from %s (package may not be installed)",
@@ -1091,7 +1093,9 @@ def get_available_models() -> dict[str, list[str]]:
             profile_module = _profile_module_from_class_path(class_path)
             if profile_module:
                 try:
-                    profiles = _load_provider_profiles(profile_module)
+                    profiles = _with_builtin_profiles(
+                        provider_name, _load_provider_profiles(profile_module)
+                    )
                 except ImportError:
                     logger.debug(
                         "Could not import profiles from %s for class_path "
@@ -1181,6 +1185,163 @@ def get_available_models() -> dict[str, list[str]]:
     return available
 
 
+_BUILTIN_MODEL_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
+    "openai": {
+        "gpt-5": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5-chat-latest": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5-codex": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5-mini": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5-nano": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5-pro": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.1": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.1-chat-latest": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.1-codex": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.1-codex-max": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.1-codex-mini": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.2": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.2-chat-latest": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.2-codex": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.2-pro": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.3-chat-latest": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.3-codex": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.3-codex-spark": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.4": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.4-mini": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.4-nano": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.4-pro": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.5": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.5-pro": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.6": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh", "max"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.6-luna": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh", "max"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.6-sol": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh", "max"],
+            "reasoning_effort_default": "medium",
+        },
+        "gpt-5.6-terra": {
+            "reasoning_effort_levels": ["none", "low", "medium", "high", "xhigh", "max"],
+            "reasoning_effort_default": "medium",
+        },
+    },
+    "anthropic": {
+        "claude-opus-5": {
+            "tool_calling": True,
+            "text_inputs": True,
+            "text_outputs": True,
+            "reasoning_output": True,
+            "reasoning_effort_levels": ["low", "medium", "high", "xhigh", "max"],
+            "reasoning_effort_default": "high",
+        },
+    },
+}
+
+
+def _with_builtin_profiles(
+    provider: str, profiles: dict[str, dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Add missing profile fields required by the current model catalog.
+
+    Args:
+        provider: Provider whose profiles are being loaded.
+        profiles: Profiles loaded from the provider integration.
+
+    Returns:
+        Provider profiles supplemented by built-in fallbacks.
+    """
+    builtins = _BUILTIN_MODEL_PROFILES.get(provider, {})
+    if not builtins:
+        return profiles
+    merged: dict[str, dict[str, Any]] = {}
+    for model_name, upstream_profile in profiles.items():
+        builtin = builtins.get(model_name, {})
+        if builtin:
+            merged[model_name] = {**upstream_profile, **builtin}
+        else:
+            merged[model_name] = upstream_profile
+    # Add built-in profiles that don't exist in upstream at all
+    for model_name, builtin_profile in builtins.items():
+        if model_name not in merged:
+            merged[model_name] = builtin_profile
+    return merged
+
+
 def _build_entry(
     base: dict[str, Any],
     overrides: dict[str, Any],
@@ -1261,7 +1422,9 @@ def get_model_profiles(
             )
             continue
         try:
-            profiles = _load_provider_profiles(module_path)
+            profiles = _with_builtin_profiles(
+                provider, _load_provider_profiles(module_path)
+            )
         except ImportError:
             logger.debug(
                 "Could not import profiles from %s for provider '%s'",
@@ -1316,7 +1479,10 @@ def get_model_profiles(
             profile_module = _profile_module_from_class_path(class_path)
             if profile_module:
                 try:
-                    pkg_profiles = _load_provider_profiles(profile_module)
+                    pkg_profiles = _with_builtin_profiles(
+                        provider_name,
+                        _load_provider_profiles(profile_module),
+                    )
                 except ImportError:
                     logger.debug(
                         "Could not import profiles from %s for class_path "
@@ -2037,7 +2203,7 @@ def get_provider_auth_status(provider: str) -> ProviderAuthStatus:
             assumed to manage its own auth (e.g., custom headers, JWT, mTLS).
         - If neither `api_key_env` nor `class_path` is set, falls through
             to provider-specific defaults.
-    2. **Hardcoded registry** (`PROVIDER_API_KEY_ENV`): a module-level dict
+    2. **Harzjcoded registry** (`PROVIDER_API_KEY_ENV`): a module-level dict
         mapping well-known provider names to their canonical env var
         (e.g., `"anthropic"` → `"ANTHROPIC_API_KEY"`). The env var is checked
         via `resolve_env_var()`.
@@ -2102,9 +2268,9 @@ def get_provider_auth_status(provider: str) -> ProviderAuthStatus:
                 detail="custom auth",
             )
         # No api_key_env in config — fall through to provider-specific and
-        # hardcoded maps.
+        # harzjcoded maps.
 
-    # Fall back to hardcoded well-known providers.
+    # Fall back to harzjcoded well-known providers.
     env_var = PROVIDER_API_KEY_ENV.get(provider)
     if env_var:
         configured = _resolve_configured(provider, env_var)
@@ -2162,7 +2328,7 @@ def get_provider_auth_status(provider: str) -> ProviderAuthStatus:
             detail=detail,
         )
 
-    # Provider not found in config or hardcoded map — credential status is
+    # Provider not found in config or harzjcoded map — credential status is
     # unknown. The provider itself will report auth failures at
     # model-creation time.
     logger.debug(
@@ -2200,7 +2366,7 @@ def get_credential_env_var(provider: str) -> str | None:
     """Return the env var name that holds credentials for a provider.
 
     Checks the config file first (user override), then falls back to the
-    hardcoded `PROVIDER_API_KEY_ENV` map.
+    harzjcoded `PROVIDER_API_KEY_ENV` map.
 
     Args:
         provider: Provider name.
@@ -2219,7 +2385,7 @@ def get_base_url_env_vars(provider: str) -> tuple[str, ...]:
     """Return base-URL env var names for a provider in resolution order.
 
     Checks the config file's `base_url_env` first (user override), then falls
-    back to the hardcoded `PROVIDER_BASE_URL_ENV` map.
+    back to the harzjcoded `PROVIDER_BASE_URL_ENV` map.
 
     Args:
         provider: Provider name.
@@ -2239,7 +2405,7 @@ def get_base_url_env_var(provider: str) -> str | None:
     """Return the canonical base-URL env var name for a provider.
 
     Checks the config file's `base_url_env` first (user override), then falls
-    back to the canonical name in the hardcoded `PROVIDER_BASE_URL_ENV` map.
+    back to the canonical name in the harzjcoded `PROVIDER_BASE_URL_ENV` map.
     Parallel to `get_credential_env_var`.
 
     Args:
@@ -2423,7 +2589,7 @@ def _apply_stored_base_url(provider: str, base_url: str | None) -> None:
     canonical = get_base_url_env_var(provider)
     # Clear every name the SDK might read: the built-in alternates plus any
     # config-declared `base_url_env` (which extends pairing to providers
-    # outside the hardcoded set).
+    # outside the harzjcoded set).
     names = set(PROVIDER_BASE_URL_ENV.get(provider, ()))
     if canonical:
         names.add(canonical)
@@ -2771,7 +2937,7 @@ class ModelConfig:
         """Check if credentials are available for a provider.
 
         This is the config-file-driven credential check, supporting custom
-        providers (e.g., local Ollama with no key required). For the hardcoded
+        providers (e.g., local Ollama with no key required). For the harzjcoded
         `PROVIDER_API_KEY_ENV`-based check used in the hot-swap path, see the
         module-level `has_provider_credentials()`.
 

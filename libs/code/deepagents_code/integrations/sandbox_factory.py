@@ -237,12 +237,12 @@ def _import_provider_module(
         msg = (
             f"The '{provider}' sandbox provider requires the '{package}' package. "
             f"Install it with: /install {provider} (in-app) or "
-            f"dcode install {provider} (CLI)"
+            f"zjcode install {provider} (CLI)"
         )
         raise ImportError(msg) from exc
 
 
-_LANGSMITH_DEFAULT_SNAPSHOT = "deepagents-code"
+_LANGSMITH_DEFAULT_SNAPSHOT = "zjcode"
 """Default LangSmith sandbox snapshot name used when none is specified."""
 
 _LANGSMITH_DEFAULT_IMAGE = "python:3"
@@ -798,7 +798,7 @@ class _AgentCoreProvider(SandboxProvider):
 
         interpreter = agentcore_module.CodeInterpreter(
             region=self._region,
-            integration_source="deepagents-code",
+            integration_source="zjcode",
         )
         try:
             interpreter.start()

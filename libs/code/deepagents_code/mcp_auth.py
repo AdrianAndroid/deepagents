@@ -337,7 +337,7 @@ class FileTokenStorage(TokenStorage):
         """Sibling lock file that serializes token refreshes across processes.
 
         A dedicated `.lock` file (never the token file itself) lets `filelock`
-        coordinate refreshes between dcode processes and provider instances
+        coordinate refreshes between zjcode processes and provider instances
         without ever holding an exclusive lock on the credential file. It holds
         no token material.
         """
@@ -702,7 +702,7 @@ class FileTokenStorage(TokenStorage):
             msg = (
                 f"Failed to read MCP token file {path}: {exc}. "
                 f"Delete the file and run `/mcp login {self._server_name}` "
-                f"in the TUI (or `dcode mcp login {self._server_name}`)."
+                f"in the TUI (or `zjcode mcp login {self._server_name}`)."
             )
             raise RuntimeError(msg) from exc
         if data.get("version") != _STORAGE_VERSION:
@@ -710,7 +710,7 @@ class FileTokenStorage(TokenStorage):
                 f"MCP token file {path} has unsupported version "
                 f"{data.get('version')!r} (expected {_STORAGE_VERSION}). "
                 f"Delete it and run `/mcp login {self._server_name}` in the "
-                f"TUI (or `dcode mcp login {self._server_name}`)."
+                f"TUI (or `zjcode mcp login {self._server_name}`)."
             )
             raise RuntimeError(msg)
         return data
@@ -1065,7 +1065,7 @@ class MCPReauthRequiredError(RuntimeError):
         super().__init__(
             f"MCP server {server_name!r} needs re-authentication. "
             f"Run `/mcp login {server_name}` in the TUI, or "
-            f"`dcode mcp login {server_name}` from the shell.",
+            f"`zjcode mcp login {server_name}` from the shell.",
         )
 
 
@@ -1384,7 +1384,7 @@ class _ExpiryAwareOAuthClientProvider(OAuthClientProvider):
     async def _reload_tokens_from_storage(self) -> None:
         """Re-read persisted tokens so a peer's refresh is observed.
 
-        Another dcode process (or a separate provider instance in this process)
+        Another zjcode process (or a separate provider instance in this process)
         may have rotated the refresh token on disk while this provider held a
         now-stale copy in memory. Re-reading before deciding to refresh keeps
         this provider from replaying an already-rotated refresh token, which

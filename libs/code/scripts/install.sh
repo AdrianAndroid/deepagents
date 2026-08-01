@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Install deepagents-code.
+# Install zjcode.
 #
 # Usage:
-#   curl -LsSf https://langch.in/dcode | bash
-#   curl -LsSf https://langch.in/dcode | bash -s -- VERSION
+#   curl -LsSf https://langch.in/zjcode | bash
+#   curl -LsSf https://langch.in/zjcode | bash -s -- VERSION
 #
 # Install an exact pre-release version:
-#   curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_VERSION="0.1.0rc1" bash
-#   curl -LsSf https://langch.in/dcode | bash -s -- 0.1.0rc1
+#   curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_VERSION="0.1.0rc1" bash
+#   curl -LsSf https://langch.in/zjcode | bash -s -- 0.1.0rc1
 #
 # Override uv's pre-release strategy when resolving the latest version:
-#   curl -LsSf https://langch.in/dcode | DEEPAGENTS_CODE_PRERELEASE="allow" bash
+#   curl -LsSf https://langch.in/zjcode | DEEPAGENTS_CODE_PRERELEASE="allow" bash
 #
 # Options:
 #   --help, -h     Show this help message and exit
 #   --version, -v  Print installer version and exit
 #
 # By default, the installer uses uv's `allow` pre-release strategy so stable
-# deepagents-code releases that pin a pre-release dependency can resolve.
+# zjcode releases that pin a pre-release dependency can resolve.
 # DEEPAGENTS_CODE_VERSION and an explicit DEEPAGENTS_CODE_PRERELEASE are mutually
 # exclusive: an exact pin already selects a single version, so setting both is an
 # error.
@@ -31,9 +31,9 @@
 #     - DEEPAGENTS_CODE_EXTRAS / _PYTHON          rebuild with those options
 #
 # Uninstall:
-#   This script installs deepagents-code as a uv tool. To remove it:
-#     uv tool uninstall deepagents-code
-#   That removes the dcode/deepagents-code binary and its isolated venv.
+#   This script installs zjcode as a uv tool. To remove it:
+#     uv tool uninstall zjcode
+#   That removes the zjcode/zjcode binary and its isolated venv.
 #   User config and data live separately in ~/.deepagents (config.toml,
 #   hooks.json, a global .env, and a .state/ dir holding sessions and saved
 #   credentials) and are NOT removed by the uninstall above. To also wipe them:
@@ -66,7 +66,7 @@
 #   DEEPAGENTS_CODE_SKIP_OPTIONAL — set to 1 to skip optional tool checks
 #   DEEPAGENTS_CODE_RIPGREP_INSTALLER — how to provision ripgrep:
 #     "managed" (default) eagerly installs the pinned, SHA-256-verified binary
-#     into ~/.deepagents/bin (no sudo) via `dcode tools install`; "system"
+#     into ~/.deepagents/bin (no sudo) via `zjcode tools install`; "system"
 #     keeps the interactive package-manager install (brew/apt/cargo/...). Set
 #     DEEPAGENTS_CODE_OFFLINE=1 to skip the managed download entirely.
 #   DEEPAGENTS_CODE_SKIP_XCODE_CHECK — set to 1 to bypass the macOS Xcode
@@ -89,16 +89,16 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # CLI flags — --help / --version short-circuit before any install work
 # ---------------------------------------------------------------------------
-INSTALLER_VERSION="deepagents-code installer 1.0"
+INSTALLER_VERSION="zjcode installer 1.0"
 
 print_help() {
   cat <<'HELP'
-Install deepagents-code.
+Install zjcode.
 
 Usage:
-  curl -LsSf https://langch.in/dcode | bash
-  curl -LsSf https://langch.in/dcode | bash -s -- [options]
-  curl -LsSf https://langch.in/dcode | bash -s -- VERSION
+  curl -LsSf https://langch.in/zjcode | bash
+  curl -LsSf https://langch.in/zjcode | bash -s -- [options]
+  curl -LsSf https://langch.in/zjcode | bash -s -- VERSION
 
 Options:
   --help, -h        Show this help message and exit
@@ -130,7 +130,7 @@ Environment variables:
   DEEPAGENTS_CODE_SKIP_OPTIONAL — set to 1 to skip optional tool checks
   DEEPAGENTS_CODE_RIPGREP_INSTALLER — how to provision ripgrep:
     "managed" (default) eagerly installs the pinned, SHA-256-verified binary
-    into ~/.deepagents/bin (no sudo) via `dcode tools install`; "system"
+    into ~/.deepagents/bin (no sudo) via `zjcode tools install`; "system"
     keeps the interactive package-manager install (brew/apt/cargo/...). Set
     DEEPAGENTS_CODE_OFFLINE=1 to skip the managed download entirely.
   DEEPAGENTS_CODE_SKIP_XCODE_CHECK — set to 1 to bypass the macOS Xcode
@@ -139,7 +139,7 @@ Environment variables:
     status lines
   UV_BIN — path to uv binary (auto-detected if unset)
 
-For full documentation: https://docs.langchain.com/deepagents-code
+For full documentation: https://docs.langchain.com/zjcode
 HELP
 }
 
@@ -208,7 +208,7 @@ cleanup_temp_files() {
 
 # Keep the shell PATH the user started with. The installer may source
 # ~/.local/bin/env later so it can find a freshly installed uv, but that does
-# not update the parent shell that will receive the final "Run: dcode" advice.
+# not update the parent shell that will receive the final "Run: zjcode" advice.
 ORIGINAL_PATH="${PATH:-}"
 
 # ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ cleanup_on_signal() {
     echo "" >&2
     log_signal_failure_hint "$exit_code"
     log_error "Installation failed (exit code ${exit_code}). See errors above."
-    log_error "For help, visit: https://docs.langchain.com/deepagents-code"
+    log_error "For help, visit: https://docs.langchain.com/zjcode"
   fi
 }
 trap cleanup_on_signal EXIT
@@ -333,7 +333,7 @@ detect_os
 # ---------------------------------------------------------------------------
 # On a fresh Mac the /usr/bin shims for git, python3, etc. are stubs that pop a
 # blocking GUI dialog ("...requires the command line developer tools") the first
-# time they run. uv's interpreter discovery and dcode's own git usage hit those
+# time they run. uv's interpreter discovery and zjcode's own git usage hit those
 # stubs, so fail fast here with a clear instruction instead of leaving the user
 # staring at a confusing popup mid-install. `xcode-select -p` only reports the
 # active developer dir — it never triggers the install dialog itself.
@@ -350,7 +350,7 @@ fi
 # ---------------------------------------------------------------------------
 # MDM tools run scripts as root in a minimal environment where HOME may be
 # unset or point to /var/root.  Resolve the real console user's home so uv
-# and dcode install to the right place.
+# and zjcode install to the right place.
 if [ "$OS" = "macos" ] && { [ -z "${HOME:-}" ] || [ "$(id -u)" -eq 0 ]; }; then
   CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null)" || {
     log_warn "Could not determine console user via /dev/console. Falling back to directory scan."
@@ -480,7 +480,7 @@ path_is_under_home() {
 
 prepare_install_log_dir() {
   local cache_root="$1"
-  local dir="${cache_root}/deepagents-code"
+  local dir="${cache_root}/zjcode"
   [ -n "$cache_root" ] || return 1
   [ ! -L "$cache_root" ] || return 1
   [ ! -L "$dir" ] || return 1
@@ -813,14 +813,14 @@ case "$ASSUME_YES" in
   *)          ASSUME_YES="0" ;;
 esac
 # How ripgrep gets provisioned: "managed" (default) eagerly fetches the
-# pinned, SHA-256-verified binary into ~/.deepagents/bin via `dcode tools
+# pinned, SHA-256-verified binary into ~/.deepagents/bin via `zjcode tools
 # install`; "system" keeps the interactive package-manager path below. Any
 # value other than "system" normalizes to "managed".
 #
 # Lowercase and strip whitespace first so this matches the `.strip().lower()`
 # normalization in managed_tools.ripgrep_installer(). Without this, a value
-# like "System" would parse as "managed" here but "system" in dcode, and the
-# eager `dcode tools install` would skip silently while this script also
+# like "System" would parse as "managed" here but "system" in zjcode, and the
+# eager `zjcode tools install` would skip silently while this script also
 # skipped the package-manager path — leaving ripgrep unprovisioned.
 RIPGREP_INSTALLER="$(printf '%s' "${DEEPAGENTS_CODE_RIPGREP_INSTALLER:-managed}" \
   | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
@@ -831,13 +831,13 @@ esac
 
 # PyPI JSON endpoint used to discover the latest published release so we can
 # tell whether an existing install is out of date before upgrading it.
-PYPI_JSON_URL="https://pypi.org/pypi/deepagents-code/json"
+PYPI_JSON_URL="https://pypi.org/pypi/zjcode/json"
 
 # Base URL for a version-specific GitHub release, surfaced before the update
 # prompt so users can review what changed before agreeing to upgrade. Release
-# tags are `deepagents-code==X.Y.Z`; the `==` must be percent-encoded (%3D%3D)
+# tags are `zjcode==X.Y.Z`; the `==` must be percent-encoded (%3D%3D)
 # for the tag URL to resolve.
-RELEASE_TAG_URL_BASE="https://github.com/langchain-ai/deepagents/releases/tag/deepagents-code%3D%3D"
+RELEASE_TAG_URL_BASE="https://github.com/langchain-ai/deepagents/releases/tag/zjcode%3D%3D"
 
 # Validate and normalize extras: accept bare CSV, wrap in brackets for pip
 if [[ -n "$EXTRAS" ]]; then
@@ -910,7 +910,7 @@ is_snap_curl() {
 # issues), then falls back to wget. Prints nothing and returns non-zero if no
 # working downloader is available.
 download_to_stdout() {
-  local url="$1" ua="${2:-deepagents-code-install}"
+  local url="$1" ua="${2:-zjcode-install}"
   local attempt=1 body="" download_rc=1
   while [ "$attempt" -le 3 ]; do
     if command -v curl >/dev/null 2>&1 && ! is_snap_curl; then
@@ -1145,7 +1145,7 @@ fi
 # ---------------------------------------------------------------------------
 # Latest-version lookup
 # ---------------------------------------------------------------------------
-# Print the latest published deepagents-code version from PyPI, or nothing on
+# Print the latest published zjcode version from PyPI, or nothing on
 # any failure (offline, transient error, missing downloader). PyPI nests the
 # latest release at "info.version"; that key appears first in the response (the
 # "info" object leads), so taking the first "version" match selects it without
@@ -1155,7 +1155,7 @@ fi
 # it ever changed, the worst case is a wrong/empty match, which the caller
 # already treats as "unknown latest" and recovers from — never a bad install.
 fetch_latest_version() {
-  local json="" ua="deepagents-code-install"
+  local json="" ua="zjcode-install"
   json=$(download_to_stdout "$PYPI_JSON_URL" "$ua" 2>/dev/null) || return 0
   if [ -z "$json" ]; then
     return 0
@@ -1169,16 +1169,16 @@ fetch_latest_version() {
 }
 
 # ---------------------------------------------------------------------------
-# Install deepagents-code
+# Install zjcode
 # ---------------------------------------------------------------------------
-PACKAGE="deepagents-code${EXTRAS}${VERSION_SPEC}"
+PACKAGE="zjcode${EXTRAS}${VERSION_SPEC}"
 
 # Capture pre-install version (if any) for messaging
 PRE_VERSION=""
 PRE_INSTALL_IS_TOOL=false
 PRE_INSTALL_ON_PATH=false
 if [ "$(id -u)" -ne 0 ]; then
-  for candidate in dcode deepagents-code; do
+  for candidate in zjcode zjcode; do
     if [ -x "${TOOL_BIN_DIR}/${candidate}" ]; then
       PRE_VERSION=$("${TOOL_BIN_DIR}/${candidate}" -v 2>/dev/null | head -1 | awk '{print $NF}') || PRE_VERSION=""
       PRE_INSTALL_IS_TOOL=true
@@ -1191,7 +1191,7 @@ if [ "$(id -u)" -ne 0 ]; then
     fi
   done
   if [ "$PRE_INSTALL_IS_TOOL" = false ]; then
-    for candidate in dcode deepagents-code; do
+    for candidate in zjcode zjcode; do
       if command -v "$candidate" >/dev/null 2>&1; then
         PRE_VERSION=$("$candidate" -v 2>/dev/null | head -1 | awk '{print $NF}') || PRE_VERSION=""
         break
@@ -1208,9 +1208,9 @@ UV_TOOL_DIR=""
 if UV_TOOL_DIR_RAW=$("$UV_BIN" tool dir 2>/dev/null); then
   UV_TOOL_DIR="$UV_TOOL_DIR_RAW"
 fi
-if [ -n "$UV_TOOL_DIR" ] && [ -d "${UV_TOOL_DIR}/deepagents-code" ]; then
+if [ -n "$UV_TOOL_DIR" ] && [ -d "${UV_TOOL_DIR}/zjcode" ]; then
   shopt -s nullglob
-  for du in "${UV_TOOL_DIR}"/deepagents-code/lib/python*/site-packages/deepagents_code-*.dist-info/direct_url.json; do
+  for du in "${UV_TOOL_DIR}"/zjcode/lib/python*/site-packages/deepagents_code-*.dist-info/direct_url.json; do
     if grep -q '"editable"[[:space:]]*:[[:space:]]*true' "$du" 2>/dev/null; then
       IS_EDITABLE=true
       EDITABLE_SRC=$(sed -nE 's|.*"url"[[:space:]]*:[[:space:]]*"file://([^"]*)".*|\1|p' "$du" | head -1)
@@ -1225,9 +1225,9 @@ fi
 if [ "$IS_EDITABLE" = true ]; then
   pre_label="${PRE_VERSION:-(version unknown)}"
   if [ -n "$EDITABLE_SRC" ]; then
-    log_info "deepagents-code ${pre_label} found (editable install from ${EDITABLE_SRC})."
+    log_info "zjcode ${pre_label} found (editable install from ${EDITABLE_SRC})."
   else
-    log_info "deepagents-code ${pre_label} found (editable install from local source)."
+    log_info "zjcode ${pre_label} found (editable install from local source)."
   fi
   log_info "  Replacing with a standard install from PyPI — the existing environment will be rebuilt."
 elif [ -n "$PRE_VERSION" ] && [ -z "$VERSION" ] && [ -z "$PRERELEASE_REQUESTED" ]; then
@@ -1237,37 +1237,37 @@ elif [ -n "$PRE_VERSION" ] && [ -z "$VERSION" ] && [ -z "$PRERELEASE_REQUESTED" 
   # below) expresses explicit intent, so those install directly.
   #
   # The up-to-date check below is plain string equality, so it relies on
-  # PRE_VERSION (the raw `dcode -v` literal) and LATEST_VERSION (PyPI's
+  # PRE_VERSION (the raw `zjcode -v` literal) and LATEST_VERSION (PyPI's
   # PEP 440-normalized `info.version`) being identically canonical. release-please
   # keeps `_version.py` to clean `X.Y.Z`, so they match today; a non-canonical
   # release literal would merely re-prompt an up-to-date user, never silently
   # skip a real upgrade. A shell installer can't import `packaging` to compare
   # semantically the way `update_check.py` does.
-  log_info "dcode ${PRE_VERSION} found — checking for updates..."
+  log_info "zjcode ${PRE_VERSION} found — checking for updates..."
   LATEST_VERSION=$(fetch_latest_version)
   if [ -z "$LATEST_VERSION" ]; then
     log_warn "Could not determine the latest version from PyPI — continuing with an upgrade attempt."
   elif [ -n "$EXTRAS" ] || [ "$PYTHON_REQUESTED" = true ]; then
     if [ "$LATEST_VERSION" = "$PRE_VERSION" ]; then
-      log_info "deepagents-code is already up to date — rebuilding with requested options."
+      log_info "zjcode is already up to date — rebuilding with requested options."
     else
-      log_info "Updating deepagents-code ${PRE_VERSION} → ${LATEST_VERSION} with requested options..."
+      log_info "Updating zjcode ${PRE_VERSION} → ${LATEST_VERSION} with requested options..."
     fi
   elif [ "$LATEST_VERSION" = "$PRE_VERSION" ] && [ "$PRE_INSTALL_ON_PATH" = true ]; then
     log_success "Already up to date!"
     exit 0
   elif [ "$LATEST_VERSION" = "$PRE_VERSION" ] && [ "$PRE_INSTALL_IS_TOOL" = true ]; then
-    log_info "deepagents-code ${PRE_VERSION} is current but is not selected on PATH — repairing its install."
+    log_info "zjcode ${PRE_VERSION} is current but is not selected on PATH — repairing its install."
   elif [ "$LATEST_VERSION" = "$PRE_VERSION" ]; then
-    log_info "deepagents-code ${PRE_VERSION} is current but is outside uv's configured tool bin — installing it there."
+    log_info "zjcode ${PRE_VERSION} is current but is outside uv's configured tool bin — installing it there."
   elif [ "$ASSUME_YES" = "1" ]; then
-    log_info "Updating deepagents-code ${PRE_VERSION} → ${LATEST_VERSION}..."
+    log_info "Updating zjcode ${PRE_VERSION} → ${LATEST_VERSION}..."
   elif can_prompt; then
     log_info "What's new: ${RELEASE_TAG_URL_BASE}${LATEST_VERSION}"
-    if prompt_yn "Update deepagents-code ${PRE_VERSION} → ${LATEST_VERSION}?"; then
-      log_info "Updating deepagents-code ${PRE_VERSION} → ${LATEST_VERSION}..."
+    if prompt_yn "Update zjcode ${PRE_VERSION} → ${LATEST_VERSION}?"; then
+      log_info "Updating zjcode ${PRE_VERSION} → ${LATEST_VERSION}..."
     else
-      log_info "Keeping deepagents-code ${PRE_VERSION}. Re-run this installer anytime to update."
+      log_info "Keeping zjcode ${PRE_VERSION}. Re-run this installer anytime to update."
       exit 0
     fi
   else
@@ -1275,10 +1275,10 @@ elif [ -n "$PRE_VERSION" ] && [ -z "$VERSION" ] && [ -z "$PRERELEASE_REQUESTED" 
     # ask, and an installer's job is to make the current version present, so
     # complete the upgrade rather than silently no-op. Callers that want a fixed
     # version pin DEEPAGENTS_CODE_VERSION, which skips this path entirely.
-    log_info "deepagents-code ${LATEST_VERSION} available — updating (no TTY to prompt)."
+    log_info "zjcode ${LATEST_VERSION} available — updating (no TTY to prompt)."
   fi
 elif [ -n "$PRE_VERSION" ]; then
-  log_info "dcode ${PRE_VERSION} found — checking for updates..."
+  log_info "zjcode ${PRE_VERSION} found — checking for updates..."
 else
   log_info "Installing ${PACKAGE}..."
 fi
@@ -1445,10 +1445,10 @@ if path_is_under_home "$TOOL_BIN_DIR"; then
   if [ "$TOOL_BIN_DIR_PREEXISTED" = false ]; then
     fix_file_owner "$TOOL_BIN_DIR"
   fi
-  fix_file_owner "${TOOL_BIN_DIR}/dcode" "${TOOL_BIN_DIR}/deepagents-code"
+  fix_file_owner "${TOOL_BIN_DIR}/zjcode" "${TOOL_BIN_DIR}/zjcode"
 fi
-if [ -n "$UV_TOOL_DIR" ] && path_is_under_home "${UV_TOOL_DIR}/deepagents-code"; then
-  fix_owner "${UV_TOOL_DIR}/deepagents-code"
+if [ -n "$UV_TOOL_DIR" ] && path_is_under_home "${UV_TOOL_DIR}/zjcode"; then
+  fix_owner "${UV_TOOL_DIR}/zjcode"
 elif [ -d "${HOME}/.local/share/uv" ]; then
   fix_owner "${HOME}/.local/share/uv"
 fi
@@ -1462,16 +1462,16 @@ fi
 fix_install_log_owner
 
 # ---------------------------------------------------------------------------
-# PATH setup — make dcode immediately findable in a new shell
+# PATH setup — make zjcode immediately findable in a new shell
 # ---------------------------------------------------------------------------
-# After `uv tool install`, dcode lands in uv's configured tool bin directory.
+# After `uv tool install`, zjcode lands in uv's configured tool bin directory.
 # If that directory is not already in PATH, expose the installed binary through
 # one of the user's conventional bin directories.
 #
 # Strategy (adapted from Amp's installer, https://ampcode.com/install.sh):
 #   1. If a common bin dir (~/.local/bin, ~/bin, ~/.bin) is already in PATH,
 #      create a symlink there — no profile modification needed.
-#   2. Otherwise, create ~/.local/bin, symlink dcode there, then add
+#   2. Otherwise, create ~/.local/bin, symlink zjcode there, then add
 #      ~/.local/bin to the user's shell profile (.zshrc, .bashrc,
 #      .bash_profile, or config.fish). Prompt interactively before writing;
 #      auto-add in non-interactive mode (CI, cron, piped install).
@@ -1493,7 +1493,7 @@ paths_are_same_file() {
   [ "$1" = "$2" ] || [ "$1" -ef "$2" ]
 }
 
-# Try to symlink the dcode binary into a directory already in PATH. Tries
+# Try to symlink the zjcode binary into a directory already in PATH. Tries
 # ~/.local/bin, ~/bin, and ~/.bin in order. Returns 0 on success.
 try_symlink_in_path() {
   local binary_name="$1"
@@ -1592,7 +1592,7 @@ local_bin_in_profile() {
 managed_path_block_present() {
   local profile="$1"
   [ -f "$profile" ] || return 1
-  grep -F '# >>> deepagents-code installer >>>' "$profile" >/dev/null 2>&1
+  grep -F '# >>> zjcode installer >>>' "$profile" >/dev/null 2>&1
 }
 
 managed_path_block_has_line() {
@@ -1605,19 +1605,19 @@ append_managed_path_block() {
   local profile="$1" path_export="$2"
   {
     echo ""
-    echo "# >>> deepagents-code installer >>>"
+    echo "# >>> zjcode installer >>>"
     echo "$path_export"
-    echo "# <<< deepagents-code installer <<<"
+    echo "# <<< zjcode installer <<<"
   } >>"$profile"
 }
 
 rewrite_managed_path_block() {
   local profile="$1" path_export="$2" tmp_profile mode
-  tmp_profile=$(mktemp "$(dirname "$profile")/.deepagents-code-profile.XXXXXX") || return 1
+  tmp_profile=$(mktemp "$(dirname "$profile")/.zjcode-profile.XXXXXX") || return 1
   register_temp "$tmp_profile"
 
-  awk -v begin="# >>> deepagents-code installer >>>" \
-    -v end="# <<< deepagents-code installer <<<" \
+  awk -v begin="# >>> zjcode installer >>>" \
+    -v end="# <<< zjcode installer <<<" \
     -v line="$path_export" '
     BEGIN { in_block = 0; replaced = 0 }
     $0 == begin {
@@ -1657,13 +1657,13 @@ rewrite_managed_path_block() {
   mv "$tmp_profile" "$profile"
 }
 
-# Ensure dcode is on PATH for new shell sessions. Creates symlinks and/or
+# Ensure zjcode is on PATH for new shell sessions. Creates symlinks and/or
 # modifies the shell profile as needed. Only acts when the binary verified
 # but isn't already on the user's original PATH.
 # Returns: 0 = PATH is fixed for the current shell (symlink in an on-PATH dir),
 #          1 = failure (a specific warning was already printed),
 #          2 = no changes needed, but the current shell still must be reloaded
-#              or sourced before dcode will resolve,
+#              or sourced before zjcode will resolve,
 #          3 = root install to a custom bin; PATH changes are left to MDM policy.
 ensure_path_setup() {
   local binary_name="$1"
@@ -1732,16 +1732,16 @@ ensure_path_setup() {
   if managed_path_block_present "$SHELL_PROFILE"; then
     if managed_path_block_has_line "$SHELL_PROFILE" "$PATH_EXPORT"; then
       if [ "$VERBOSE" = "1" ]; then
-        log_info "deepagents-code PATH block already configured in ${tilde_profile}."
+        log_info "zjcode PATH block already configured in ${tilde_profile}."
       fi
       return 2
     fi
     if rewrite_managed_path_block "$SHELL_PROFILE" "$PATH_EXPORT"; then
       fix_owner "$SHELL_PROFILE"
-      log_success "Updated deepagents-code PATH block in ${tilde_profile}."
+      log_success "Updated zjcode PATH block in ${tilde_profile}."
       return 2
     fi
-    log_warn "Could not update deepagents-code PATH block in ${tilde_profile}."
+    log_warn "Could not update zjcode PATH block in ${tilde_profile}."
     return 1
   fi
 
@@ -1805,7 +1805,7 @@ classify_shadowing_command() {
 
 detect_shadowing_install() {
   local candidate expected original manager
-  for candidate in dcode deepagents-code; do
+  for candidate in zjcode zjcode; do
     expected="${TOOL_BIN_DIR}/${candidate}"
     [ -x "$expected" ] || continue
     original=$(PATH="$ORIGINAL_PATH" command -v "$candidate" 2>/dev/null || true)
@@ -1829,7 +1829,7 @@ DCODE_NAME=""
 # Tracks whether the binary would have resolved via the user's original PATH,
 # not the installer-mutated PATH.
 DCODE_ON_PATH=false
-for candidate in dcode deepagents-code; do
+for candidate in zjcode zjcode; do
   if [ -x "${TOOL_BIN_DIR}/${candidate}" ]; then
     DCODE_BIN="${TOOL_BIN_DIR}/${candidate}"
     DCODE_NAME="$candidate"
@@ -1842,7 +1842,7 @@ for candidate in dcode deepagents-code; do
   fi
 done
 if [ -z "$DCODE_BIN" ]; then
-  for candidate in dcode deepagents-code; do
+  for candidate in zjcode zjcode; do
     if resolved=$(command -v "$candidate" 2>/dev/null) && [ -n "$resolved" ]; then
       DCODE_BIN="$resolved"
       DCODE_NAME="$candidate"
@@ -1878,9 +1878,9 @@ if [ -n "$DCODE_BIN" ]; then
 fi
 
 if [ "$IS_EDITABLE" = true ]; then
-  log_success "deepagents-code${NEW_VERSION:+ ${NEW_VERSION}} reinstalled from PyPI."
+  log_success "zjcode${NEW_VERSION:+ ${NEW_VERSION}} reinstalled from PyPI."
 elif [ -z "$PRE_VERSION" ]; then
-  log_success "deepagents-code${NEW_VERSION:+ ${NEW_VERSION}} installed."
+  log_success "zjcode${NEW_VERSION:+ ${NEW_VERSION}} installed."
 elif [ -n "$NEW_VERSION" ] && [ "$PRE_VERSION" = "$NEW_VERSION" ]; then
   # Same app version, but uv may have refreshed transitive deps (security or
   # compat bumps). The final status line is the user-facing summary, so a flat
@@ -1891,14 +1891,14 @@ elif [ -n "$NEW_VERSION" ] && [ "$PRE_VERSION" = "$NEW_VERSION" ]; then
   if [ "$UV_REPORTED_PACKAGE_CHANGES" = true ]; then
     # INSTALL_LOG_DISPLAY is empty exactly when no log was written, so the
     # `:+` suffix appends the pointer only when there's a log to point at.
-    log_success "deepagents-code ${NEW_VERSION} was already up to date; dependencies were updated.${INSTALL_LOG_DISPLAY:+ Details: ${INSTALL_LOG_DISPLAY}}"
+    log_success "zjcode ${NEW_VERSION} was already up to date; dependencies were updated.${INSTALL_LOG_DISPLAY:+ Details: ${INSTALL_LOG_DISPLAY}}"
   else
-    log_success "deepagents-code ${NEW_VERSION} already up to date."
+    log_success "zjcode ${NEW_VERSION} already up to date."
   fi
 elif [ -n "$NEW_VERSION" ]; then
-  log_success "deepagents-code updated: ${PRE_VERSION} → ${NEW_VERSION}."
+  log_success "zjcode updated: ${PRE_VERSION} → ${NEW_VERSION}."
 else
-  log_success "deepagents-code installed."
+  log_success "zjcode installed."
 fi
 
 if [ "$VERBOSE" = "1" ] && [ -n "$DCODE_BIN_DISPLAY" ]; then
@@ -1922,12 +1922,12 @@ elif [ -n "$DCODE_BIN" ]; then
   log_warn "  ${VERIFY_OUTPUT}"
   log_warn "The installation may be broken. Try running: ${DCODE_NAME} -v"
 else
-  log_warn "dcode (or deepagents-code) command not found in ${TOOL_BIN_DIR_DISPLAY} or PATH. Restart your shell or run:"
+  log_warn "zjcode (or zjcode) command not found in ${TOOL_BIN_DIR_DISPLAY} or PATH. Restart your shell or run:"
   log_warn "  source ~/.zshrc   # (or ~/.bashrc)"
 fi
 
 # The binary verified via its absolute path but isn't on the current shell's
-# PATH (typical right after a fresh `uv tool install`): typing `dcode` won't
+# PATH (typical right after a fresh `uv tool install`): typing `zjcode` won't
 # work until the shell picks up ~/.local/bin. Instead of just telling the user
 # to restart their shell, try to fix the PATH now — symlink into an existing
 # PATH dir, or add ~/.local/bin to the shell profile — so the binary is
@@ -2051,7 +2051,7 @@ ripgrep_managed_failed() {
 if [ "$SKIP_OPTIONAL" != "1" ]; then
   if [ "$RIPGREP_INSTALLER" = "managed" ] && [ "$VERIFY_OK" = true ] && [ -n "$DCODE_BIN" ]; then
     # Eager, non-prompting managed install through the freshly installed binary
-    # — the same pinned, SHA-256-verified path dcode uses on first run
+    # — the same pinned, SHA-256-verified path zjcode uses on first run
     # (downloads into ~/.deepagents/bin, no sudo). Doing it here removes the
     # first-run download latency. The binary reuses a system `rg` already on
     # PATH and honors DEEPAGENTS_CODE_OFFLINE and
@@ -2131,5 +2131,5 @@ else
 fi
 echo ""
 # shellcheck disable=SC2059
-printf "${GREEN}✔${NC} %s Run: ${BOLD}dcode${NC}\n" "$footer_msg"
-echo "  Docs: https://docs.langchain.com/deepagents-code"
+printf "${GREEN}✔${NC} %s Run: ${BOLD}zjcode${NC}\n" "$footer_msg"
+echo "  Docs: https://docs.langchain.com/zjcode"

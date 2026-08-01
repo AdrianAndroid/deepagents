@@ -288,4 +288,4 @@ class TestFormatUntrustedProjectNotice:
         notice = format_untrusted_project_notice((a, b))
         assert str(a) in notice
         assert str(b) in notice
-        assert "pass --mcp-config <path> to use it explicitly" in notice
+        assert "pass --mcp-config <path> to use the file explicitly" in notice

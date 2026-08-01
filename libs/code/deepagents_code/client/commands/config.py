@@ -55,7 +55,7 @@ def setup_config_parser(
     make_help_action: Callable[[Callable[[], None]], type[argparse.Action]],
     add_output_args: Callable[..., None],
 ) -> None:
-    """Register the `dcode config` command group.
+    """Register the `zjcode config` command group.
 
     Args:
         subparsers: The `argparse` subparsers object from the top-level CLI
@@ -549,9 +549,9 @@ def _report_missing_get_key(output_format: OutputFormat) -> int:
         return 2
 
     print(  # noqa: T201
-        f"`dcode config get` needs an option key, e.g. `dcode config get "
-        f"{_GET_KEY_EXAMPLE}`. Run `dcode config` to list options and their "
-        "effective values, or `dcode config --verbose` to see every key.",
+        f"`zjcode config get` needs an option key, e.g. `zjcode config get "
+        f"{_GET_KEY_EXAMPLE}`. Run `zjcode config` to list options and their "
+        "effective values, or `zjcode config --verbose` to see every key.",
         file=sys.stderr,
     )
     return 2
@@ -576,7 +576,7 @@ def _run_get(key: str | None, output_format: OutputFormat) -> int:
         else:
             print(  # noqa: T201
                 f"Unknown config option: {key!r}. Run "
-                "`dcode config --verbose` to see available keys.",
+                "`zjcode config --verbose` to see available keys.",
                 file=sys.stderr,
             )
         return 1

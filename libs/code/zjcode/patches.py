@@ -61,6 +61,7 @@ def patch_path_constants() -> None:
     """修补硬编码的路径常量
 
     对那些在模块级别就计算好的路径，需要在使用前重新计算。
+    延迟到首次访问时调用，避免在包初始化阶段导入重量级模块。
     """
     from pathlib import Path
 
@@ -76,7 +77,7 @@ def patch_path_constants() -> None:
             if old != config._GLOBAL_DOTENV_PATH:
                 patched += 1
 
-        # 修补 DEFAULT_CONFIG_DIR
+        # 修补 DEFAULT_CONFIG_DIR - 延迟导入 model_config
         from deepagents_code import model_config
 
         if hasattr(model_config, "DEFAULT_CONFIG_DIR"):
@@ -117,7 +118,22 @@ def patch_path_constants() -> None:
         logger.warning(f"[zjcode] Failed to patch path constants: {e}")
 
 
-def apply_all_patches() -> None:
-    """应用所有补丁的入口函数"""
-    apply_brand_patches()
+_path_constants_patched = False
+
+
+def _ensure_path_constants_patched() -> None:
+    """延迟修补路径常量，仅在首次调用时执行。"""
+    global _path_constants_patched
+    if _path_constants_patched:
+        return
+    _path_constants_patched = True
     patch_path_constants()
+
+
+def apply_all_patches() -> None:
+    """应用所有补丁的入口函数
+
+    品牌补丁在包初始化时应用；路径常量补丁延迟到首次需要时应用，
+    避免在 help-only 快速路径上导入 model_config 等重量级模块。
+    """
+    apply_brand_patches()

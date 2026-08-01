@@ -156,7 +156,7 @@ shell, launch env, or global `~/.deepagents/.env` can.
 """
 
 EXPERIMENTAL = "DEEPAGENTS_CODE_EXPERIMENTAL"
-"""Opt into experimental, unstable dcode behavior.
+"""Opt into experimental, unstable zjcode behavior.
 
 Off by default; parsed by `is_env_truthy` (see there for the accepted truthy
 values). Marks experimental runs in UI/trace metadata. Behavior behind this
@@ -213,7 +213,7 @@ Not user-facing. The launch name is normally derived from `sys.argv[0]`, but the
 startup auto-update re-execs the process as `python -m deepagents_code`, which
 discards it. `_restart_current_process` records the resolved name here so the
 re-exec'd process still echoes the command the user actually typed in its resume
-hints. Implausible values are ignored in favor of the `dcode` default; see
+hints. Implausible values are ignored in favor of the `zjcode` default; see
 `_invocation.invoked_name`.
 """
 
@@ -230,7 +230,7 @@ LANGSMITH_REPLICA_PROJECTS = "DEEPAGENTS_CODE_LANGSMITH_REPLICA_PROJECTS"
 """Comma-separated LangSmith project names to *also* write agent traces to.
 
 When set (and tracing is active), each agent run is dual-written to the primary
-deepagents-code project *and* one extra project via LangSmith write replicas.
+zjcode project *and* one extra project via LangSmith write replicas.
 
 Only the first listed project is used: the LangGraph server mirrors a run to a
 single extra project, so any additional entries are dropped (with a warning).

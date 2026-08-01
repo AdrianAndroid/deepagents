@@ -116,11 +116,11 @@ class TestStartupAutoUpdate:
             yield
 
     @pytest.fixture(autouse=True)
-    def _no_shadowed_dcode(self) -> Iterator[None]:
+    def _no_shadowed_zjcode(self) -> Iterator[None]:
         """Default to "no PATH shadow detected" for the success-path tests.
 
         Without this, every successful-upgrade test would run the real
-        `detect_shadowed_dcode` against the host filesystem. That's
+        `detect_shadowed_zjcode` against the host filesystem. That's
         hermetic only by accident — the test runner's editable install
         currently short-circuits at `detect_install_method() != "uv"` — but
         a uv-tool-managed Python or CI image that does match would silently
@@ -135,7 +135,7 @@ class TestStartupAutoUpdate:
         function.
         """
         with patch(
-            "deepagents_code.update_check.detect_shadowed_dcode",
+            "deepagents_code.update_check.detect_shadowed_zjcode",
             return_value=None,
         ):
             yield
@@ -165,7 +165,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -182,13 +182,13 @@ class TestStartupAutoUpdate:
         upgrade.assert_awaited_once()
         clear_failure.assert_called_once_with("9.9.9")
         printed = " ".join(str(c.args[0]) for c in console.print.call_args_list)
-        assert "tail -f /tmp/dcode-update.log" in printed
+        assert "tail -f /tmp/zjcode-update.log" in printed
         restart.assert_called_once_with()
 
     def test_successful_update_skips_restart_when_shadowed(self) -> None:
-        """Successful upgrade + shadowed dcode must NOT restart into the old binary.
+        """Successful upgrade + shadowed zjcode must NOT restart into the old binary.
 
-        Regression guard for the critical bug: when a stale `dcode` is
+        Regression guard for the critical bug: when a stale `zjcode` is
         earlier on PATH than uv's bin dir, re-exec'ing would silently
         re-launch the old version. The pre-launch path must surface a
         warning and return *before* `_restart_current_process` so the user
@@ -204,7 +204,7 @@ class TestStartupAutoUpdate:
         # so a regression that dropped `escape()` would raise a Rich
         # `MarkupError` here instead of silently emitting broken styling.
         shadow = ShadowedDcode(
-            shadowing_bin=Path("/opt/old [legacy]/bin/dcode"),
+            shadowing_bin=Path("/opt/old [legacy]/bin/zjcode"),
             upgraded_bin_dir=Path("/home/user/.local/bin"),
         )
 
@@ -228,15 +228,15 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
-            # Override the autouse `_no_shadowed_dcode` fixture for this
+            # Override the autouse `_no_shadowed_zjcode` fixture for this
             # single test by re-patching the same name with the positive
             # case. The innermost patch wins, so the autouse fixture's
             # `None` doesn't leak through.
             patch(
-                "deepagents_code.update_check.detect_shadowed_dcode",
+                "deepagents_code.update_check.detect_shadowed_zjcode",
                 return_value=shadow,
             ),
             patch("deepagents_code.main._restart_current_process") as restart,
@@ -252,7 +252,7 @@ class TestStartupAutoUpdate:
         # dropped `escape()` would either raise `MarkupError` (test fails)
         # or render `[legacy]` as a (broken) style tag. Asserting the
         # escaped form pins the fix.
-        assert "/opt/old \\[legacy]/bin/dcode" in printed
+        assert "/opt/old \\[legacy]/bin/zjcode" in printed
         assert "/home/user/.local/bin" in printed
         assert "Continuing with v" in printed
 
@@ -302,7 +302,7 @@ class TestStartupAutoUpdate:
         """Restart should reload package code from the updated environment."""
         with (
             patch.object(sys, "executable", "/tool/bin/python"),
-            patch.object(sys, "argv", ["dcode", "--model", "openai:gpt-5.5"]),
+            patch.object(sys, "argv", ["zjcode", "--model", "openai:gpt-5.5"]),
             patch("os.execv", side_effect=SystemExit(0)) as execv,
             pytest.raises(SystemExit),
         ):
@@ -350,11 +350,11 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -391,11 +391,11 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             # The marker write fails (e.g. a read-only state dir).
@@ -434,7 +434,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -476,7 +476,7 @@ class TestStartupAutoUpdate:
             ) as should_skip,
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool install -U deepagents-code",
+                return_value="uv tool install -U zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade") as upgrade,
             patch("deepagents_code.main._restart_current_process") as restart,
@@ -634,7 +634,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade") as upgrade,
             patch("deepagents_code.main._restart_current_process") as restart,
@@ -669,7 +669,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -845,7 +845,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.main._restart_current_process") as restart,
         ):
@@ -939,7 +939,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -998,7 +998,7 @@ class TestStartupAutoUpdate:
 
         launch = AsyncMock(return_value=AppResult(return_code=0, thread_id="thread"))
         with (
-            patch("sys.argv", ["dcode"]),
+            patch("sys.argv", ["zjcode"]),
             patch("sys.stdin", SimpleNamespace(isatty=lambda: True)),
             patch("deepagents_code.main._run_startup_auto_update"),
             patch("deepagents_code.main._resolve_agent_arg", return_value="agent"),
@@ -1025,7 +1025,7 @@ class TestStartupAutoUpdate:
 
         launch = AsyncMock(return_value=AppResult(return_code=0, thread_id="thread"))
         with (
-            patch("sys.argv", ["dcode", "--yolo"]),
+            patch("sys.argv", ["zjcode", "--yolo"]),
             patch("sys.stdin", SimpleNamespace(isatty=lambda: True)),
             patch("deepagents_code.main._run_startup_auto_update"),
             patch("deepagents_code.main._resolve_agent_arg", return_value="agent"),
@@ -1059,7 +1059,7 @@ class TestStartupAutoUpdate:
 
         launch = AsyncMock(return_value=AppResult(return_code=0, thread_id="thread"))
         with (
-            patch("sys.argv", ["dcode"]),
+            patch("sys.argv", ["zjcode"]),
             patch("sys.stdin", SimpleNamespace(isatty=lambda: True)),
             patch("deepagents_code.main._run_startup_auto_update"),
             patch("deepagents_code.main._resolve_agent_arg", return_value="agent"),
@@ -1082,10 +1082,10 @@ class TestAutoUpdateDefaultMigration:
     """First-run consent/migration notice for the auto-update opt-out default."""
 
     @pytest.fixture(autouse=True)
-    def _no_shadowed_dcode(self) -> Iterator[None]:
+    def _no_shadowed_zjcode(self) -> Iterator[None]:
         """Default to no PATH shadow — same reasoning as `TestStartupAutoUpdate`."""
         with patch(
-            "deepagents_code.update_check.detect_shadowed_dcode",
+            "deepagents_code.update_check.detect_shadowed_zjcode",
             return_value=None,
         ):
             yield
@@ -1245,7 +1245,7 @@ class TestAutoUpdateDefaultMigration:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -1286,7 +1286,7 @@ class TestAutoUpdateDefaultMigration:
             ),
             patch(
                 "deepagents_code.update_check.create_update_log_path",
-                return_value=Path("/tmp/dcode-update.log"),
+                return_value=Path("/tmp/zjcode-update.log"),
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
         ):
@@ -1413,7 +1413,7 @@ class TestRenderTeardownThreadHints:
         thread_exists_mock: AsyncMock,
         thread_url: str | None,
         return_code: int = 0,
-        launch_name: str = "dcode",
+        launch_name: str = "zjcode",
     ) -> str:
         """Render the hints with patched dependencies, returning the output."""
         buffer = StringIO()
@@ -1444,10 +1444,10 @@ class TestRenderTeardownThreadHints:
 
         thread_exists_mock.assert_awaited_once()
         assert "Resume this thread with:" in output
-        assert "dcode -r test123" in output
+        assert "zjcode -r test123" in output
 
     def test_resume_hint_echoes_launch_command(self) -> None:
-        """The hint names the shim the user launched, not a hardcoded `dcode`."""
+        """The hint names the shim the user launched, not a harzjcoded `zjcode`."""
         thread_exists_mock = AsyncMock(return_value=True)
 
         output = self._render(
@@ -1457,7 +1457,7 @@ class TestRenderTeardownThreadHints:
         )
 
         assert "abc -r test123" in output
-        assert "dcode" not in output
+        assert "zjcode" not in output
 
     def test_prints_langsmith_link_when_available(self) -> None:
         """A configured LangSmith URL is shown alongside the resume hint."""

@@ -30,7 +30,7 @@ def _update_entry() -> PendingNotification:
             NotificationAction(ActionId.SKIP_VERSION, "Skip this version"),
         ),
         payload=UpdateAvailablePayload(
-            latest="2.0.0", upgrade_cmd="uv tool upgrade deepagents-code"
+            latest="2.0.0", upgrade_cmd="uv tool upgrade zjcode"
         ),
     )
 

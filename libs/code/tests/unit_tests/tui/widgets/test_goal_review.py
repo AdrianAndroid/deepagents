@@ -214,7 +214,7 @@ class TestGoalReviewMenu:
     async def test_newline_hint_uses_terminal_shortcut(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Newline hints use the terminal-aware shortcut, not a hardcoded key.
+        """Newline hints use the terminal-aware shortcut, not a harzjcoded key.
 
         On terminals that cannot report Shift+Enter (e.g. macOS Terminal.app),
         `newline_shortcut` returns `Ctrl+J`/`Option+Enter`; the goal editor must

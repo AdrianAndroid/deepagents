@@ -944,7 +944,7 @@ def project_root_for_mcp_config_path(
     parent = path.parent
     if fallback is not None and not path.is_absolute():
         parent = fallback if str(parent) == "." else fallback / parent
-    if parent.name == ".deepagents":
+    if parent.name == _constants.CONFIG_DOTDIR:
         return parent.parent
     return parent
 
@@ -2170,7 +2170,7 @@ async def _load_tools_from_config(
                 status = "unauthenticated"
                 error = (
                     f"MCP server {server_name!r} requires authentication; "
-                    f"run `dcode mcp login {server_name}`."
+                    f"run `zjcode mcp login {server_name}`."
                 )
                 logger.warning(
                     "MCP server '%s' skipped: %s",

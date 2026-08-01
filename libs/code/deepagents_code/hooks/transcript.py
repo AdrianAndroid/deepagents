@@ -61,7 +61,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SUBAGENT_TRANSCRIPT_ID_METADATA_KEY = "dcode_subagent_id"
+SUBAGENT_TRANSCRIPT_ID_METADATA_KEY = "zjcode_subagent_id"
 _INTERNAL_STREAM_SOURCES = frozenset({"summarization", "auto_mode_classifier"})
 
 TRANSCRIPT_SCHEMA_VERSION = 1
@@ -246,7 +246,7 @@ class TranscriptStore:
 
         Materialization rewrites the whole per-thread JSONL file, so it runs
         under a cross-process advisory lock and re-reads the on-disk records
-        first, merging in anything another dcode process appended since this
+        first, merging in anything another zjcode process appended since this
         process last loaded the file.
 
         Args:
@@ -485,7 +485,7 @@ def _redact_url(value: str) -> str:
 def _file_lock(lock_path: Path) -> Iterator[None]:
     """Hold an advisory cross-process lock on `lock_path`.
 
-    Materialization rewrites the whole transcript file, so concurrent dcode
+    Materialization rewrites the whole transcript file, so concurrent zjcode
     processes resuming the same thread must serialize their read-merge-write
     cycle on something stronger than the in-process `threading.RLock`.
     """

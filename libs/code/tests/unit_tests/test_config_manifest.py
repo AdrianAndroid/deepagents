@@ -1325,7 +1325,7 @@ def test_run_get_missing_key_hints_available_keys(capsys) -> None:
     assert run_config_command(args) == 2
     err = capsys.readouterr().err
     assert "needs an option key" in err
-    assert "dcode config" in err
+    assert "zjcode config" in err
 
 
 def test_run_get_missing_key_json_lists_keys(capsys) -> None:
@@ -1627,7 +1627,7 @@ def test_config_parser_wires_default_and_verbose_flag(monkeypatch) -> None:
 
     from deepagents_code.main import parse_args
 
-    monkeypatch.setattr(sys, "argv", ["dcode", "config", "--all", "--json"])
+    monkeypatch.setattr(sys, "argv", ["zjcode", "config", "--all", "--json"])
     ns = parse_args()
     assert ns.config_command is None
     assert ns.verbose is True
@@ -1643,7 +1643,7 @@ def test_config_parser_rejects_removed_subcommands(
 
     from deepagents_code.main import parse_args
 
-    monkeypatch.setattr(sys, "argv", ["dcode", "config", removed_subcommand])
+    monkeypatch.setattr(sys, "argv", ["zjcode", "config", removed_subcommand])
     with pytest.raises(SystemExit) as exc:
         parse_args()
     assert exc.value.code == 2

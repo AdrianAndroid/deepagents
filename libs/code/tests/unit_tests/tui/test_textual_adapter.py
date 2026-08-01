@@ -1060,7 +1060,7 @@ class TestBuildStreamConfig:
 
         metadata = build_stream_config("t-id", assistant_id=None)["metadata"]
         assert metadata["ls_agent_purpose"] == "coding"
-        assert metadata["ls_integration"] == "deepagents-code"
+        assert metadata["ls_integration"] == "zjcode"
         assert metadata["ls_agent_runtime"] == "Deep Agents Code"
         assert metadata["ls_trace_schema_version"] == "coding-agent-v1"
         assert metadata["ls_integration_version"] == __version__
@@ -1095,11 +1095,11 @@ class TestBuildStreamConfig:
         assert "ls_subagent_id" not in metadata
         assert "ls_subagent_type" not in metadata
 
-    def test_dcode_agent_fields_present(self) -> None:
-        """Selected dcode agent metadata should be present."""
+    def test_zjcode_agent_fields_present(self) -> None:
+        """Selected zjcode agent metadata should be present."""
         config = build_stream_config("t-456", assistant_id="my-agent")
         assert "assistant_id" not in config["metadata"]
-        assert config["metadata"]["dcode_agent_name"] == "my-agent"
+        assert config["metadata"]["zjcode_agent_name"] == "my-agent"
         assert config["metadata"]["agent_name"] == "my-agent"
         assert "updated_at" in config["metadata"]
         assert "cwd" in config["metadata"]
@@ -1112,22 +1112,22 @@ class TestBuildStreamConfig:
         parsed = datetime.fromisoformat(raw)
         assert parsed.tzinfo is not None
 
-    def test_no_dcode_agent_fields_when_none(self) -> None:
-        """Selected dcode agent fields should be absent when unset."""
+    def test_no_zjcode_agent_fields_when_none(self) -> None:
+        """Selected zjcode agent fields should be absent when unset."""
         config = build_stream_config("t-789", assistant_id=None)
         metadata = config["metadata"]
         assert "assistant_id" not in metadata
-        assert "dcode_agent_name" not in metadata
+        assert "zjcode_agent_name" not in metadata
         assert "agent_name" not in metadata
         assert "updated_at" not in metadata
         assert "cwd" in metadata
 
-    def test_no_dcode_agent_fields_when_empty_string(self) -> None:
+    def test_no_zjcode_agent_fields_when_empty_string(self) -> None:
         """Empty-string `assistant_id` should be treated as absent."""
         config = build_stream_config("t-000", assistant_id="")
         metadata = config["metadata"]
         assert "assistant_id" not in metadata
-        assert "dcode_agent_name" not in metadata
+        assert "zjcode_agent_name" not in metadata
         assert "agent_name" not in metadata
         assert "updated_at" not in metadata
         assert "cwd" in metadata
@@ -1185,10 +1185,10 @@ class TestBuildStreamConfig:
             patch("deepagents_code.config._get_deepagents_version", return_value=None),
         ):
             config = build_stream_config("t-ver", assistant_id=None)
-        assert config["metadata"]["lc_versions"] == {"deepagents-code": __version__}
+        assert config["metadata"]["lc_versions"] == {"zjcode": __version__}
 
     def test_versions_marks_editable_cli_version(self) -> None:
-        """Editable dcode installs should be visible in metadata.lc_versions."""
+        """Editable zjcode installs should be visible in metadata.lc_versions."""
         from deepagents_code._version import __version__
 
         with (
@@ -1197,10 +1197,10 @@ class TestBuildStreamConfig:
         ):
             config = build_stream_config("t-editable", assistant_id=None)
         assert config["metadata"]["lc_versions"] == {
-            "deepagents-code": f"{__version__} (editable)"
+            "zjcode": f"{__version__} (editable)"
         }
 
-    def test_dcode_client_deepagents_version_is_diagnostic_metadata(self) -> None:
+    def test_zjcode_client_deepagents_version_is_diagnostic_metadata(self) -> None:
         """Client-side SDK version should not be reported as graph instrumentation."""
         with (
             patch("deepagents_code.config._is_editable_install", return_value=False),
@@ -1210,10 +1210,10 @@ class TestBuildStreamConfig:
             ),
         ):
             config = build_stream_config("t-sdk", assistant_id=None)
-        assert config["metadata"]["dcode_client_deepagents_version"] == "1.2.3"
+        assert config["metadata"]["zjcode_client_deepagents_version"] == "1.2.3"
         assert "deepagents" not in config["metadata"]["lc_versions"]
 
-    def test_dcode_client_deepagents_version_absent_when_metadata_missing(
+    def test_zjcode_client_deepagents_version_absent_when_metadata_missing(
         self,
     ) -> None:
         """Missing SDK metadata should not prevent stream config construction."""
@@ -1226,9 +1226,9 @@ class TestBuildStreamConfig:
         ):
             config = build_stream_config("t-missing-sdk", assistant_id=None)
 
-        assert "dcode_client_deepagents_version" not in config["metadata"]
+        assert "zjcode_client_deepagents_version" not in config["metadata"]
 
-    def test_dcode_client_deepagents_version_does_not_import_sdk(
+    def test_zjcode_client_deepagents_version_does_not_import_sdk(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -1279,9 +1279,9 @@ class TestBuildStreamConfig:
         ):
             config = build_stream_config("t-editable-sdk", assistant_id=None)
         assert config["metadata"]["lc_versions"] == {
-            "deepagents-code": f"{__version__} (editable)"
+            "zjcode": f"{__version__} (editable)"
         }
-        assert config["metadata"]["dcode_client_deepagents_version"] == "1.2.3"
+        assert config["metadata"]["zjcode_client_deepagents_version"] == "1.2.3"
 
     def test_user_id_included_when_set(self) -> None:
         """DEEPAGENTS_CODE_USER_ID should appear in metadata when set."""
@@ -1299,13 +1299,13 @@ class TestBuildStreamConfig:
         """Experimental runs should be identifiable in trace metadata."""
         with patch.dict("os.environ", {"DEEPAGENTS_CODE_EXPERIMENTAL": "true"}):
             config = build_stream_config("t-experimental", assistant_id=None)
-        assert config["metadata"]["dcode_experimental"] is True
+        assert config["metadata"]["zjcode_experimental"] is True
 
     def test_experimental_absent_when_disabled(self) -> None:
         """Default runs should not be labeled experimental."""
         with patch.dict("os.environ", {"DEEPAGENTS_CODE_EXPERIMENTAL": "false"}):
             config = build_stream_config("t-stable", assistant_id=None)
-        assert "dcode_experimental" not in config["metadata"]
+        assert "zjcode_experimental" not in config["metadata"]
 
     def test_experimental_absent_when_unset(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1313,22 +1313,22 @@ class TestBuildStreamConfig:
         """The default path (env var unset) is not labeled experimental."""
         monkeypatch.delenv("DEEPAGENTS_CODE_EXPERIMENTAL", raising=False)
         config = build_stream_config("t-default", assistant_id=None)
-        assert "dcode_experimental" not in config["metadata"]
+        assert "zjcode_experimental" not in config["metadata"]
 
     def test_auto_approve_included_when_active(self) -> None:
         """YOLO (auto-approve) runs should be identifiable in trace metadata."""
         config = build_stream_config("t-yolo", assistant_id=None, auto_approve=True)
-        assert config["metadata"]["dcode_auto_approve"] is True
+        assert config["metadata"]["zjcode_auto_approve"] is True
 
     def test_auto_approve_absent_when_inactive(self) -> None:
         """Manual-approval runs should not carry the auto-approve label."""
         config = build_stream_config("t-manual", assistant_id=None, auto_approve=False)
-        assert "dcode_auto_approve" not in config["metadata"]
+        assert "zjcode_auto_approve" not in config["metadata"]
 
     def test_auto_approve_absent_by_default(self) -> None:
         """The default (param omitted) is not labeled auto-approve."""
         config = build_stream_config("t-default-approve", assistant_id=None)
-        assert "dcode_auto_approve" not in config["metadata"]
+        assert "zjcode_auto_approve" not in config["metadata"]
 
 
 class TestGetGitBranch:
@@ -1870,8 +1870,8 @@ class TestExecuteTaskTextualTurnMarkers:
         assert agent.contexts[0]["turn_id"] == first_meta["turn_id"]
         assert agent.contexts[1]["turn_id"] == second_meta["turn_id"]
         # The session's auto-approve mode is labeled onto every turn's trace.
-        assert first_meta["dcode_auto_approve"] is True
-        assert second_meta["dcode_auto_approve"] is True
+        assert first_meta["zjcode_auto_approve"] is True
+        assert second_meta["zjcode_auto_approve"] is True
         # The session state itself reflects the latest turn.
         assert session_state.turn_number == 2
 
@@ -1880,7 +1880,7 @@ class TestExecuteTaskTextualTurnMarkers:
 
         Complements the positive case above: guards the TUI call site
         (`bool(session_state.auto_approve)` -> `build_stream_config`) against
-        wiring that would stamp `dcode_auto_approve` regardless of the mode.
+        wiring that would stamp `zjcode_auto_approve` regardless of the mode.
         """
         from deepagents_code.app import TextualSessionState
 
@@ -1905,7 +1905,7 @@ class TestExecuteTaskTextualTurnMarkers:
                 adapter=adapter,
             )
 
-        assert "dcode_auto_approve" not in agent.configs[0]["metadata"]
+        assert "zjcode_auto_approve" not in agent.configs[0]["metadata"]
 
 
 class TestExecuteTaskTextualClientLifecycle:

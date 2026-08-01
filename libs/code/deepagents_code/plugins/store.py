@@ -1,4 +1,4 @@
-"""State storage for dcode plugin marketplaces, installs, and enablement."""
+"""State storage for zjcode plugin marketplaces, installs, and enablement."""
 
 from __future__ import annotations
 

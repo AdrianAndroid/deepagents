@@ -180,7 +180,7 @@ class _GlmTerminalStallRecovery(AgentMiddleware):
             else f"{prompt}\n\n{_TERMINAL_STALL_RECOVERY_SUFFIX}"
         )
         # Recovery is Fireworks-only (`_should_recover`), and Fireworks reads
-        # `reasoning_effort` nested under `model_kwargs` (see dcode
+        # `reasoning_effort` nested under `model_kwargs` (see zjcode
         # `reasoning_effort._fireworks_model_params`), not at the top level. This
         # middleware runs inner to `ConfigurableModelMiddleware`, so a top-level
         # key set here would never be translated into the nested form the model
@@ -281,7 +281,7 @@ def _ensure_glm_5p2_profile_registered() -> None:
     override or a built-in) would have its suffix clobbered; the explicit skip
     below is a deliberate countermeasure so an existing suffix is left alone
     rather than silently replaced. In the common case no GLM profile exists yet,
-    so the dcode profile is registered for each spec.
+    so the zjcode profile is registered for each spec.
 
     This mutates the process-global harness registry without a lock. Concurrent
     first-calls are benign: `register_harness_profile` is additive/idempotent and

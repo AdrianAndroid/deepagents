@@ -679,7 +679,7 @@ models = ["claude-sonnet-4-5"]
     ) -> None:
         """A config-declared `base_url_env` participates in the pairing.
 
-        Lets a provider outside the hardcoded set clear an inherited gateway
+        Lets a provider outside the harzjcoded set clear an inherited gateway
         URL when a `/auth` key with no base URL is applied.
         """
         import os
@@ -4489,7 +4489,7 @@ api_key_env = "CIS_API_KEY"
             assert has_provider_credentials("cis") is False
 
     def test_returns_none_for_totally_unknown_provider(self):
-        """Returns None for provider not in hardcoded map or config.
+        """Returns None for provider not in harzjcoded map or config.
 
         Unknown providers are let through so the provider itself can report
         auth failures at model-creation time.
@@ -4558,7 +4558,7 @@ models = ["aviato-turbo"]
         assert status.env_var is None
 
     def test_missing_state_for_known_provider_without_env(self) -> None:
-        """Hardcoded provider with no env set returns MISSING with the env name."""
+        """Harzjcoded provider with no env set returns MISSING with the env name."""
         with patch.dict("os.environ", {}, clear=True):
             status = get_provider_auth_status("anthropic")
 

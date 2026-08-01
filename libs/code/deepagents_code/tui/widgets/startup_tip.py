@@ -22,7 +22,7 @@ _TIPS: dict[str, int] = {
     "Use /offload when your conversation gets long": 2,
     "Use /copy to copy the latest message": 3,
     "Use /tools to list the tools available to the agent": 1,
-    "Use dcode install <name> for optional providers": 1,
+    "Use zjcode install <name> for optional providers": 1,
     "Use /mcp login <server> to authenticate MCP servers": 1,
     "Use /remember to save learnings from this conversation": 1,
     "Use /model to switch models mid-conversation": 2,
@@ -48,7 +48,7 @@ installs do not advertise a switcher path that policy has removed.
 
 # Fail fast at import if the registry is ever emptied or given a non-positive
 # weight: `random.choices` would otherwise raise a cryptic error at widget
-# construction. `_TIPS` is a hardcoded constant, so this never fires in
+# construction. `_TIPS` is a harzjcoded constant, so this never fires in
 # practice — it just guards future edits.
 if not _TIPS:
     msg = "_TIPS must not be empty"

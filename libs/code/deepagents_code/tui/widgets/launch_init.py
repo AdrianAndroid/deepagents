@@ -151,7 +151,7 @@ class LaunchGoalCriteriaPreferenceScreen(ModalScreen[bool]):
                 classes="launch-init-title",
             )
             yield Static(
-                "When you create or update a goal, dcode drafts acceptance "
+                "When you create or update a goal, zjcode drafts acceptance "
                 "criteria before starting.",
                 classes="launch-init-copy",
             )

@@ -123,7 +123,7 @@ def test_builtin_metadata_working_dir() -> None:
     assert vercel.supports_sandbox_id is True
     assert vercel.supports_snapshot_name is False
     assert vercel.install is not None
-    assert vercel.install.command(in_app=False) == "dcode install vercel"
+    assert vercel.install.command(in_app=False) == "zjcode install vercel"
 
 
 def test_unknown_provider_metadata_is_none() -> None:
@@ -137,7 +137,7 @@ def test_config_provider_is_discovered() -> None:
             "acme": {
                 "class_path": _FAKE_CLASS_PATH,
                 "working_dir": "/workspace",
-                "package": "acme-dcode-sandbox",
+                "package": "acme-zjcode-sandbox",
                 "params": {"region": "us-east-1"},
             }
         },
@@ -149,7 +149,7 @@ def test_config_provider_is_discovered() -> None:
     assert metadata.working_dir == "/workspace"
     assert metadata.install is not None
     assert metadata.install.kind == "package"
-    assert metadata.install.name == "acme-dcode-sandbox"
+    assert metadata.install.name == "acme-zjcode-sandbox"
     assert registry.get_params("acme") == {"region": "us-east-1"}
     provider = registry.create_provider("acme")
     assert isinstance(provider, FakeProvider)

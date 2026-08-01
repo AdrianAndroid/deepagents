@@ -41,7 +41,7 @@ from deepagents_code.client.launch.server import (
 from deepagents_code.project_utils import ProjectContext
 
 logger = logging.getLogger(__name__)
-_DISTRIBUTION_NAME = "deepagents-code"
+_DISTRIBUTION_NAME = "zjcode"
 
 
 def _set_or_clear_server_env(name: str, value: str | None) -> None:

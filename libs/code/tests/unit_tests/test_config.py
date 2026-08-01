@@ -158,7 +158,7 @@ class TestRuntimeDotenvReload:
 
         Regression: when a cwd switch unsets `DEEPAGENTS_CODE_LANGSMITH_PROJECT`
         and the user has no original `LANGSMITH_PROJECT`, the reload must fall
-        back to `deepagents-code` (not leave the var unset) so trace ingestion
+        back to `zjcode` (not leave the var unset) so trace ingestion
         keeps matching the name `get_langsmith_project_name` displays.
         """
         import os
@@ -3388,7 +3388,7 @@ class TestGetTracingStatus:
     def test_prefixed_flag_and_key_are_detected(self) -> None:
         """`DEEPAGENTS_CODE_`-prefixed tracing/key vars resolve like the runtime.
 
-        `dcode doctor` runs before bootstrap bridges these to canonical names,
+        `zjcode doctor` runs before bootstrap bridges these to canonical names,
         so a user with only the supported prefixed vars must still read as
         enabled/configured with the prefixed project resolved.
         """
@@ -3836,10 +3836,10 @@ class TestFetchLangsmithProjectUrl:
 
         with patch("langsmith.Client") as mock_client_cls:
             mock_client_cls.return_value.read_project.side_effect = (
-                LangSmithNotFoundError("Project deepagents-code not found")
+                LangSmithNotFoundError("Project zjcode not found")
             )
             with pytest.raises(LangSmithProjectNotFoundError):
-                fetch_langsmith_project_url_or_raise("deepagents-code")
+                fetch_langsmith_project_url_or_raise("zjcode")
 
     def test_or_raise_raises_api_error_on_other_failure(self) -> None:
         """A non-404 SDK error raises the generic LangSmithApiError."""
@@ -3875,7 +3875,7 @@ class TestBuildLangsmithThreadUrl:
 
         assert (
             result
-            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-123?utm_source=deepagents-code"
+            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-123?utm_source=zjcode"
         )
 
     def test_cached_url_is_available_without_another_lookup(self) -> None:
@@ -3897,7 +3897,7 @@ class TestBuildLangsmithThreadUrl:
 
         assert (
             result
-            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-456?utm_source=deepagents-code"
+            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-456?utm_source=zjcode"
         )
         mock_client_cls.return_value.read_project.assert_called_once()
 
@@ -3933,7 +3933,7 @@ class TestBuildLangsmithThreadUrl:
 
         assert (
             result
-            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-123?utm_source=deepagents-code"
+            == "https://smith.langchain.com/o/org/projects/p/proj/t/thread-123?utm_source=zjcode"
         )
 
     def test_returns_none_when_no_project_name(self) -> None:
@@ -3969,7 +3969,7 @@ class TestGetProviderKwargsConfigFallback:
         clear_caches()
 
     def test_returns_base_url_from_config(self, tmp_path: Path) -> None:
-        """Returns base_url from config for non-hardcoded provider."""
+        """Returns base_url from config for non-harzjcoded provider."""
         config_path = tmp_path / "config.toml"
         config_path.write_text("""
 [models.providers.fireworks]
@@ -4072,7 +4072,7 @@ api_key_env = "FIREWORKS_API_KEY"
         assert "api_key" not in kwargs
 
     def test_returns_empty_for_unknown_config_provider(self) -> None:
-        """Returns empty dict for provider not in hardcoded map or config."""
+        """Returns empty dict for provider not in harzjcoded map or config."""
         kwargs = _get_provider_kwargs("nonexistent_provider_xyz")
         assert kwargs == {}
 
@@ -4399,7 +4399,7 @@ class TestOpenRouterHeaders:
         create_model("openrouter:deepseek/deepseek-chat")
 
         _, call_kwargs = mock_init.call_args
-        assert call_kwargs["app_url"] == "https://pypi.org/project/deepagents-code/"
+        assert call_kwargs["app_url"] == "https://pypi.org/project/zjcode/"
         assert call_kwargs["app_title"] == "Deep Agents Code"
         assert call_kwargs["app_categories"] == ["cli-agent"]
 
@@ -4423,7 +4423,7 @@ app_title = "My Custom App"
         _, call_kwargs = mock_init.call_args
         assert call_kwargs["app_title"] == "My Custom App"
         # Built-in app_url should still be present
-        assert call_kwargs["app_url"] == "https://pypi.org/project/deepagents-code/"
+        assert call_kwargs["app_url"] == "https://pypi.org/project/zjcode/"
 
     @patch("langchain.chat_models.init_chat_model")
     def test_per_model_categories_override(
@@ -5240,7 +5240,7 @@ class TestCreateModelViaInitImportError:
         ):
             _create_model_via_init("claude-sonnet-4-5", "google_vertexai", {})
         mock_extra_for_package.assert_called_once_with(
-            "langchain-google-vertexai", "deepagents-code"
+            "langchain-google-vertexai", "zjcode"
         )
         assert exc_info.value.provider == "google_vertexai"
         assert exc_info.value.package == "langchain-google-vertexai"
@@ -5284,7 +5284,7 @@ class TestCreateModelViaInitImportError:
         fallback (see the sibling unreadable-receipt test).
         """
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
+            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -5299,7 +5299,7 @@ class TestCreateModelViaInitImportError:
                 ModelConfigError,
                 match=(
                     "Install with: uv tool install --reinstall -U "
-                    f"deepagents-code=={__version__} "
+                    f"zjcode=={__version__} "
                     "--with langchain-custom_provider --prerelease allow"
                 ),
             ),
@@ -5437,7 +5437,7 @@ class TestDetectProvider:
             ("cohere.command-r-v1:0", "bedrock"),
             ("ai21.jamba-1-5-large-v1:0", "bedrock"),
             ("writer.palmyra-x5-v1:0", "bedrock"),
-            # Structural detection covers vendors with no hardcoded entry.
+            # Structural detection covers vendors with no harzjcoded entry.
             ("qwen.qwen3-32b-v1:0", "bedrock"),
             ("google.gemma-3-27b-v1:0", "bedrock"),
             # Cross-region inference-profile IDs front the vendor with a region.
@@ -6080,7 +6080,7 @@ class TestLazyModuleAttributes:
     def test_bootstrap_defaults_project_when_tracing_and_key(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Tracing on with a key but no project defaults to deepagents-code.
+        """Tracing on with a key but no project defaults to zjcode.
 
         Exercises `_apply_default_langsmith_project` wired into the real
         `_ensure_bootstrap` flow (after the override and orphaned-tracing
@@ -6125,7 +6125,7 @@ class TestLazyModuleAttributes:
         and `_apply_default_langsmith_project`: a tracing flag with no
         resolvable key must be flipped off *before* the default runs, so
         `LANGSMITH_PROJECT` is left unset (tracing never starts) rather than
-        pointed at `deepagents-code`.
+        pointed at `zjcode`.
         """
         import os
 

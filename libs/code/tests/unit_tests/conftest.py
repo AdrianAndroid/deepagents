@@ -42,6 +42,15 @@ def _warm_model_caches() -> Generator[None, None, None]:
     os.environ[discovery_var] = "0"
     try:
         with contextlib.suppress(Exception):
+            # Apply zjcode path-constant patches before importing model_config
+            # so the patched paths are used during cache warm-up.
+            try:
+                from zjcode.patches import _ensure_path_constants_patched
+
+                _ensure_path_constants_patched()
+            except ImportError:
+                pass
+
             from deepagents_code.model_config import (
                 get_available_models,
                 get_model_profiles,

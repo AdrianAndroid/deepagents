@@ -50,12 +50,12 @@ def _block_sdk_pypi_fetch(tmp_path: Path) -> Iterator[None]:
         # Pin the post-upgrade shadow check to a clean "no shadow" for the
         # whole module. Several `/update` tests pin `detect_install_method`
         # to `"uv"` to exercise pre-release handling, which would otherwise
-        # make the real `detect_shadowed_dcode` run against the test
+        # make the real `detect_shadowed_zjcode` run against the test
         # runner's filesystem and replace the expected success message
         # with the shadow warning. The dedicated shadow-present tests in
         # this file override this patch with their own.
         patch(
-            "deepagents_code.update_check.detect_shadowed_dcode",
+            "deepagents_code.update_check.detect_shadowed_zjcode",
             return_value=None,
         ),
     ):
@@ -90,7 +90,7 @@ def test_cli_version_flag() -> None:
     )
     # argparse exits with 0 for --version
     assert result.returncode == 0
-    assert f"deepagents-code {__version__}" in result.stdout
+    assert f"zjcode {__version__}" in result.stdout
     from deepagents_code.extras_info import collect_version_report
 
     sdk_version = collect_version_report().display_sdk_version
@@ -119,7 +119,7 @@ async def test_version_slash_command_message_format() -> None:
         app_msgs = app.query(AppMessage)
         plain = [m for m in app_msgs if not m._is_markdown]
         content = str(plain[-1]._content)
-        assert f"deepagents-code version: {__version__}" in content
+        assert f"zjcode version: {__version__}" in content
         assert f"deepagents (SDK) version: {sdk_version}" in content
 
 
@@ -167,7 +167,7 @@ async def test_version_slash_command_sdk_unavailable() -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert f"deepagents-code version: {__version__}" in content
+        assert f"zjcode version: {__version__}" in content
         assert "deepagents (SDK) version: unknown" in content
 
 
@@ -186,7 +186,7 @@ async def test_version_slash_command_cli_version_unavailable() -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert "deepagents-code version: unknown" in content
+        assert "zjcode version: unknown" in content
 
 
 async def test_version_slash_command_includes_release_age(tmp_path) -> None:
@@ -218,7 +218,7 @@ async def test_version_slash_command_includes_release_age(tmp_path) -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert f"deepagents-code version: {__version__}, released " in content
+        assert f"zjcode version: {__version__}, released " in content
         assert "ago" in content
 
 
@@ -277,7 +277,7 @@ async def test_version_slash_command_mentions_update_available() -> None:
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Update available: v99.99.99" in content
-        assert "relaunch dcode to install it automatically" in content
+        assert "relaunch zjcode to install it automatically" in content
         # The auto-update hint must not also carry the manual fallback.
         assert "/update" not in content
         assert "uv tool install" not in content
@@ -309,7 +309,7 @@ async def test_version_slash_command_update_hint_when_auto_update_disabled() -> 
         content = str(app_msgs[-1]._content)
         assert "Update available: v99.99.99" in content
         assert "/update" in content
-        assert "dcode update" in content
+        assert "zjcode update" in content
         # The manual hint must not falsely promise an automatic install.
         assert "automatically" not in content
         assert "uv tool install" not in content
@@ -340,7 +340,7 @@ async def test_version_slash_command_does_not_promise_unsupported_update() -> No
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Update available: v99.99.99" in content
-        assert "method that installed this copy of dcode" in content
+        assert "method that installed this copy of zjcode" in content
         assert "automatically" not in content
         auto_update_enabled.assert_not_called()
 
@@ -463,7 +463,7 @@ def test_build_version_text_includes_editable_core_deps() -> None:
     ):
         text = build_version_text()
 
-    assert f"deepagents-code {__version__}" in text
+    assert f"zjcode {__version__}" in text
     assert "Editable install: ~/src/deepagents/libs/code" in text
     assert "Core dependencies:" in text
     assert "langchain-core" in text
@@ -492,7 +492,7 @@ def _editable_exact_pin_version_report(cli_metadata: str = "0.1.40") -> VersionR
 
     return VersionReport(
         cli=DistributionVersion(
-            name="deepagents-code",
+            name="zjcode",
             source_version=__version__,
             metadata_version=cli_metadata,
             editable=True,
@@ -524,7 +524,7 @@ def test_build_version_text_reports_editable_drift_and_newer_sdk_pin() -> None:
 
     # Editable status is shown on its own `Editable install:` line, so the CLI
     # version line carries only the source/metadata drift, not `editable`.
-    assert f"deepagents-code {__version__} (installed metadata: 0.1.40)" in text
+    assert f"zjcode {__version__} (installed metadata: 0.1.40)" in text
     assert (
         "deepagents (SDK) 0.7.0a7+editable "
         "(workspace HEAD; source marker: 0.6.12)" in text
@@ -557,7 +557,7 @@ async def test_version_slash_command_reports_editable_drift_and_newer_sdk_pin() 
             [m for m in app.query(AppMessage) if not m._is_markdown][-1]._content
         )
         assert (
-            f"deepagents-code version: {__version__} "
+            f"zjcode version: {__version__} "
             "(installed metadata: 0.1.40)" in content
         )
         assert (
@@ -600,7 +600,7 @@ def test_get_core_dependency_versions_marks_missing_as_none() -> None:
 async def test_update_slash_command_editable_install_short_circuits() -> None:
     """Editable install must not invoke `perform_upgrade` from the TUI.
 
-    A regression here would run `uv tool upgrade deepagents-code` on an
+    A regression here would run `uv tool upgrade zjcode` on an
     editable dev checkout and clobber the local install with a PyPI copy.
     """
     from deepagents_code.app import DeepAgentsApp
@@ -795,7 +795,7 @@ async def test_update_slash_command_prerelease_updates_channel() -> None:
 
 
 async def test_update_slash_command_replaces_success_with_shadow_warning() -> None:
-    """A shadowed `dcode` after a successful upgrade swaps success line for warning.
+    """A shadowed `zjcode` after a successful upgrade swaps success line for warning.
 
     Regression guard for the inverted-conditional bug class: showing the
     user a green "relaunch to use the new version" line and then *also*
@@ -811,7 +811,7 @@ async def test_update_slash_command_replaces_success_with_shadow_warning() -> No
     from deepagents_code.update_check import ShadowedDcode
 
     shadow = ShadowedDcode(
-        shadowing_bin=Path("/opt/stale/bin/dcode"),
+        shadowing_bin=Path("/opt/stale/bin/zjcode"),
         upgraded_bin_dir=Path("/home/user/.local/bin"),
     )
     app = DeepAgentsApp()
@@ -834,7 +834,7 @@ async def test_update_slash_command_replaces_success_with_shadow_warning() -> No
             # Override the module-level autouse `None` patch with the
             # positive case. Innermost patch wins.
             patch(
-                "deepagents_code.update_check.detect_shadowed_dcode",
+                "deepagents_code.update_check.detect_shadowed_zjcode",
                 return_value=shadow,
             ),
         ):
@@ -851,7 +851,7 @@ async def test_update_slash_command_replaces_success_with_shadow_warning() -> No
         # The warning is mounted as an `ErrorMessage` (red), not a generic
         # `AppMessage`, so it visually stands apart from neutral status text.
         error_msgs = [str(m._content) for m in app.query(ErrorMessage)]
-        assert any("/opt/stale/bin/dcode" in m for m in error_msgs)
+        assert any("/opt/stale/bin/zjcode" in m for m in error_msgs)
         assert any("/home/user/.local/bin" in m for m in error_msgs)
 
 
@@ -915,8 +915,8 @@ async def test_update_slash_command_rejects_unknown_option() -> None:
         )
 
 
-async def test_update_deps_refreshes_when_dcode_current() -> None:
-    """`/update --deps` re-resolves deps after confirming dcode is current."""
+async def test_update_deps_refreshes_when_zjcode_current() -> None:
+    """`/update --deps` re-resolves deps after confirming zjcode is current."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -985,8 +985,8 @@ async def test_update_deps_reports_when_already_current() -> None:
         assert "Dependencies are already up to date." in str(app_msgs[-1]._content)
 
 
-async def test_update_deps_routes_outdated_dcode_through_regular_update() -> None:
-    """`/update --deps` runs the normal update flow when dcode is outdated."""
+async def test_update_deps_routes_outdated_zjcode_through_regular_update() -> None:
+    """`/update --deps` runs the normal update flow when zjcode is outdated."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1013,7 +1013,7 @@ async def test_update_deps_routes_outdated_dcode_through_regular_update() -> Non
                 new_callable=AsyncMock,
                 return_value=(
                     True,
-                    " - deepagents-code==1.0.0\n + deepagents-code==1.1.0\n",
+                    " - zjcode==1.0.0\n + zjcode==1.1.0\n",
                 ),
             ),
         ):
@@ -1023,13 +1023,13 @@ async def test_update_deps_routes_outdated_dcode_through_regular_update() -> Non
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Updated to v1.1.0" in content
-        assert "Quit and relaunch dcode to use the new version" in content
-        assert "Updated deepagents-code:" not in content
+        assert "Quit and relaunch zjcode to use the new version" in content
+        assert "Updated zjcode:" not in content
         assert "Dependencies are already up to date." not in content
 
 
 async def test_update_deps_skips_refresh_prompt_when_refresh_unsupported() -> None:
-    """Unsupported refresh installs take the normal outdated dcode update path."""
+    """Unsupported refresh installs take the normal outdated zjcode update path."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1063,7 +1063,7 @@ async def test_update_deps_skips_refresh_prompt_when_refresh_unsupported() -> No
                 new_callable=AsyncMock,
                 return_value=(
                     True,
-                    " - deepagents-code==1.0.0\n + deepagents-code==1.1.0\n",
+                    " - zjcode==1.0.0\n + zjcode==1.1.0\n",
                 ),
             ) as perform_upgrade_mock,
         ):
@@ -1079,12 +1079,12 @@ async def test_update_deps_skips_refresh_prompt_when_refresh_unsupported() -> No
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Updated to v1.1.0" in content
-        assert "Updated deepagents-code:" not in content
+        assert "Updated zjcode:" not in content
         assert "Dependency refresh failed" not in content
 
 
 async def test_update_deps_decline_app_update_refreshes_current_deps() -> None:
-    """Declining the app update refreshes deps without upgrading dcode."""
+    """Declining the app update refreshes deps without upgrading zjcode."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1132,12 +1132,12 @@ async def test_update_deps_decline_app_update_refreshes_current_deps() -> None:
         content = str(app_msgs[-1]._content)
         assert "Refreshed dependencies:" in content
         assert "langchain-openai  1.3.2 -> 1.5.0" in content
-        assert "A deepagents-code update is available: v1.1.0." in content
+        assert "A zjcode update is available: v1.1.0." in content
         assert "Updated to v1.1.0" not in content
 
 
 async def test_update_deps_decline_app_update_reports_no_new_deps() -> None:
-    """`/update --deps` reports current deps even when dcode has an update."""
+    """`/update --deps` reports current deps even when zjcode has an update."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1180,12 +1180,12 @@ async def test_update_deps_decline_app_update_reports_no_new_deps() -> None:
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Dependencies are already up to date." in content
-        assert "A deepagents-code update is available: v1.1.0." in content
+        assert "A zjcode update is available: v1.1.0." in content
         assert "Updated to v1.1.0" not in content
 
 
 async def test_update_already_current_prompts_and_refreshes_on_confirm() -> None:
-    """Plain `/update` offers a dep refresh when dcode is already current."""
+    """Plain `/update` offers a dep refresh when zjcode is already current."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1457,7 +1457,7 @@ async def test_refresh_dependencies_surfaces_failure() -> None:
 
 
 async def test_refresh_dependencies_renders_self_changes() -> None:
-    """A `deepagents-code` line in the diff renders under its own heading."""
+    """A `zjcode` line in the diff renders under its own heading."""
     from deepagents_code.app import DeepAgentsApp
     from deepagents_code.tui.widgets.messages import AppMessage
 
@@ -1470,7 +1470,7 @@ async def test_refresh_dependencies_renders_self_changes() -> None:
             return_value=(
                 True,
                 (
-                    " - deepagents-code==1.0.0\n + deepagents-code==1.0.1\n"
+                    " - zjcode==1.0.0\n + zjcode==1.0.1\n"
                     " - langchain-openai==1.3.2\n + langchain-openai==1.5.0\n"
                 ),
             ),
@@ -1480,7 +1480,7 @@ async def test_refresh_dependencies_renders_self_changes() -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert "Updated deepagents-code:" in content
+        assert "Updated zjcode:" in content
         assert "Refreshed dependencies:" in content
         assert "langchain-openai  1.3.2 -> 1.5.0" in content
 

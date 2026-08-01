@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 import json
 import logging
 import re
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from textual import on
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.content import Content
-from textual.css.query import NoMatches
+from textual.css.query import NoMatches, WrongType
 from textual.events import Click
 from textual.geometry import Offset
 from textual.message import Message
@@ -386,6 +387,33 @@ def _truncate_for_display(text: str) -> str:
         it does not exceed the display threshold.
     """
     return _collapse_user_message(text).text
+
+
+class SessionSeparator(Static):
+    """Widget displaying a session separator between different sessions."""
+
+    DEFAULT_CSS = """
+    SessionSeparator {
+        height: auto;
+        padding: 1 0;
+        margin: 2 0;
+        width: 100%;
+        color: $primary;
+        text-align: center;
+        background: transparent;
+    }
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize a session separator.
+
+        Args:
+            **kwargs: Additional arguments passed to parent.
+        """
+        super().__init__(
+            "---\n✨ ✨ ✨ ✨ ✨ ✨ 【 NEW SESSION 】 ✨ ✨ ✨ ✨ ✨ ✨\n---",
+            **kwargs,
+        )
 
 
 class UserMessage(Static):
@@ -1127,6 +1155,97 @@ class SkillMessage(Vertical):
             self.toggle_body()
 
 
+class CopyTurnButton(Static):
+    """Clickable button that copies the preceding Q&A turn to the clipboard.
+
+    Rendered as a small `[ Copy ]` label at the bottom-left of an
+    `AssistantMessage`. Hidden while the assistant is still streaming and
+    revealed once `stop_stream` finalizes the content.
+    """
+
+    DEFAULT_CSS = """
+    CopyTurnButton {
+        display: none;
+        height: 1;
+        width: auto;
+        max-width: 12;
+        padding: 0 1;
+        margin: 0 0 0 0;
+        color: $text-muted;
+        text-style: dim;
+        background: transparent;
+        pointer: pointer;
+    }
+
+    CopyTurnButton.-visible {
+        display: block;
+    }
+
+    CopyTurnButton:hover {
+        color: $primary;
+        text-style: bold;
+    }
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize the copy button.
+
+        Args:
+            **kwargs: Additional arguments passed to parent.
+        """
+        glyphs = get_glyphs()
+        super().__init__(f"{glyphs.arrow_up} Copy", **kwargs)
+
+    @on(Click)
+    def _handle_click(self, event: Click) -> None:
+        """Copy the Q&A turn (user question + assistant answer) to clipboard.
+
+        Args:
+            event: The click event.
+        """
+        event.stop()
+        assistant = self.parent
+        if assistant is None:
+            return
+
+        # Walk siblings backwards to find the nearest preceding UserMessage.
+        messages_container = assistant.parent
+        if messages_container is None:
+            return
+
+        user_content: str | None = None
+        for sibling in reversed(messages_container.children):
+            if sibling is assistant:
+                continue
+            if isinstance(sibling, UserMessage):
+                user_content = sibling._content
+                break
+
+        assistant_content = ""
+        if isinstance(assistant, AssistantMessage):
+            assistant_content = assistant._content
+
+        parts: list[str] = []
+        if user_content:
+            parts.append(user_content)
+        if assistant_content:
+            parts.append(assistant_content)
+
+        if not parts:
+            return
+
+        text = "\n\n".join(parts)
+
+        from deepagents_code.clipboard import copy_text_with_feedback
+
+        copy_text_with_feedback(
+            self.app,
+            text,
+            failure_noun="message",
+            success_message="Q&A copied to clipboard",
+        )
+
+
 class AssistantMessage(Vertical):
     """Widget displaying an assistant message with markdown support.
 
@@ -1182,6 +1301,7 @@ class AssistantMessage(Vertical):
         self._stream: MarkdownStream | None = None
         self._pending_append = ""
         self._flush_timer: Timer | None = None
+        self._stream_finalized: bool = bool(content)
 
     @property
     def _content(self) -> str:
@@ -1198,17 +1318,27 @@ class AssistantMessage(Vertical):
         """Compose the assistant message layout.
 
         Yields:
-            Markdown widget for rendering assistant content.
+            Markdown widget for rendering assistant content, and a copy
+            button shown after streaming completes.
         """
         from textual.widgets import Markdown
 
         yield Markdown("", id="assistant-content", open_links=False)
+        yield CopyTurnButton(id="copy-turn-btn")
 
     def on_mount(self) -> None:
-        """Store reference to markdown widget."""
+        """Store reference to markdown widget and show copy button if finalized."""
         from textual.widgets import Markdown
 
         self._markdown = self.query_one("#assistant-content", Markdown)
+        self._show_copy_button()
+
+    def _show_copy_button(self) -> None:
+        """Reveal the copy-turn button if the message content is finalized."""
+        if not self._stream_finalized:
+            return
+        with contextlib.suppress(NoMatches, WrongType):
+            self.query_one("#copy-turn-btn", CopyTurnButton).add_class("-visible")
 
     def on_mouse_move(self, event: MouseMove) -> None:
         """Show a pointer cursor over markdown links, text cursor elsewhere.
@@ -1305,6 +1435,7 @@ class AssistantMessage(Vertical):
         """Write initial content if provided at construction time."""
         if self._content:
             await self._get_markdown().update(self._content)
+        self._show_copy_button()
 
     async def stop_stream(self) -> None:
         """Stop the streaming and finalize the content."""
@@ -1314,6 +1445,8 @@ class AssistantMessage(Vertical):
             await self._stream.stop()
             self._stream = None
             await self._get_markdown().update(self._content)
+        self._stream_finalized = True
+        self._show_copy_button()
 
     async def set_content(self, content: str) -> None:
         """Set the full message content.
@@ -1333,6 +1466,8 @@ class AssistantMessage(Vertical):
         self._content = content
         if self._markdown:
             await self._markdown.update(content)
+        self._stream_finalized = True
+        self._show_copy_button()
 
 
 _ToolStatus = Literal["pending", "running", "success", "error", "rejected", "skipped"]
@@ -1917,6 +2052,15 @@ class ToolCallMessage(Vertical):
             if self._tool_name == "ask_user"
             else _strip_success_exit_line(result)
         )
+        # Successful `edit_file` auto-expands so users see exactly what each
+        # edit did; the full row is visible immediately and toggling collapses
+        # it back to the hint. Search "no-result" sentinels are excluded so
+        # they keep their inline preview rendering.
+        if (
+            self._tool_name == "edit_file"
+            and not self._is_search_no_result_output(self._output)
+        ):
+            self._expanded = True
         self._apply_status_class("success")
         if self._duration is not None:
             self._show_timed_success_status(self._duration)
@@ -3820,7 +3964,13 @@ class ToolGroupSummary(Static):
 
     _SPINNER_INTERVAL: ClassVar[float] = 0.1
 
-    _collapsed: var[bool] = var(True)
+    _collapsed: var[bool] = var(False)
+    """User preference: default the group to expanded so every tool call in
+    the run (`read_file(...)`, `grep(...)`, ...) is visible from the moment
+    it mounts. The per-tool result body still honors its own collapse rules
+    (`_COLLAPSE_OUTPUT_BY_DEFAULT`), so verbose output stays folded. Click the
+    header or press Ctrl+O to re-collapse the whole group.
+    """
 
     def __init__(
         self,

@@ -1,6 +1,6 @@
 """Filesystem-path classification shared by the diagnostic CLI commands.
 
-`dcode doctor` and `dcode config path` both probe whether config locations
+`zjcode doctor` and `zjcode config path` both probe whether config locations
 exist. `Path.exists()` can report `False` for `OSError` cases such as EACCES
 when a parent directory denies traversal, so a bare `.exists()` can hide the
 very permissions problem these commands should diagnose. `classify_path`

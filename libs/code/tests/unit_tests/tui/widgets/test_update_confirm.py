@@ -89,7 +89,7 @@ class TestUpdateBeforeDependenciesConfirmScreen:
             assert outcomes == [True]
 
     async def test_escape_dismisses_with_false(self) -> None:
-        """Pressing Esc keeps dcode current and refreshes dependencies."""
+        """Pressing Esc keeps zjcode current and refreshes dependencies."""
         app = _RefreshConfirmTestApp()
         async with app.run_test() as pilot:
             outcomes: list[bool | None] = []

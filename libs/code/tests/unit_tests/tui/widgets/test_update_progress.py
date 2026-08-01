@@ -19,7 +19,7 @@ async def test_update_progress_screen_shows_tail_when_details_toggle(tmp_path) -
     """The progress modal keeps a bounded tail hidden until details are toggled."""
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool upgrade deepagents-code",
+        command="uv tool upgrade zjcode",
         log_path=tmp_path / "update.log",
         tail_limit=2,
     )
@@ -32,7 +32,7 @@ async def test_update_progress_screen_shows_tail_when_details_toggle(tmp_path) -
         log_path = screen.query(Static).filter(".up-log").first()
         assert details.display is False
         assert log_path.display is False
-        assert "Running command: uv tool upgrade deepagents-code" in str(
+        assert "Running command: uv tool upgrade zjcode" in str(
             details.render()
         )
         assert "tail -f" not in str(details.render())
@@ -58,7 +58,7 @@ async def test_update_progress_screen_copies_log_path_only_in_details(
     log_path = tmp_path / "update.log"
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool upgrade deepagents-code",
+        command="uv tool upgrade zjcode",
         log_path=log_path,
     )
 
@@ -104,7 +104,7 @@ async def test_update_progress_screen_close_waits_until_done(tmp_path) -> None:
     """Esc is ignored while the update is running and closes after completion."""
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool upgrade deepagents-code",
+        command="uv tool upgrade zjcode",
         log_path=tmp_path / "update.log",
     )
 
@@ -128,7 +128,7 @@ async def test_update_progress_screen_failure_uses_error_glyph(tmp_path) -> None
     """Failure completion should not look visually successful."""
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool install -U deepagents-code",
+        command="uv tool install -U zjcode",
         log_path=tmp_path / "update.log",
     )
 
@@ -137,7 +137,7 @@ async def test_update_progress_screen_failure_uses_error_glyph(tmp_path) -> None
         app.push_screen(screen)
         await pilot.pause()
 
-        screen.mark_failure("uv tool install -U deepagents-code")
+        screen.mark_failure("uv tool install -U zjcode")
         await pilot.pause()
 
         status = screen.query(Static).filter(".up-status").first()
@@ -152,7 +152,7 @@ async def test_update_progress_screen_warning_stays_visible(
     """Warning completion keeps the user action visible in the modal."""
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool upgrade deepagents-code",
+        command="uv tool upgrade zjcode",
         log_path=tmp_path / "update.log",
     )
 
@@ -165,7 +165,7 @@ async def test_update_progress_screen_warning_stays_visible(
 
         fix_command = "export PATH=/home/user/.local/bin:$PATH\nhash -r"
         screen.mark_warning(
-            "Update installed, but another `dcode` is earlier on your PATH.\n"
+            "Update installed, but another `zjcode` is earlier on your PATH.\n"
             "Remove the shadowing binary, or put /home/user/.local/bin earlier "
             "on your PATH, then relaunch.",
             copy_text=fix_command,
@@ -177,7 +177,7 @@ async def test_update_progress_screen_warning_stays_visible(
         spinner = screen.query(Static).filter(".up-spinner").first()
         help_text = screen.query(Static).filter(".up-help").first()
         assert "Update complete" not in str(status.render())
-        assert "another `dcode` is earlier on your PATH" in str(status.render())
+        assert "another `zjcode` is earlier on your PATH" in str(status.render())
         assert "Remove the shadowing binary" in str(status.render())
         assert details.display is True
         assert str(spinner.render()) == get_glyphs().warning
@@ -202,7 +202,7 @@ async def test_update_progress_screen_warning_without_copy_text_copies_log_path(
     log_path = tmp_path / "update.log"
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool install -U deepagents-code",
+        command="uv tool install -U zjcode",
         log_path=log_path,
     )
 
@@ -213,7 +213,7 @@ async def test_update_progress_screen_warning_without_copy_text_copies_log_path(
         app.push_screen(screen)
         await pilot.pause()
 
-        screen.mark_warning("Another `dcode` is earlier on your PATH.")
+        screen.mark_warning("Another `zjcode` is earlier on your PATH.")
         await pilot.pause()
 
         spinner = screen.query(Static).filter(".up-spinner").first()
@@ -233,7 +233,7 @@ async def test_update_progress_screen_warning_without_copy_text_copies_log_path(
     [
         pytest.param(lambda screen: screen.mark_success(), id="success"),
         pytest.param(
-            lambda screen: screen.mark_failure("uv tool upgrade deepagents-code"),
+            lambda screen: screen.mark_failure("uv tool upgrade zjcode"),
             id="failure",
         ),
         pytest.param(lambda screen: screen.mark_warning("Heads up"), id="warning"),
@@ -250,7 +250,7 @@ async def test_update_progress_screen_quit_waits_until_done(
     """
     screen = UpdateProgressScreen(
         latest="2.0.0",
-        command="uv tool upgrade deepagents-code",
+        command="uv tool upgrade zjcode",
         log_path=tmp_path / "update.log",
     )
 

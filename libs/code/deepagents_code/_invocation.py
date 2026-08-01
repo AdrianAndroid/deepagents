@@ -1,11 +1,11 @@
 """Resolution of the command name this process was launched with.
 
 Hints that tell the user how to resume a thread have to echo a command the user
-can actually paste back. `dcode` is only one of the names that reach this code:
-the package ships both `deepagents-code` and `dcode` console scripts, and
+can actually paste back. `zjcode` is only one of the names that reach this code:
+the package ships both `zjcode` and `zjcode` console scripts, and
 per-project shims (a renamed symlink in `~/.local/bin` pointing at a worktree's
-`bin/dcode`) are a common way to run several checkouts side by side. Hardcoding
-`dcode` tells those users to run a command that may not exist.
+`bin/zjcode`) are a common way to run several checkouts side by side. Hardcoding
+`zjcode` tells those users to run a command that may not exist.
 
 `sys.argv[0]` holds the answer, because the kernel passes the pathname given to
 `execve` to the interpreter rather than the symlink target, so a shim invoked as
@@ -27,10 +27,10 @@ from deepagents_code._env_vars import DEBUG, INVOKED_AS, is_env_truthy
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_INVOKED_NAME = "dcode"
+DEFAULT_INVOKED_NAME = "zjcode"
 """Command name assumed when the launch name cannot be determined."""
 
-STANDARD_INVOKED_NAMES = frozenset({"dcode", "deepagents-code"})
+STANDARD_INVOKED_NAMES = frozenset({"zjcode"})
 """Console scripts shipped in `pyproject.toml` (`[project.scripts]`).
 
 Anything else — a per-checkout shim or a user alias — is non-standard and gets a
@@ -87,8 +87,8 @@ def invoked_name() -> str:
     the process. Tests that vary either must call `invoked_name.cache_clear()`.
 
     Returns:
-        The console-script name the user invoked (for example `dcode`,
-            `deepagents-code`, or a shim name), or `DEFAULT_INVOKED_NAME` when it
+        The console-script name the user invoked (for example `zjcode`,
+            `zjcode`, or a shim name), or `DEFAULT_INVOKED_NAME` when it
             cannot be determined.
     """
     override = os.environ.get(INVOKED_AS)

@@ -1330,7 +1330,7 @@ class TestArtifactsRoot:
         root_path = Path(storage.root)
 
         assert storage.large_results_dir is None
-        assert root_path.samefile(temp_dir / f"dcode-artifacts-{uid}")
+        assert root_path.samefile(temp_dir / f"zjcode-artifacts-{uid}")
         assert stat.S_IMODE(root_path.stat().st_mode) == 0o700
         # Stable across calls (paths embedded in resumed threads stay resolvable).
         assert _artifacts_root() == storage
@@ -1338,13 +1338,13 @@ class TestArtifactsRoot:
     def test_windows_artifacts_root_is_accepted_by_filesystem_tools(self) -> None:
         """A Windows temp path retains its drive without a rejected drive prefix."""
         disk_root = PureWindowsPath(
-            "C:/Users/test/AppData/Local/Temp/dcode-artifacts-123"
+            "C:/Users/test/AppData/Local/Temp/zjcode-artifacts-123"
         )
 
         root = _filesystem_tool_path(disk_root)
         result_path = f"{root}/large_tool_results/tool-call-id"
 
-        assert root == "//?/C:/Users/test/AppData/Local/Temp/dcode-artifacts-123"
+        assert root == "//?/C:/Users/test/AppData/Local/Temp/zjcode-artifacts-123"
         assert PureWindowsPath(root).is_absolute()
         assert validate_path(result_path) == result_path
 
@@ -1361,7 +1361,7 @@ class TestArtifactsRoot:
         temp_dir = tmp_path / "tmp"
         temp_dir.mkdir()
         uid = getuid()
-        reserved = temp_dir / f"dcode-artifacts-{uid}"
+        reserved = temp_dir / f"zjcode-artifacts-{uid}"
         reserved.mkdir()  # a real, us-owned directory; lstat is faked below
 
         real_lstat = Path.lstat
@@ -1378,12 +1378,12 @@ class TestArtifactsRoot:
         storage = _artifacts_root()
         next_storage = _artifacts_root()
 
-        assert storage.root == "/dcode-artifacts-fallback"
+        assert storage.root == "/zjcode-artifacts-fallback"
         assert next_storage.root == storage.root
         assert storage.large_results_dir is not None
         assert next_storage.large_results_dir is not None
         assert not storage.large_results_dir.samefile(reserved)
-        assert storage.large_results_dir.name.startswith(f"dcode-artifacts-{uid}-")
+        assert storage.large_results_dir.name.startswith(f"zjcode-artifacts-{uid}-")
         assert stat.S_IMODE(storage.large_results_dir.stat().st_mode) == 0o700
         assert next_storage.large_results_dir != storage.large_results_dir
 

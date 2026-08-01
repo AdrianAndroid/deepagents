@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 MarketplaceSourceType = Literal["directory", "file", "github", "git", "url"]
 ExternalPluginRepositorySourceType = Literal["github", "git-subdir", "url"]
 UnsupportedComponent = Literal["agents", "commands", "hooks"]
-"""Plugin component directory that `deepagents-code` does not load."""
+"""Plugin component directory that `zjcode` does not load."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -73,7 +73,7 @@ class PluginManifest:
 class ComponentInventory:
     """Inventory of supported plugin components.
 
-    `unsupported` lists plugin component directories that `deepagents-code` does
+    `unsupported` lists plugin component directories that `zjcode` does
     not load (e.g. `agents/`, `commands/`, `hooks/`).
     """
 
@@ -85,7 +85,7 @@ class ComponentInventory:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PluginInstance:
-    """A discovered plugin ready to feed dcode adapters.
+    """A discovered plugin ready to feed zjcode adapters.
 
     Attributes:
         plugin_id: Stable id in `{name}@{marketplace}` form.

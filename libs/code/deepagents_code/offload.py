@@ -11,7 +11,7 @@ from pathlib import Path, PurePath
 
 logger = logging.getLogger(__name__)
 
-_FALLBACK_ARTIFACTS_ROOT = "/dcode-artifacts-fallback"
+_FALLBACK_ARTIFACTS_ROOT = "/zjcode-artifacts-fallback"
 
 CONVERSATION_HISTORY_DIRNAME = "conversation_history"
 """Subdirectory of the offload root that holds per-thread conversation archives.
@@ -133,7 +133,7 @@ def _artifacts_root() -> _ArtifactsStorage:
     getuid = getattr(os, "getuid", None)
     suffix = str(getuid()) if getuid is not None else str(os.getpid())
     temp_root = Path(tempfile.gettempdir())
-    root = temp_root / f"dcode-artifacts-{suffix}"
+    root = temp_root / f"zjcode-artifacts-{suffix}"
     try:
         _harden_dir(root)
         _probe_writable(root)
@@ -144,7 +144,7 @@ def _artifacts_root() -> _ArtifactsStorage:
             exc_info=True,
         )
         unique = Path(
-            tempfile.mkdtemp(prefix=f"dcode-artifacts-{suffix}-", dir=temp_root)
+            tempfile.mkdtemp(prefix=f"zjcode-artifacts-{suffix}-", dir=temp_root)
         )
         _harden_dir(unique)
         _probe_writable(unique)
