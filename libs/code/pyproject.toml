@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zjcode"
-version = "0.0.8"
+version = "0.0.9"
 description = "Private-branded terminal coding agent forked from deepagents-code."
 readme = "README.md"
 license = { text = "MIT" }
@@ -171,11 +171,13 @@ test = [
 # DEEPAGENTS_CODE_BUILD_COMMIT is set (CI release builds). See hatch_build.py.
 
 [tool.hatch.build.targets.wheel]
-packages = ["deepagents_code"]
+packages = ["deepagents_code", "zjcode"]
 include = [
     "deepagents_code/**/*.py",
     "deepagents_code/**/*.md",
     "deepagents_code/**/*.tcss",
+    "zjcode/**/*.py",
+    "zjcode/**/*.md",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]

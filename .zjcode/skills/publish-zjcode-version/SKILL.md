@@ -32,7 +32,7 @@ cd /Users/zhaojian/code/deepagents
 ```
 
 1. **Working tree clean** - `git status --short` must be empty (or only contain unrelated doc changes; ask user).
-2. **On `learn` branch** - `git branch --show-current` should print `learn`. If not, ask before proceeding.
+2. **On `zjcode` branch** - `git branch --show-current` should print `zjcode`. If not, ask before proceeding.
 3. **Tag not already used** - `git tag -l "zjcode-v<NEW_VERSION>"` must be empty. If the tag exists, refuse - PyPI versions are one-shot.
 4. **Version not already on PyPI** - `curl -sf "https://pypi.org/pypi/zjcode/<NEW_VERSION>/json" > /dev/null` should return non-zero (404). If the version already exists on PyPI, refuse.
 
@@ -120,15 +120,17 @@ git add libs/code/pyproject.toml \
 # Only if Step 1 wrote the workflow patch on this run:
 git add .github/workflows/publish-zjcode.yml
 git commit -m "chore(code): bump zjcode to <NEW_VERSION>"
-git push origin learn
+git push origin zjcode
 ```
+
+Note: `libs/code/pyproject.toml` is always staged because `bump-version.py` updates `version = "..."` in it. If this is the first publish after the `packages = ["deepagents_code", "zjcode"]` fix, that change rides along automatically.
 
 ## Step 6 - (Optional) Dry-run first
 
 Only if the user asked for a dry run. Via GitHub web UI (no `gh` CLI needed):
 
 1. Open `https://github.com/AdrianAndroid/deepagents/actions/workflows/publish-zjcode.yml`
-2. Click **Run workflow** -> branch `learn` -> `dry-run` = `true` -> Run
+2. Click **Run workflow** -> branch `zjcode` -> `dry-run` = `true` -> Run
 3. Wait for the `build` job to succeed. This runs the sed patch + `uv build` but skips the `publish` job.
 
 Only proceed to Step 7 after dry run is green.
