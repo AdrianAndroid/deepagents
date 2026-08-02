@@ -354,7 +354,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             patch(
@@ -395,7 +395,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade", upgrade),
             # The marker write fails (e.g. a read-only state dir).
@@ -476,7 +476,7 @@ class TestStartupAutoUpdate:
             ) as should_skip,
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool install -U deepagents-code",
+                return_value="uv tool install -U zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade") as upgrade,
             patch("deepagents_code.main._restart_current_process") as restart,
@@ -634,7 +634,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.update_check.perform_upgrade") as upgrade,
             patch("deepagents_code.main._restart_current_process") as restart,
@@ -845,7 +845,7 @@ class TestStartupAutoUpdate:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
             patch("deepagents_code.main._restart_current_process") as restart,
         ):

@@ -652,9 +652,9 @@ class TestListSkillsBuiltIn:
         assert creator["source"] == "built-in"
         assert len(creator["description"]) > 0
         assert creator["license"] == "MIT"
-        assert creator["compatibility"] == "designed for deepagents-code"
-        assert "deepagents-code-version" in creator["metadata"]
-        assert creator["metadata"]["deepagents-code-version"] == _cli_version
+        assert creator["compatibility"] == "designed for zjcode"
+        assert "zjcode-version" in creator["metadata"]
+        assert creator["metadata"]["zjcode-version"] == _cli_version
 
     def test_real_remember_skill_ships(self) -> None:
         """Verify the actual built-in remember SKILL.md exists and loads."""
@@ -674,9 +674,9 @@ class TestListSkillsBuiltIn:
         assert remember["source"] == "built-in"
         assert len(remember["description"]) > 0
         assert remember["license"] == "MIT"
-        assert remember["compatibility"] == "designed for deepagents-code"
-        assert "deepagents-code-version" in remember["metadata"]
-        assert remember["metadata"]["deepagents-code-version"] == _cli_version
+        assert remember["compatibility"] == "designed for zjcode"
+        assert "zjcode-version" in remember["metadata"]
+        assert remember["metadata"]["zjcode-version"] == _cli_version
 
     def test_real_thread_inspector_skill_ships(self) -> None:
         """Verify the built-in thread inspector and its script load from the package."""
@@ -698,8 +698,8 @@ class TestListSkillsBuiltIn:
         assert inspector["source"] == "built-in"
         assert len(inspector["description"]) > 0
         assert inspector["license"] == "MIT"
-        assert inspector["compatibility"] == "designed for deepagents-code"
-        assert inspector["metadata"]["deepagents-code-version"] == _cli_version
+        assert inspector["compatibility"] == "designed for zjcode"
+        assert inspector["metadata"]["zjcode-version"] == _cli_version
 
     def test_oserror_in_one_source_does_not_break_others(self, tmp_path: Path) -> None:
         """An OSError in one source should not prevent other sources from loading.

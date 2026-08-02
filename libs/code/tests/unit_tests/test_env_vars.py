@@ -17,7 +17,7 @@ import pytest
 
 import deepagents_code._env_vars as _mod
 
-_SRC_DIR = Path(__file__).resolve().parents[2] / "deepagents_code"
+_SRC_DIR = Path(__file__).resolve().parents[2] / "zjcode"
 _REGISTRY_FILE = _SRC_DIR / "_env_vars.py"
 
 # Matches a full DEEPAGENTS_CODE_* env var name inside quote characters.
@@ -80,7 +80,7 @@ class TestEnvVarRegistryDrift:
         stale = registered - in_registry_file
         assert not stale, (
             f"Constants whose values don't appear in _env_vars.py: {stale}. "
-            "Remove stale entries from deepagents_code/_env_vars.py."
+            "Remove stale entries from zjcode/_env_vars.py."
         )
 
     def test_registry_constants_are_sorted(self) -> None:

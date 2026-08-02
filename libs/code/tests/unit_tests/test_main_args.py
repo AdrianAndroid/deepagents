@@ -1882,7 +1882,7 @@ class TestUpdateSubcommand:
     def test_editable_install_skips_upgrade(self) -> None:
         """Editable install exits 0 without calling `is_update_available`/upgrade.
 
-        A regression here would run `uv tool upgrade deepagents-code` on an
+        A regression here would run `uv tool upgrade zjcode` on an
         editable checkout and clobber the dev install with a PyPI copy.
         """
         code, is_update_mock, perform_upgrade_mock = self._run_update(
@@ -2342,7 +2342,7 @@ class TestInstallExtraSubcommand:
 
     def test_failure_escapes_uv_recovery_command_markup(self) -> None:
         """Failed uv recovery commands preserve extras rendered by Rich."""
-        command = "uv tool install -U 'deepagents-code[quickjs]'"
+        command = "uv tool install -U 'zjcode[quickjs]'"
         code, _perform, console_mock = self._run_install_capture(
             "quickjs",
             perform_return=(False, "resolver: conflict"),
@@ -2350,14 +2350,14 @@ class TestInstallExtraSubcommand:
         )
         assert code == 1
         text = self._printed_text(console_mock)
-        assert "deepagents-code\\[quickjs]" in text
+        assert "zjcode\\[quickjs]" in text
 
     def test_failure_recovery_command_error_keeps_prior_command(self) -> None:
         """A recovery-command error on a failed install keeps the prior command.
 
         The command resolved before the failure is shown instead of crashing.
         """
-        resolved = "uv tool install -U 'deepagents-code[quickjs]'"
+        resolved = "uv tool install -U 'zjcode[quickjs]'"
         code, _perform, console_mock = self._run_install_capture(
             "quickjs",
             perform_return=(False, "resolver: conflict"),
@@ -2369,7 +2369,7 @@ class TestInstallExtraSubcommand:
         assert "Install failed" in text
         # Falls back to the install_extra_command value resolved before the
         # failure, with its bracket escaped for Rich.
-        assert "deepagents-code\\[quickjs]" in text
+        assert "zjcode\\[quickjs]" in text
 
     def test_keyboard_interrupt_exits_130(self) -> None:
         """Ctrl-C during install exits 130 with an Aborted message."""

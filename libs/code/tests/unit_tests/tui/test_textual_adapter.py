@@ -1064,8 +1064,8 @@ class TestBuildStreamConfig:
 
         metadata = build_stream_config("t-id", assistant_id=None)["metadata"]
         assert metadata["ls_agent_purpose"] == "coding"
-        assert metadata["ls_integration"] == "deepagents-code"
-        assert metadata["ls_agent_runtime"] == "Deep Agents Code"
+        assert metadata["ls_integration"] == "zjcode"
+        assert metadata["ls_agent_runtime"] == "zjcode"
         assert metadata["ls_trace_schema_version"] == "coding-agent-v1"
         assert metadata["ls_integration_version"] == __version__
         assert metadata["ls_agent_runtime_version"] == __version__
@@ -1189,7 +1189,7 @@ class TestBuildStreamConfig:
             patch("deepagents_code.config._get_deepagents_version", return_value=None),
         ):
             config = build_stream_config("t-ver", assistant_id=None)
-        assert config["metadata"]["lc_versions"] == {"deepagents-code": __version__}
+        assert config["metadata"]["lc_versions"] == {"zjcode": __version__}
 
     def test_versions_marks_editable_cli_version(self) -> None:
         """Editable dcode installs should be visible in metadata.lc_versions."""
@@ -1201,7 +1201,7 @@ class TestBuildStreamConfig:
         ):
             config = build_stream_config("t-editable", assistant_id=None)
         assert config["metadata"]["lc_versions"] == {
-            "deepagents-code": f"{__version__}+editable"
+            "zjcode": f"{__version__}+editable"
         }
 
     def test_dcode_client_deepagents_version_is_diagnostic_metadata(self) -> None:
@@ -1283,7 +1283,7 @@ class TestBuildStreamConfig:
         ):
             config = build_stream_config("t-editable-sdk", assistant_id=None)
         assert config["metadata"]["lc_versions"] == {
-            "deepagents-code": f"{__version__}+editable"
+            "zjcode": f"{__version__}+editable"
         }
         assert config["metadata"]["dcode_client_deepagents_version"] == "1.2.3"
 

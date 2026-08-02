@@ -55,11 +55,11 @@ class TestInvokedNameFromArgv:
         assert invoked_name() == "dcode"
 
     def test_reports_alias_entry_point(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The longer `deepagents-code` console script is reported verbatim."""
+        """The longer `zjcode` console script is reported verbatim."""
         monkeypatch.delenv(INVOKED_AS, raising=False)
-        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/deepagents-code"])
+        monkeypatch.setattr(sys, "argv", ["/usr/local/bin/zjcode"])
 
-        assert invoked_name() == "deepagents-code"
+        assert invoked_name() == "zjcode"
 
     def test_reports_shim_name_not_symlink_target(
         self, monkeypatch: pytest.MonkeyPatch
@@ -210,7 +210,7 @@ class TestLogNonstandardInvokedName:
         assert record.levelno == logging.DEBUG
         assert "'abc'" in record.getMessage()
 
-    @pytest.mark.parametrize("argv0", ["dcode", "deepagents-code"])
+    @pytest.mark.parametrize("argv0", ["dcode", "zjcode"])
     def test_standard_names_log_nothing(
         self,
         monkeypatch: pytest.MonkeyPatch,

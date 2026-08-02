@@ -25277,6 +25277,10 @@ class zjcodeApp(App):
             )
 
 
+# Alias for backward compatibility with tests and external imports
+DeepAgentsApp = zjcodeApp
+
+
 @dataclass(frozen=True)
 class AppResult:
     """Result from running the Textual application."""

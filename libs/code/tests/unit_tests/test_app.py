@@ -6412,7 +6412,7 @@ class TestTraceCommand:
 
             expected_url = (
                 "https://smith.langchain.com/o/org/projects/p/proj"
-                "/t/test-thread-123?utm_source=deepagents-code"
+                "/t/test-thread-123?utm_source=zjcode"
             )
             mock_open.assert_called_once_with(expected_url)
             app_msgs = app.query(AppMessage)
@@ -6732,12 +6732,12 @@ class TestTraceCommand:
             with (
                 patch(
                     "deepagents_code.config.get_langsmith_project_name",
-                    return_value="deepagents-code",
+                    return_value="zjcode",
                 ),
                 patch(
                     "deepagents_code.config.fetch_langsmith_project_url_or_raise",
                     side_effect=LangSmithProjectNotFoundError(
-                        "Project deepagents-code not found"
+                        "Project zjcode not found"
                     ),
                 ),
             ):
@@ -21521,7 +21521,7 @@ class TestDeferredActions:
                 await pilot.pause()
 
             mock_extra_for_package.assert_called_once_with(
-                "langchain-google-vertexai", "deepagents-code"
+                "langchain-google-vertexai", "zjcode"
             )
             widget = app._startup_failure_widget
             assert isinstance(widget, ErrorMessage)
@@ -21544,7 +21544,7 @@ class TestDeferredActions:
         from deepagents_code.tui.widgets.messages import ErrorMessage
 
         tmp_path.joinpath("uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "deepagents-code" }]\n',
+            '[tool]\nrequirements = [{ name = "zjcode" }]\n',
             encoding="utf-8",
         )
         monkeypatch.setattr("sys.prefix", str(tmp_path))
@@ -21580,7 +21580,7 @@ class TestDeferredActions:
             rendered = str(widget._content)
             assert (
                 "uv tool install --reinstall -U "
-                f"deepagents-code=={__version__} "
+                f"zjcode=={__version__} "
                 "--with langchain-custom_provider --prerelease allow" in rendered
             )
             assert "/model custom_provider:<model>" in rendered
@@ -23815,7 +23815,7 @@ def _update_entry(latest: str = "2.0.0") -> PendingNotification:
             NotificationAction(ActionId.SKIP_VERSION, "Skip this version"),
         ),
         payload=UpdateAvailablePayload(
-            latest=latest, upgrade_cmd="uv tool upgrade deepagents-code"
+            latest=latest, upgrade_cmd="uv tool upgrade zjcode"
         ),
     )
 
@@ -23829,7 +23829,7 @@ def test_build_update_notification_uses_release_and_installed_age_copy() -> None
         cli_version="1.0.0",
         release_age=" (released 3d ago)",
         installed_age=" (8 days old)",
-        upgrade_cmd="uv tool upgrade deepagents-code",
+        upgrade_cmd="uv tool upgrade zjcode",
     )
 
     assert notification.body == (
@@ -24614,7 +24614,7 @@ class TestNotificationCenterIntegration:
             await pilot.pause()
             with patch(
                 "deepagents_code.update_check.perform_upgrade",
-                new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                new=AsyncMock(return_value=(True, "Updated zjcode")),
             ):
                 await app._dispatch_notification_action(entry.key, ActionId.INSTALL)
                 await pilot.pause()
@@ -24664,7 +24664,7 @@ class TestNotificationCenterIntegration:
             with (
                 patch(
                     "deepagents_code.update_check.perform_upgrade",
-                    new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                    new=AsyncMock(return_value=(True, "Updated zjcode")),
                 ),
                 # Override the autouse `None` patch.
                 patch(
@@ -24744,7 +24744,7 @@ class TestNotificationCenterIntegration:
             with (
                 patch(
                     "deepagents_code.update_check.perform_upgrade",
-                    new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                    new=AsyncMock(return_value=(True, "Updated zjcode")),
                 ),
                 patch(
                     "deepagents_code.update_check.detect_shadowed_dcode",
@@ -24795,7 +24795,7 @@ class TestNotificationCenterIntegration:
             monkeypatch.setenv(DEBUG_UPDATE, "1")
             with patch(
                 "deepagents_code.update_check.perform_upgrade",
-                new=AsyncMock(return_value=(True, "Updated deepagents-code")),
+                new=AsyncMock(return_value=(True, "Updated zjcode")),
             ) as mock_upgrade:
                 with patch(
                     "deepagents_code.app.asyncio.sleep",
@@ -25285,7 +25285,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
         ):
             async with app.run_test() as pilot:
@@ -25325,7 +25325,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool install -U deepagents-code --prerelease allow",
+                return_value="uv tool install -U zjcode --prerelease allow",
             ) as upgrade_command_mock,
         ):
             async with app.run_test() as pilot:
@@ -25391,7 +25391,7 @@ class TestNotificationCenterIntegration:
             ),
             patch(
                 "deepagents_code.update_check.upgrade_command",
-                return_value="uv tool upgrade deepagents-code",
+                return_value="uv tool upgrade zjcode",
             ),
         ):
             async with app.run_test() as pilot:
@@ -26127,7 +26127,7 @@ class TestPrewarmDeferredImports:
     """Prewarming is a cache optimization and must never crash the app.
 
     When the installed package is replaced in place mid-session (e.g. a
-    concurrent `uv tool upgrade deepagents-code`), a not-yet-imported module
+    concurrent `uv tool upgrade zjcode`), a not-yet-imported module
     can be transiently absent on disk, so a deferred import raises
     `ModuleNotFoundError`. The prewarm worker must swallow that — the module
     cold-loads on first use instead — rather than surfacing a fatal traceback.
@@ -26609,10 +26609,10 @@ class TestPrewarmAwait:
 class TestHeaderAndTitle:
     """Header widget visibility and custom title overrides."""
 
-    async def test_default_title_is_deep_agents(self) -> None:
+    async def test_default_title_is_zjcode(self) -> None:
         """Without overrides, `App.title` is the class-level `TITLE`."""
         app = DeepAgentsApp()
-        assert app.title == "Deep Agents"
+        assert app.title == "zjcode"
 
     async def test_custom_title_kwarg_sets_app_title(self) -> None:
         """The `title` kwarg overrides the default Textual `App.title`."""

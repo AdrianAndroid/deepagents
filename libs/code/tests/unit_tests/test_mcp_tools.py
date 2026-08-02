@@ -119,7 +119,7 @@ def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     fake.mkdir()
     monkeypatch.setattr(Path, "home", staticmethod(lambda: fake))
     monkeypatch.setattr(
-        "deepagents_code.model_config.DEFAULT_STATE_DIR",
+        "zjcode.model_config.DEFAULT_STATE_DIR",
         fake / ".deepagents" / ".state",
     )
     return fake
@@ -651,7 +651,7 @@ class TestDiscoverMcpConfigs:
         (project / ".mcp.json").write_text("{}")
         monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
         monkeypatch.setattr(
-            "deepagents_code.project_utils.find_project_root",
+            "zjcode.project_utils.find_project_root",
             lambda: project,
         )
 
@@ -667,7 +667,7 @@ class TestDiscoverMcpConfigs:
         home.mkdir()
         monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
         monkeypatch.setattr(
-            "deepagents_code.project_utils.find_project_root",
+            "zjcode.project_utils.find_project_root",
             lambda: None,
         )
         monkeypatch.chdir(tmp_path)
@@ -1162,7 +1162,7 @@ class TestMCPSessionManager:
 
         with (
             patch("langchain_mcp_adapters.sessions.create_session", _fake),
-            caplog.at_level(logging.WARNING, logger="deepagents_code.mcp_tools"),
+            caplog.at_level(logging.WARNING, logger="zjcode.mcp_tools"),
             pytest.raises(asyncio.CancelledError),
         ):
             await manager.get_session("filesystem")
@@ -1218,7 +1218,7 @@ class TestMCPSessionManager:
 
         with (
             patch("langchain_mcp_adapters.sessions.create_session", _fake),
-            caplog.at_level(logging.WARNING, logger="deepagents_code.mcp_tools"),
+            caplog.at_level(logging.WARNING, logger="zjcode.mcp_tools"),
             pytest.raises(asyncio.CancelledError),
         ):
             await manager.get_session("filesystem")
@@ -1272,9 +1272,9 @@ class TestGetMCPTools:
     def _bypass_health_checks(self) -> Generator[None]:
         """Bypass pre-flight health checks for tests in this class."""
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server"),
+            patch("zjcode.mcp_tools._check_stdio_server"),
             patch(
-                "deepagents_code.mcp_tools._check_remote_server",
+                "zjcode.mcp_tools._check_remote_server",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1353,7 +1353,7 @@ class TestGetMCPTools:
             raise RuntimeError(msg)
             yield
 
-        caplog.set_level(logging.DEBUG, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.DEBUG, logger="zjcode.mcp_tools")
 
         with patch("langchain_mcp_adapters.sessions.create_session", _fake):
             tools, manager, server_infos = await get_mcp_tools(path)
@@ -1368,7 +1368,7 @@ class TestGetMCPTools:
         assert any(
             record.exc_info is not None
             for record in caplog.records
-            if record.name == "deepagents_code.mcp_tools"
+            if record.name == "zjcode.mcp_tools"
         )
         await manager.cleanup()
 
@@ -1380,7 +1380,7 @@ class TestGetMCPTools:
         path = write_config({"mcpServers": {"srv": {"command": "missing", "args": []}}})
 
         with patch(
-            "deepagents_code.mcp_tools._check_stdio_server",
+            "zjcode.mcp_tools._check_stdio_server",
             side_effect=RuntimeError("command missing"),
         ):
             tools, manager, server_infos = await get_mcp_tools(path)
@@ -1435,7 +1435,7 @@ class TestGetMCPTools:
         }
 
         with patch(
-            "deepagents_code.mcp_tools._check_stdio_server",
+            "zjcode.mcp_tools._check_stdio_server",
             side_effect=lambda _name, server: checked.append(server),
         ):
             await _load_tools_from_config(config)
@@ -1672,7 +1672,7 @@ class TestLoadToolsFromConfigOAuth:
     def _bypass_health_checks(self) -> Generator[None]:
         """Bypass remote health checks for tests in this class."""
         with patch(
-            "deepagents_code.mcp_tools._check_remote_server",
+            "zjcode.mcp_tools._check_remote_server",
             new_callable=AsyncMock,
         ):
             yield
@@ -1768,7 +1768,7 @@ class TestLoadToolsFromConfigOAuth:
             raise ExceptionGroup(msg, [MCPReauthRequiredError("notion")])
             yield
 
-        caplog.set_level(logging.DEBUG, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.DEBUG, logger="zjcode.mcp_tools")
 
         with patch("langchain_mcp_adapters.sessions.create_session", _fake):
             config = {
@@ -1796,7 +1796,7 @@ class TestLoadToolsFromConfigOAuth:
         mcp_records = [
             record
             for record in caplog.records
-            if record.name == "deepagents_code.mcp_tools"
+            if record.name == "zjcode.mcp_tools"
         ]
         warning_records = [
             record for record in mcp_records if record.levelno == logging.WARNING
@@ -1938,7 +1938,7 @@ class TestLoadToolsFromConfigOAuth:
             raise challenge
             yield
 
-        caplog.set_level(logging.DEBUG, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.DEBUG, logger="zjcode.mcp_tools")
 
         with patch("langchain_mcp_adapters.sessions.create_session", _fake):
             config = {
@@ -1960,7 +1960,7 @@ class TestLoadToolsFromConfigOAuth:
         mcp_records = [
             record
             for record in caplog.records
-            if record.name == "deepagents_code.mcp_tools"
+            if record.name == "zjcode.mcp_tools"
         ]
         # The breadcrumb must be present AND carry its diagnostic payload — the
         # classified exception's type name (via `format_login_failure`) — so
@@ -2095,8 +2095,8 @@ class TestResolveAndLoadMcpTools:
         assert manager is None
         assert infos == []
 
-    @patch("deepagents_code.mcp_tools._warm_mcp_adapter_imports")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._warm_mcp_adapter_imports")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_no_adapter_warmup_when_no_active_servers(
         self,
         mock_discover: MagicMock,
@@ -2117,8 +2117,8 @@ class TestResolveAndLoadMcpTools:
         assert infos == []
         mock_warm.assert_not_called()
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_explicit_path_merges_with_discovery(
         self,
         mock_discover: MagicMock,
@@ -2146,8 +2146,8 @@ class TestResolveAndLoadMcpTools:
         assert "fs" in merged["mcpServers"]
         assert "search" in merged["mcpServers"]
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_stateless_and_manager_forwarded(
         self,
         mock_discover: MagicMock,
@@ -2187,9 +2187,9 @@ class TestResolveAndLoadMcpTools:
         with pytest.raises(json.JSONDecodeError):
             await resolve_and_load_mcp_tools(explicit_config_path=str(bad))
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.classify_discovered_configs")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.classify_discovered_configs")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_malformed_project_config_without_summaries_is_nonfatal(
         self,
         mock_discover: MagicMock,
@@ -2218,9 +2218,9 @@ class TestResolveAndLoadMcpTools:
         assert infos[0].status == "error"
         assert "must be a dictionary" in (infos[0].error or "")
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.classify_discovered_configs")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.classify_discovered_configs")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_untrusted_project_remote_dropped_when_flag_false(
         self,
         mock_discover: MagicMock,
@@ -2257,7 +2257,7 @@ class TestResolveAndLoadMcpTools:
         mock_classify.return_value = ([], [project_cfg])
         mock_load.return_value = ([], None, [])
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH",
+            "zjcode.model_config.DEFAULT_CONFIG_PATH",
             tmp_path / "config.toml",
         )
         monkeypatch.delenv(
@@ -2267,7 +2267,7 @@ class TestResolveAndLoadMcpTools:
         monkeypatch.delenv(
             "DEEPAGENTS_CODE_DISABLED_PROJECT_MCP_SERVERS", raising=False
         )
-        caplog.set_level(logging.WARNING, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.WARNING, logger="zjcode.mcp_tools")
 
         tools, _manager, _infos = await resolve_and_load_mcp_tools(
             trust_project_mcp=False,
@@ -2280,9 +2280,9 @@ class TestResolveAndLoadMcpTools:
         assert "- docs-langchain [http]: https://docs.langchain.com/mcp" in caplog.text
         assert "; docs-langchain" not in caplog.text
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.classify_discovered_configs")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.classify_discovered_configs")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_untrusted_project_remote_dropped_without_trust_flag(
         self,
         mock_discover: MagicMock,
@@ -2312,9 +2312,9 @@ class TestResolveAndLoadMcpTools:
 
         assert mock_load.call_count == 0
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.classify_discovered_configs")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.classify_discovered_configs")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_trusted_project_remote_passes_through(
         self,
         mock_discover: MagicMock,
@@ -2345,8 +2345,8 @@ class TestResolveAndLoadMcpTools:
         merged = mock_load.call_args.args[0]
         assert "remote" in merged["mcpServers"]
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_disabled_server_is_split_off(
         self,
         mock_discover: MagicMock,
@@ -2369,7 +2369,7 @@ class TestResolveAndLoadMcpTools:
         mock_discover.return_value = [cfg]
         mock_load.return_value = ([], None, [])
         monkeypatch.setattr(
-            "deepagents_code.mcp_disabled.get_disabled_servers",
+            "zjcode.mcp_disabled.get_disabled_servers",
             lambda *_a, **_k: {"off"},
         )
 
@@ -2385,8 +2385,8 @@ class TestResolveAndLoadMcpTools:
         assert disabled[0].name == "off"
         assert disabled[0].transport == "stdio"
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_all_servers_disabled_short_circuits_loader(
         self,
         mock_discover: MagicMock,
@@ -2404,7 +2404,7 @@ class TestResolveAndLoadMcpTools:
         mock_discover.return_value = [cfg]
         mock_load.return_value = ([], None, [])
         monkeypatch.setattr(
-            "deepagents_code.mcp_disabled.get_disabled_servers",
+            "zjcode.mcp_disabled.get_disabled_servers",
             lambda *_a, **_k: {"fs"},
         )
 
@@ -2417,8 +2417,8 @@ class TestResolveAndLoadMcpTools:
         assert mock_load.call_count == 0
         assert [i.name for i in infos if i.status == "disabled"] == ["fs"]
 
-    @patch("deepagents_code.mcp_tools._load_tools_from_config")
-    @patch("deepagents_code.mcp_tools.discover_mcp_configs")
+    @patch("zjcode.mcp_tools._load_tools_from_config")
+    @patch("zjcode.mcp_tools.discover_mcp_configs")
     async def test_disabled_non_dict_config_gets_unknown_transport(
         self,
         mock_discover: MagicMock,
@@ -2437,11 +2437,11 @@ class TestResolveAndLoadMcpTools:
         mock_discover.return_value = [cfg]
         mock_load.return_value = ([], None, [])
         monkeypatch.setattr(
-            "deepagents_code.mcp_disabled.get_disabled_servers",
+            "zjcode.mcp_disabled.get_disabled_servers",
             lambda *_a, **_k: {"weird"},
         )
         monkeypatch.setattr(
-            "deepagents_code.mcp_tools.merge_mcp_configs",
+            "zjcode.mcp_tools.merge_mcp_configs",
             lambda _configs: {"mcpServers": {"weird": "not-a-dict"}},
         )
 
@@ -2468,7 +2468,7 @@ class TestDiscoveryHelpers:
         fake_home.mkdir()
         monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
         monkeypatch.setattr(
-            "deepagents_code.project_utils.find_project_root",
+            "zjcode.project_utils.find_project_root",
             lambda: tmp_path / "repo",
         )
 
@@ -2557,7 +2557,7 @@ class TestHealthChecks:
     def test_check_stdio_server_command_missing(self) -> None:
         """Missing stdio commands are rejected."""
         with (
-            patch("deepagents_code.mcp_tools.shutil.which", return_value=None),
+            patch("zjcode.mcp_tools.shutil.which", return_value=None),
             pytest.raises(RuntimeError, match="not found on PATH"),
         ):
             _check_stdio_server("srv", {"command": "missing"})
@@ -2576,7 +2576,7 @@ class TestHealthChecks:
             return None
 
         with patch(
-            "deepagents_code.mcp_tools.shutil.which",
+            "zjcode.mcp_tools.shutil.which",
             side_effect=_record_missing_command,
         ):
             tools, manager, server_infos = await get_mcp_tools(path)
@@ -2621,7 +2621,7 @@ class TestHealthChecks:
         client.head.side_effect = httpx.InvalidURL(f"invalid URL containing {secret}")
         client.__aenter__ = AsyncMock(return_value=client)
         client.__aexit__ = AsyncMock(return_value=False)
-        caplog.set_level(logging.WARNING, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.WARNING, logger="zjcode.mcp_tools")
 
         with patch("httpx.AsyncClient", return_value=client):
             tools, manager, infos = await _load_tools_from_config(
@@ -2674,10 +2674,10 @@ class TestHealthChecks:
             raise discovery_error
             yield
 
-        caplog.set_level(logging.DEBUG, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.DEBUG, logger="zjcode.mcp_tools")
         with (
             patch(
-                "deepagents_code.mcp_tools._check_remote_server",
+                "zjcode.mcp_tools._check_remote_server",
                 new_callable=AsyncMock,
             ),
             patch(
@@ -2721,14 +2721,14 @@ class TestHealthChecks:
         storage.get_tokens = AsyncMock(
             side_effect=RuntimeError(f"token store failure for {secret}")
         )
-        caplog.set_level(logging.DEBUG, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.DEBUG, logger="zjcode.mcp_tools")
 
         with (
             patch(
-                "deepagents_code.mcp_tools._check_remote_server",
+                "zjcode.mcp_tools._check_remote_server",
                 new_callable=AsyncMock,
             ),
-            patch("deepagents_code.mcp_auth.FileTokenStorage", return_value=storage),
+            patch("zjcode.mcp_auth.FileTokenStorage", return_value=storage),
         ):
             tools, manager, infos = await _load_tools_from_config(
                 {
@@ -2759,9 +2759,9 @@ class TestHealthChecks:
         """Expanded commands never reach status or warning text."""
         secret = "command-token-must-not-leak"
         monkeypatch.setenv("MCP_COMMAND", secret)
-        caplog.set_level(logging.WARNING, logger="deepagents_code.mcp_tools")
+        caplog.set_level(logging.WARNING, logger="zjcode.mcp_tools")
 
-        with patch("deepagents_code.mcp_tools.shutil.which", return_value=None):
+        with patch("zjcode.mcp_tools.shutil.which", return_value=None):
             tools, manager, infos = await _load_tools_from_config(
                 {"mcpServers": {"stdio": {"command": "${MCP_COMMAND}"}}}
             )
@@ -2782,9 +2782,9 @@ class TestToolOrdering:
     def _bypass_health_checks(self) -> Generator[None]:
         """Bypass health checks for ordering tests."""
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server"),
+            patch("zjcode.mcp_tools._check_stdio_server"),
             patch(
-                "deepagents_code.mcp_tools._check_remote_server",
+                "zjcode.mcp_tools._check_remote_server",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2843,7 +2843,7 @@ class TestLoadToolsConcurrency:
     @pytest.fixture(autouse=True)
     def _bypass_stdio_health_check(self) -> Generator[None]:
         """Bypass stdio pre-flight so tests focus on discovery concurrency."""
-        with patch("deepagents_code.mcp_tools._check_stdio_server"):
+        with patch("zjcode.mcp_tools._check_stdio_server"):
             yield
 
     @staticmethod
@@ -2935,7 +2935,7 @@ class TestLoadToolsConcurrency:
     ) -> None:
         """No more than `_MCP_LOAD_CONCURRENCY` sessions are open at once."""
         monkeypatch.setattr(
-            "deepagents_code.mcp_tools._MCP_LOAD_CONCURRENCY", 2, raising=True
+            "zjcode.mcp_tools._MCP_LOAD_CONCURRENCY", 2, raising=True
         )
         names = ["s1", "s2", "s3", "s4", "s5"]
         tool_by_server = {n: f"t_{n}" for n in names}
@@ -3056,7 +3056,7 @@ class TestLoadToolsConcurrency:
             yield session
 
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server", _check),
+            patch("zjcode.mcp_tools._check_stdio_server", _check),
             patch("langchain_mcp_adapters.sessions.create_session", _fake),
         ):
             tools, manager, infos = await _load_tools_from_config(self._config(*names))
@@ -3084,7 +3084,7 @@ class TestLoadToolsConcurrency:
             msg = "nope"
             raise RuntimeError(msg)
 
-        with patch("deepagents_code.mcp_tools._check_stdio_server", _check):
+        with patch("zjcode.mcp_tools._check_stdio_server", _check):
             tools, manager, infos = await _load_tools_from_config(self._config(*names))
 
         assert tools == []
@@ -3117,7 +3117,7 @@ class TestLoadToolsConcurrency:
 
         with (
             patch("langchain_mcp_adapters.sessions.create_session", fake),
-            patch("deepagents_code.mcp_tools._apply_tool_filter", _filter),
+            patch("zjcode.mcp_tools._apply_tool_filter", _filter),
         ):
             tools, manager, infos = await _load_tools_from_config(self._config(*names))
 
@@ -3194,7 +3194,7 @@ class TestLoadToolsConcurrency:
             tool_by_server=tool_by_server, sleep_s=0.0
         )
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server", _slow_check),
+            patch("zjcode.mcp_tools._check_stdio_server", _slow_check),
             patch("langchain_mcp_adapters.sessions.create_session", fake),
         ):
             releaser = asyncio.create_task(_release())
@@ -3213,16 +3213,16 @@ class TestLoadToolsConcurrency:
         """Warmup eagerly imports every module used later on the event loop."""
         import langchain_mcp_adapters
 
-        import deepagents_code
+        import zjcode
 
         module_names = {
-            "deepagents_code.mcp_auth",
+            "zjcode.mcp_auth",
             "langchain_mcp_adapters.sessions",
             "langchain_mcp_adapters.tools",
         }
         for module_name in module_names:
             monkeypatch.delitem(sys.modules, module_name, raising=False)
-        monkeypatch.delattr(deepagents_code, "mcp_auth", raising=False)
+        monkeypatch.delattr(zjcode, "mcp_auth", raising=False)
         monkeypatch.delattr(langchain_mcp_adapters, "sessions", raising=False)
         monkeypatch.delattr(langchain_mcp_adapters, "tools", raising=False)
 
@@ -3244,10 +3244,10 @@ class TestLoadToolsConcurrency:
         """
         import builtins
 
-        import deepagents_code
+        import zjcode
 
-        monkeypatch.delitem(sys.modules, "deepagents_code.mcp_auth", raising=False)
-        monkeypatch.delattr(deepagents_code, "mcp_auth", raising=False)
+        monkeypatch.delitem(sys.modules, "zjcode.mcp_auth", raising=False)
+        monkeypatch.delattr(zjcode, "mcp_auth", raising=False)
 
         original_import = builtins.__import__
 
@@ -3258,9 +3258,9 @@ class TestLoadToolsConcurrency:
             fromlist: tuple[str, ...] = (),
             level: int = 0,
         ) -> ModuleType:
-            cold_auth_import = "deepagents_code.mcp_auth" not in sys.modules and (
-                name == "deepagents_code.mcp_auth"
-                or (name == "deepagents_code" and "mcp_auth" in fromlist)
+            cold_auth_import = "zjcode.mcp_auth" not in sys.modules and (
+                name == "zjcode.mcp_auth"
+                or (name == "zjcode" and "mcp_auth" in fromlist)
             )
             if cold_auth_import:
                 msg = "simulated broken mcp_auth import"
@@ -3269,10 +3269,10 @@ class TestLoadToolsConcurrency:
 
         monkeypatch.setattr(builtins, "__import__", _failing_auth_import)
 
-        with caplog.at_level(logging.WARNING, logger="deepagents_code.mcp_tools"):
+        with caplog.at_level(logging.WARNING, logger="zjcode.mcp_tools"):
             _warm_mcp_adapter_imports()  # must not raise
 
-        assert "deepagents_code.mcp_auth" not in sys.modules
+        assert "zjcode.mcp_auth" not in sys.modules
         assert any(
             "Failed to warm mcp_auth import" in record.getMessage()
             for record in caplog.records
@@ -3299,7 +3299,7 @@ class TestLoadToolsConcurrency:
             yield session
 
         with (
-            patch("deepagents_code.mcp_tools._warm_mcp_adapter_imports", _warm),
+            patch("zjcode.mcp_tools._warm_mcp_adapter_imports", _warm),
             patch("langchain_mcp_adapters.sessions.create_session", _fake),
         ):
             _tools, manager, _infos = await _load_tools_from_config(
@@ -3408,7 +3408,7 @@ class TestGatherBounded:
             return _run
 
         with (
-            caplog.at_level(logging.DEBUG, logger="deepagents_code.mcp_tools"),
+            caplog.at_level(logging.DEBUG, logger="zjcode.mcp_tools"),
             pytest.raises(RuntimeError),
         ):
             await _gather_bounded(
@@ -3429,9 +3429,9 @@ class TestCachedSessionProxy:
     def _bypass_health_checks(self) -> Generator[None]:
         """Bypass health checks for runtime tool tests."""
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server"),
+            patch("zjcode.mcp_tools._check_stdio_server"),
             patch(
-                "deepagents_code.mcp_tools._check_remote_server",
+                "zjcode.mcp_tools._check_remote_server",
                 new_callable=AsyncMock,
             ),
         ):
@@ -4019,7 +4019,7 @@ class TestApplyToolFilter:
     ) -> None:
         """Names in `allowedTools` that don't match any tool produce a warning."""
         tools = [_make_prefixed_tool("fs_read")]
-        with caplog.at_level("WARNING", logger="deepagents_code.mcp_tools"):
+        with caplog.at_level("WARNING", logger="zjcode.mcp_tools"):
             result = _apply_tool_filter(
                 tools, "fs", {"command": "node", "allowedTools": ["read", "gone"]}
             )
@@ -4066,7 +4066,7 @@ class TestApplyToolFilter:
     ) -> None:
         """Glob patterns that match zero tools also produce a warning."""
         tools = [_make_prefixed_tool("fs_read_file")]
-        with caplog.at_level("WARNING", logger="deepagents_code.mcp_tools"):
+        with caplog.at_level("WARNING", logger="zjcode.mcp_tools"):
             result = _apply_tool_filter(
                 tools,
                 "fs",
@@ -4115,7 +4115,7 @@ class TestApplyToolFilter:
         Otherwise the user thinks a tool was disabled when it's still active.
         """
         tools = [_make_prefixed_tool("fs_read"), _make_prefixed_tool("fs_write")]
-        with caplog.at_level("WARNING", logger="deepagents_code.mcp_tools"):
+        with caplog.at_level("WARNING", logger="zjcode.mcp_tools"):
             result = _apply_tool_filter(
                 tools,
                 "fs",
@@ -4131,8 +4131,8 @@ class TestToolFilterEndToEnd:
     @pytest.fixture(autouse=True)
     def _bypass_health_checks(self) -> Generator[None]:
         with (
-            patch("deepagents_code.mcp_tools._check_stdio_server"),
-            patch("deepagents_code.mcp_tools._check_remote_server"),
+            patch("zjcode.mcp_tools._check_stdio_server"),
+            patch("zjcode.mcp_tools._check_remote_server"),
         ):
             yield
 
@@ -4448,7 +4448,7 @@ class TestNormalizeMCPArguments:
             {"q": {"type": "string"}, "ctx": {"type": "string"}},
             required=["q"],
         )
-        with caplog.at_level(logging.DEBUG, logger="deepagents_code.mcp_tools"):
+        with caplog.at_level(logging.DEBUG, logger="zjcode.mcp_tools"):
             _normalize_mcp_arguments({"q": "x", "ctx": ""}, schema)
         assert any(
             "dropped empty-string keys" in r.message and "ctx" in r.message
@@ -4547,11 +4547,11 @@ class TestSelectiveProjectMcpTrust:
         (home / ".deepagents").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
 
         loader = AsyncMock(return_value=([], None, []))
-        monkeypatch.setattr("deepagents_code.mcp_tools._load_tools_from_config", loader)
+        monkeypatch.setattr("zjcode.mcp_tools._load_tools_from_config", loader)
 
         ctx = ProjectContext(user_cwd=project_root, project_root=project_root)
         await resolve_and_load_mcp_tools(
@@ -4956,7 +4956,7 @@ class TestSelectiveProjectMcpTrust:
         (home / ".deepagents").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
         ctx = ProjectContext(user_cwd=project, project_root=project)
 
@@ -4987,7 +4987,7 @@ class TestSelectiveProjectMcpTrust:
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setenv("DEEPAGENTS_CODE_ENABLED_PROJECT_MCP_SERVERS", "docs")
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
         ctx = ProjectContext(user_cwd=project, project_root=project)
 
@@ -5028,7 +5028,7 @@ class TestSelectiveProjectMcpTrust:
         (home / ".deepagents").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
         ctx = ProjectContext(user_cwd=project, project_root=project)
 
@@ -5243,10 +5243,10 @@ class TestSelectiveProjectMcpTrust:
         user_config = tmp_path / "config.toml"
         user_config.write_text("[[not valid toml")
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
         loader = AsyncMock(return_value=([], None, []))
-        monkeypatch.setattr("deepagents_code.mcp_tools._load_tools_from_config", loader)
+        monkeypatch.setattr("zjcode.mcp_tools._load_tools_from_config", loader)
 
         ctx = ProjectContext(user_cwd=project, project_root=project)
         _tools, _manager, infos = await resolve_and_load_mcp_tools(
@@ -5393,7 +5393,7 @@ class TestSelectiveProjectMcpTrust:
             user_config, project, servers, [], disabled=["other"]
         )
 
-        with caplog.at_level(logging.WARNING, logger="deepagents_code.mcp_tools"):
+        with caplog.at_level(logging.WARNING, logger="zjcode.mcp_tools"):
             merged = await self._resolve_merged(
                 project,
                 monkeypatch,
@@ -5422,7 +5422,7 @@ class TestSelectiveProjectMcpTrust:
         (home / ".deepagents").mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(
-            "deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config
+            "zjcode.model_config.DEFAULT_CONFIG_PATH", user_config
         )
         ctx = ProjectContext(user_cwd=project, project_root=project)
 

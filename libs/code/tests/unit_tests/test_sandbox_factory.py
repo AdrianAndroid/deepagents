@@ -1349,7 +1349,7 @@ class TestLangSmithSnapshotResolution:
         mock_client: MagicMock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """With no env vars, falls back to `deepagents-code` + 16 GiB."""
+        """With no env vars, falls back to `zjcode` + 16 GiB."""
         monkeypatch.delenv("LANGSMITH_SANDBOX_SNAPSHOT_ID", raising=False)
         monkeypatch.delenv("LANGSMITH_SANDBOX_SNAPSHOT_NAME", raising=False)
         mock_client.list_snapshots.return_value = []
@@ -1358,7 +1358,7 @@ class TestLangSmithSnapshotResolution:
         provider.get_or_create()
 
         kwargs = mock_client.create_snapshot.call_args.kwargs
-        assert kwargs["name"] == "deepagents-code"
+        assert kwargs["name"] == "zjcode"
         assert kwargs["docker_image"] == "python:3"
         assert kwargs["fs_capacity_bytes"] == 16 * 1024**3
 

@@ -422,7 +422,7 @@ def test_missing_extra_hint_checks_provider_dependency(monkeypatch) -> None:
         install_extra="missing-provider",
     )
     monkeypatch.setattr(
-        "deepagents_code.client.commands.config.importlib.util.find_spec",
+        "zjcode.client.commands.config.importlib.util.find_spec",
         lambda name: None if name == "langchain_missing_provider" else object(),
     )
     assert _missing_extra_hint(option) is True
@@ -472,7 +472,7 @@ def test_run_get_json_omits_secret_value(monkeypatch, capsys) -> None:
 def stored_auth_dir(tmp_path, monkeypatch):
     """Redirect the credential store into a temp dir so `/auth` keys are isolated."""
     state_dir = tmp_path / ".deepagents" / ".state"
-    monkeypatch.setattr("deepagents_code.model_config.DEFAULT_STATE_DIR", state_dir)
+    monkeypatch.setattr("zjcode.model_config.DEFAULT_STATE_DIR", state_dir)
     return state_dir
 
 
@@ -1074,7 +1074,7 @@ def test_resolve_malformed_toml_int_falls_back_with_warning(caplog) -> None:
 
     opt = get_option("interpreter.memory_limit_mb")
     assert opt is not None
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(
             opt, toml_data={"interpreter": {"memory_limit_mb": "oops"}}
         )
@@ -1117,7 +1117,7 @@ def test_resolve_cursor_style_from_env(monkeypatch, caplog) -> None:
     )
 
     monkeypatch.setenv(_env_vars.CURSOR_STYLE, "bar")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         assert resolve_scalar(opt, toml_data=toml_data) == (
             "underline",
             "config.toml",
@@ -1140,7 +1140,7 @@ def test_resolve_cursor_style_from_toml(caplog) -> None:
 
     for raw in ("bar", 1):
         caplog.clear()
-        with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+        with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
             value, source = resolve_scalar(opt, toml_data={"ui": {"cursor_style": raw}})
         assert (value, source) == (CURSOR_STYLE_DEFAULT, "default")
         assert any(
@@ -1441,7 +1441,7 @@ def test_resolve_malformed_int_env_falls_back_with_warning(monkeypatch, caplog) 
         env_var="DEEPAGENTS_CODE_TEST_INT",
     )
     monkeypatch.setenv("DEEPAGENTS_CODE_TEST_INT", "not-a-number")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(int_opt, toml_data={})
     assert (value, source) == (7, "default")
     assert any("TEST_INT" in r.getMessage() for r in caplog.records)
@@ -1486,7 +1486,7 @@ def test_resolve_malformed_skills_dir_env_falls_back(monkeypatch, caplog) -> Non
     # `~nobodyuser_xyz` cannot resolve to a home directory; `expanduser` raises
     # RuntimeError, which the resolver must catch.
     monkeypatch.setenv(opt.env_var, "~nobodyuser_xyz/skills")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={})
     assert (value, source) == (None, "default")
     assert any("could not resolve" in r.getMessage() for r in caplog.records)
@@ -1498,7 +1498,7 @@ def test_resolve_malformed_skills_dir_toml_falls_back(caplog) -> None:
 
     opt = get_option("skills.extra_allowed_dirs")
     assert opt is not None
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(
             opt,
             toml_data={"skills": {"extra_allowed_dirs": ["~nobodyuser_xyz/skills"]}},
@@ -1529,7 +1529,7 @@ def test_load_config_toml_corrupt_returns_empty_with_warning(
     bad = tmp_path / "config.toml"
     bad.write_text("this is = not valid = toml ][")
     monkeypatch.setattr(model_config, "DEFAULT_CONFIG_PATH", bad)
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         assert config_manifest.load_config_toml() == {}
     assert any("Could not read config" in r.getMessage() for r in caplog.records)
 
@@ -2018,7 +2018,7 @@ def test_resolve_bool_unrecognized_env_falls_back_with_warning(
     opt = get_option("display.hide_cwd")
     assert opt is not None
     monkeypatch.setenv(opt.env_var, "maybe")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={})
     assert (value, source) == (False, "default")
     assert any("expected bool" in r.getMessage() for r in caplog.records)
@@ -2049,7 +2049,7 @@ def test_resolve_float_env_coerces_and_falls_back(monkeypatch, caplog) -> None:
     assert source == "env (DEEPAGENTS_CODE_TEST_FLOAT)"
 
     monkeypatch.setenv("DEEPAGENTS_CODE_TEST_FLOAT", "not-a-number")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(float_opt, toml_data={})
     assert (value, source) == (1.5, "default")
     assert any("TEST_FLOAT" in r.getMessage() for r in caplog.records)
@@ -2070,7 +2070,7 @@ def test_resolve_shell_list_env_happy_and_invalid(monkeypatch, caplog) -> None:
     # `'all'` cannot be combined with other commands; the parser raises and the
     # resolver logs + falls back rather than crashing.
     monkeypatch.setenv(opt.env_var, "all,ls")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={})
     assert source == "default"
     assert any("Ignoring invalid" in r.getMessage() for r in caplog.records)
@@ -2089,7 +2089,7 @@ def test_coerce_env_delegate_returns_invalid_not_raw(caplog) -> None:
 
     opt = get_option("interpreter.ptc")
     assert opt is not None
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         result = _coerce_env(opt, "safe", "DEEPAGENTS_CODE_FAKE")
     assert result is _INVALID
     assert any("not env-backed" in r.getMessage() for r in caplog.records)
@@ -2109,7 +2109,7 @@ def test_resolve_toml_str_success_and_type_mismatch(caplog) -> None:
         "config.toml",
     )
 
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={"threads": {"sort_order": 123}})
     assert (value, source) == ("updated_at", "default")
     assert any("sort_order" in r.getMessage() for r in caplog.records)
@@ -2205,7 +2205,7 @@ def test_resolve_startup_mode_from_toml(caplog) -> None:
             mode,
             "config.toml",
         )
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(
             opt, toml_data={"startup": {"mode": "dangerously-auto"}}
         )
@@ -2216,7 +2216,7 @@ def test_resolve_startup_mode_from_toml(caplog) -> None:
 
     for raw in (["manual"], {"name": "manual"}):
         caplog.clear()
-        with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+        with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
             value, source = resolve_scalar(opt, toml_data={"startup": {"mode": raw}})
         assert (value, source) == (DEFAULT_STARTUP_MODE, "default")
         assert any("[startup].mode" in r.getMessage() for r in caplog.records)
@@ -2251,7 +2251,7 @@ def test_resolve_theme_unknown_env_warns(monkeypatch, caplog) -> None:
     opt = get_option("display.theme")
     assert opt is not None
     monkeypatch.setenv("DEEPAGENTS_CODE_THEME", "no-such-theme")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={})
     assert (value, source) == (theme.DEFAULT_THEME, "default")
     assert any("Unknown theme" in r.getMessage() for r in caplog.records)
@@ -2266,7 +2266,7 @@ def test_resolve_theme_non_table_ui_warns(monkeypatch, caplog) -> None:
     opt = get_option("display.theme")
     assert opt is not None
     monkeypatch.delenv("DEEPAGENTS_CODE_THEME", raising=False)
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(opt, toml_data={"ui": "oops"})
     assert (value, source) == (theme.DEFAULT_THEME, "default")
     assert any("should be a table" in r.getMessage() for r in caplog.records)
@@ -2282,7 +2282,7 @@ def test_resolve_theme_unknown_saved_warns(monkeypatch, caplog) -> None:
     assert opt is not None
     monkeypatch.delenv("DEEPAGENTS_CODE_THEME", raising=False)
     monkeypatch.setenv("TERM_PROGRAM", "no-mapping-terminal")
-    with caplog.at_level(logging.WARNING, logger="deepagents_code.config_manifest"):
+    with caplog.at_level(logging.WARNING, logger="zjcode.config_manifest"):
         value, source = resolve_scalar(
             opt, toml_data={"ui": {"theme": "no-such-theme"}}
         )
@@ -2313,7 +2313,7 @@ def test_config_paths_logs_and_reports_missing_on_oserror(monkeypatch, caplog) -
     monkeypatch.setattr(Path, "stat", fake_stat)
     # The OSError guard and its debug log now live in the shared `_paths`
     # classifier that `_config_paths` delegates to.
-    with caplog.at_level(logging.DEBUG, logger="deepagents_code._paths"):
+    with caplog.at_level(logging.DEBUG, logger="zjcode._paths"):
         rows = _config_paths()
     config_row = next(row for row in rows if row[0] == "config.toml")
     assert config_row[2] is False
@@ -2527,3 +2527,15 @@ def test_delegate_static_defaults_are_parseable() -> None:
             continue
         if opt.kind is OptionKind.PTC_DELEGATE:
             assert _parse_interpreter_ptc(opt.default) == opt.default
+    """
+    from deepagents_code.config import _parse_interpreter_ptc
+
+    for opt in get_config_options():
+        if opt.default is None:
+            continue
+        if opt.kind is OptionKind.PTC_DELEGATE:
+            assert _parse_interpreter_ptc(opt.default) == opt.default
+t) == opt.default
+.default
+t) == opt.default
+.default

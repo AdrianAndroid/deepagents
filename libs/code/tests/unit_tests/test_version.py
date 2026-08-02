@@ -96,7 +96,7 @@ def test_cli_version_flag() -> None:
     )
     # argparse exits with 0 for --version
     assert result.returncode == 0
-    assert f"deepagents-code {__version__}" in result.stdout
+    assert f"zjcode {__version__}" in result.stdout
     from deepagents_code.extras_info import collect_version_report
 
     sdk_version = collect_version_report().display_sdk_version
@@ -125,7 +125,7 @@ async def test_version_slash_command_message_format() -> None:
         app_msgs = app.query(AppMessage)
         plain = [m for m in app_msgs if not m._is_markdown]
         content = str(plain[-1]._content)
-        assert f"deepagents-code version: {__version__}" in content
+        assert f"zjcode version: {__version__}" in content
         assert f"deepagents (SDK) version: {sdk_version}" in content
 
 
@@ -173,7 +173,7 @@ async def test_version_slash_command_sdk_unavailable() -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert f"deepagents-code version: {__version__}" in content
+        assert f"zjcode version: {__version__}" in content
         assert "deepagents (SDK) version: unknown" in content
 
 
@@ -192,7 +192,7 @@ async def test_version_slash_command_cli_version_unavailable() -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert "deepagents-code version: unknown" in content
+        assert "zjcode version: unknown" in content
 
 
 async def test_version_slash_command_includes_release_age(tmp_path) -> None:
@@ -224,7 +224,7 @@ async def test_version_slash_command_includes_release_age(tmp_path) -> None:
 
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
-        assert f"deepagents-code version: {__version__}, released " in content
+        assert f"zjcode version: {__version__}, released " in content
         assert "ago" in content
 
 
@@ -469,7 +469,7 @@ def test_build_version_text_includes_editable_core_deps() -> None:
     ):
         text = build_version_text()
 
-    assert f"deepagents-code {__version__}" in text
+    assert f"zjcode {__version__}" in text
     assert "Editable install: ~/src/deepagents/libs/code" in text
     assert "Core dependencies:" in text
     assert "langchain-core" in text
@@ -498,7 +498,7 @@ def _editable_exact_pin_version_report(cli_metadata: str = "0.1.40") -> VersionR
 
     return VersionReport(
         cli=DistributionVersion(
-            name="deepagents-code",
+            name="zjcode",
             source_version=__version__,
             metadata_version=cli_metadata,
             editable=True,
@@ -530,7 +530,7 @@ def test_build_version_text_reports_editable_drift_and_newer_sdk_pin() -> None:
 
     # Editable status is shown on its own `Editable install:` line, so the CLI
     # version line carries only the source/metadata drift, not `editable`.
-    assert f"deepagents-code {__version__} (installed metadata: 0.1.40)" in text
+    assert f"zjcode {__version__} (installed metadata: 0.1.40)" in text
     assert (
         "deepagents (SDK) 0.7.0a7+editable "
         "(workspace HEAD; source marker: 0.6.12)" in text
@@ -563,7 +563,7 @@ async def test_version_slash_command_reports_editable_drift_and_newer_sdk_pin() 
             [m for m in app.query(AppMessage) if not m._is_markdown][-1]._content
         )
         assert (
-            f"deepagents-code version: {__version__} "
+            f"zjcode version: {__version__} "
             "(installed metadata: 0.1.40)" in content
         )
         assert (
@@ -1021,7 +1021,7 @@ async def test_update_deps_routes_outdated_dcode_through_regular_update(
                 new_callable=AsyncMock,
                 return_value=(
                     True,
-                    " - deepagents-code==1.0.0\n + deepagents-code==1.1.0\n",
+                    " - zjcode==1.0.0\n + zjcode==1.1.0\n",
                 ),
             ),
         ):
@@ -1033,7 +1033,7 @@ async def test_update_deps_routes_outdated_dcode_through_regular_update(
         content = str(app_msgs[-1]._content)
         assert "Updated to v1.1.0" in content
         assert "Quit and relaunch dcode to use the new version" in content
-        assert "Updated deepagents-code:" not in content
+        assert "Updated zjcode:" not in content
         assert "Dependencies are already up to date." not in content
 
 
@@ -1074,7 +1074,7 @@ async def test_update_deps_skips_refresh_prompt_when_refresh_unsupported(
                 new_callable=AsyncMock,
                 return_value=(
                     True,
-                    " - deepagents-code==1.0.0\n + deepagents-code==1.1.0\n",
+                    " - zjcode==1.0.0\n + zjcode==1.1.0\n",
                 ),
             ) as perform_upgrade_mock,
         ):
@@ -1091,7 +1091,7 @@ async def test_update_deps_skips_refresh_prompt_when_refresh_unsupported(
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Updated to v1.1.0" in content
-        assert "Updated deepagents-code:" not in content
+        assert "Updated zjcode:" not in content
         assert "Dependency refresh failed" not in content
 
 
@@ -1147,7 +1147,7 @@ async def test_update_deps_decline_app_update_refreshes_current_deps(
         content = str(app_msgs[-1]._content)
         assert "Refreshed dependencies:" in content
         assert "langchain-openai  1.3.2 -> 1.5.0" in content
-        assert "A deepagents-code update is available: v1.1.0." in content
+        assert "A zjcode update is available: v1.1.0." in content
         assert "Updated to v1.1.0" not in content
 
 
@@ -1198,7 +1198,7 @@ async def test_update_deps_decline_app_update_reports_no_new_deps(
         app_msgs = [m for m in app.query(AppMessage) if not m._is_markdown]
         content = str(app_msgs[-1]._content)
         assert "Dependencies are already up to date." in content
-        assert "A deepagents-code update is available: v1.1.0." in content
+        assert "A zjcode update is available: v1.1.0." in content
         assert "Updated to v1.1.0" not in content
 
 

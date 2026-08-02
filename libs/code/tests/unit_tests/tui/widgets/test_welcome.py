@@ -189,7 +189,7 @@ class TestLangsmithLinkHelpers:
     def test_link_appends_utm_source(self) -> None:
         """`_langsmith_project_link` appends the UTM source tag."""
         result = _langsmith_project_link("https://smith.langchain.com/o/org/p/proj")
-        assert "utm_source=deepagents-code" in result
+        assert "utm_source=zjcode" in result
 
     def test_link_style_non_ansi_has_link(self) -> None:
         """Non-ANSI link style carries the project URL as a link."""
@@ -201,7 +201,7 @@ class TestLangsmithLinkHelpers:
             colors=DARK_COLORS,
         )
         assert style.link is not None
-        assert "utm_source=deepagents-code" in style.link
+        assert "utm_source=zjcode" in style.link
 
     def test_link_style_ansi_is_bold(self) -> None:
         """ANSI link style is bold with a link."""
@@ -813,7 +813,7 @@ class TestThreadLine:
         link = _style_covering(content, "(open in langsmith)").link
         assert link == (
             "https://smith.langchain.com/o/org/projects/p/p1/t/abc-123"
-            "?utm_source=deepagents-code"
+            "?utm_source=zjcode"
         )
 
     def test_no_langsmith_link_before_project_url_resolves(self) -> None:

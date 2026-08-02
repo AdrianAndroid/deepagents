@@ -291,7 +291,7 @@ class TestTopLevelHelp:
 
         with (
             patch.object(sys, "argv", ["deepagents", "-h"]),
-            patch("deepagents_code.ui.console", test_console),
+            patch("zjcode.ui.console", test_console),
             pytest.raises(SystemExit) as exc_info,
         ):
             parse_args()
@@ -331,7 +331,7 @@ class TestSubcommandHelpFlags:
 
         with (
             patch.object(sys, "argv", argv),
-            patch("deepagents_code.ui.console", test_console),
+            patch("zjcode.ui.console", test_console),
             pytest.raises(SystemExit) as exc_info,
         ):
             parse_args()
@@ -488,8 +488,8 @@ class TestNoMcpArg:
                 "argv",
                 ["deepagents", "--no-mcp", "--mcp-config", "/some/path"],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 cli_main()
@@ -515,13 +515,13 @@ class TestConfigCommandDispatch:
                     "--json",
                 ],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
+            patch("zjcode.main.check_cli_dependencies"),
             patch(
-                "deepagents_code.main.apply_stdin_pipe",
+                "zjcode.main.apply_stdin_pipe",
                 side_effect=AssertionError("config command read stdin"),
             ) as stdin_mock,
             patch(
-                "deepagents_code.client.commands.config.run_config_command",
+                "zjcode.client.commands.config.run_config_command",
                 return_value=0,
             ) as config_mock,
             pytest.raises(SystemExit) as exc_info,
@@ -556,10 +556,10 @@ class TestMcpCommandDispatch:
                     "notion",
                 ],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
             patch(
-                "deepagents_code.client.commands.mcp.run_mcp_login",
+                "zjcode.client.commands.mcp.run_mcp_login",
                 new=AsyncMock(return_value=0),
             ) as mock_login,
             pytest.raises(SystemExit) as exc_info,
@@ -591,10 +591,10 @@ class TestMcpCommandDispatch:
                     "/subcommand/config.json",
                 ],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
             patch(
-                "deepagents_code.client.commands.mcp.run_mcp_login",
+                "zjcode.client.commands.mcp.run_mcp_login",
                 new=AsyncMock(return_value=0),
             ) as mock_login,
             pytest.raises(SystemExit) as exc_info,
@@ -615,8 +615,8 @@ class TestMcpCommandDispatch:
 
         with (
             patch.object(sys, "argv", ["deepagents", "mcp", "config"]),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
             pytest.raises(SystemExit) as exc_info,
         ):
             cli_main()
@@ -648,10 +648,10 @@ class TestMcpCommandDispatch:
                     "/sub/config.json",
                 ],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
             patch(
-                "deepagents_code.client.commands.mcp.run_mcp_login",
+                "zjcode.client.commands.mcp.run_mcp_login",
                 new=AsyncMock(return_value=0),
             ) as mock_login,
             pytest.raises(SystemExit) as exc_info,
@@ -688,8 +688,8 @@ class TestMcpCommandDispatch:
                     "/some/path.json",
                 ],
             ),
-            patch("deepagents_code.main.check_cli_dependencies"),
-            patch("deepagents_code.main.apply_stdin_pipe"),
+            patch("zjcode.main.check_cli_dependencies"),
+            patch("zjcode.main.apply_stdin_pipe"),
             pytest.raises(SystemExit) as exc_info,
         ):
             cli_main()
@@ -724,7 +724,7 @@ class TestMcpCommandDispatch:
         monkeypatch.setattr(pathlib.Path, "home", lambda: fake_home)
         monkeypatch.chdir(fake_project)
         monkeypatch.setattr(
-            "deepagents_code.project_utils.find_project_root",
+            "zjcode.project_utils.find_project_root",
             lambda: fake_project,
         )
 
@@ -823,7 +823,7 @@ class TestHelpScreenDrift:
         # 2. Render show_help() to a string.
         help_buf = io.StringIO()
         test_console = Console(file=help_buf, highlight=False, width=200)
-        with patch("deepagents_code.ui.console", test_console):
+        with patch("zjcode.ui.console", test_console):
             show_help()
         help_text = help_buf.getvalue()
 
@@ -850,7 +850,7 @@ class TestHelpScreenDrift:
         with (
             patch.object(sys, "argv", ["deepagents", "threads", "list", "-h"]),
             patch("sys.stdout", stdout_buf),
-            patch("deepagents_code.ui.console", Console(file=io.StringIO())),
+            patch("zjcode.ui.console", Console(file=io.StringIO())),
             pytest.raises(SystemExit),
         ):
             parse_args()
@@ -863,7 +863,7 @@ class TestHelpScreenDrift:
 
         help_buf = io.StringIO()
         test_console = Console(file=help_buf, highlight=False, width=200)
-        with patch("deepagents_code.ui.console", test_console):
+        with patch("zjcode.ui.console", test_console):
             show_threads_list_help()
         help_flags = set(re.findall(r"--[\w][\w-]*", help_buf.getvalue()))
 

@@ -55,7 +55,7 @@ def _isolate_project_mcp_trust_lists(
 
     user_config = tmp_path / "config.toml"
     user_config.write_text(config_text)
-    monkeypatch.setattr("deepagents_code.model_config.DEFAULT_CONFIG_PATH", user_config)
+    monkeypatch.setattr("zjcode.model_config.DEFAULT_CONFIG_PATH", user_config)
     monkeypatch.delenv(_env_vars.DANGEROUSLY_ENABLE_PROJECT_MCP_SERVERS, raising=False)
     monkeypatch.delenv(_env_vars.DISABLED_PROJECT_MCP_SERVERS, raising=False)
     return user_config
@@ -112,7 +112,7 @@ class TestResolveMcpConfigAutodiscover:
     def test_no_discovered_configs_returns_no_config_found(self) -> None:
         """Empty discovery yields the `NO_CONFIG_FOUND` reason."""
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[],
         ):
             result = resolve_mcp_config(None)
@@ -132,7 +132,7 @@ class TestResolveMcpConfigAutodiscover:
             '"url":"https://mcp.notion.com/mcp","auth":"oauth"}}}'
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -153,7 +153,7 @@ class TestResolveMcpConfigAutodiscover:
             '"url":"https://mcp.notion.com/mcp","auth":"oauth"}}}'
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None, trust_project_mcp=True)
@@ -182,7 +182,7 @@ class TestResolveMcpConfigAutodiscover:
             '"url":"https://mcp.notion.com/mcp","auth":"oauth"}}}'
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -221,7 +221,7 @@ class TestResolveMcpConfigAutodiscover:
         )
         _isolate_project_mcp_trust_lists(monkeypatch, tmp_path, config_text)
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None, trust_project_mcp=True)
@@ -262,7 +262,7 @@ class TestResolveMcpConfigAutodiscover:
         )
         monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[user_cfg, project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -288,7 +288,7 @@ class TestResolveMcpConfigAutodiscover:
         _isolate_project_mcp_trust_lists(monkeypatch, tmp_path)
         monkeypatch.setenv("DEEPAGENTS_CODE_ENABLED_PROJECT_MCP_SERVERS", "fs")
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -309,7 +309,7 @@ class TestResolveMcpConfigAutodiscover:
         project_cfg.parent.mkdir()
         project_cfg.write_text("{not valid json")
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -335,7 +335,7 @@ class TestResolveMcpConfigAutodiscover:
         )
         monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[user_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -366,7 +366,7 @@ class TestResolveMcpConfigAutodiscover:
         )
         monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[user_cfg, project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -400,7 +400,7 @@ class TestResolveMcpConfigAutodiscover:
             _project_approval_config(project_cfg.parent, "slack", slack),
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -433,7 +433,7 @@ class TestResolveMcpConfigAutodiscover:
             _project_approval_config(project, "docs", approved),
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[nested_cfg, root_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -460,7 +460,7 @@ class TestResolveMcpConfigAutodiscover:
         _isolate_project_mcp_trust_lists(monkeypatch, tmp_path, "[[not valid toml")
         monkeypatch.setenv(_env_vars.DANGEROUSLY_ENABLE_PROJECT_MCP_SERVERS, "docs")
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -490,7 +490,7 @@ class TestResolveMcpConfigAutodiscover:
             _project_approval_config(project_cfg.parent, "slack", slack),
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -514,7 +514,7 @@ class TestResolveMcpConfigAutodiscover:
             '"broken":{"args":[]}}}'
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None, trust_project_mcp=True)
@@ -546,7 +546,7 @@ class TestResolveMcpConfigAutodiscover:
             _project_approval_config(approved_project, "slack", slack),
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[attack_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -576,7 +576,7 @@ class TestResolveMcpConfigAutodiscover:
             ),
         )
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[project_cfg],
         ):
             result = resolve_mcp_config(None)
@@ -606,7 +606,7 @@ class TestResolveMcpConfigAutodiscover:
         broken = tmp_path / "broken.json"
         broken.write_text("{not json")
         with patch(
-            "deepagents_code.mcp_tools.discover_mcp_configs",
+            "zjcode.mcp_tools.discover_mcp_configs",
             return_value=[good, broken],
         ):
             result = resolve_mcp_config(None, trust_project_mcp=True)

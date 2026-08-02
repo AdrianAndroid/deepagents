@@ -87,7 +87,7 @@ def _write_cli_pyproject(root: Path, requirement: str) -> None:
     """Write the minimal editable dcode project metadata used by version tests."""
     root.mkdir(parents=True, exist_ok=True)
     (root / "pyproject.toml").write_text(
-        f'[project]\nname = "deepagents-code"\ndependencies = ["{requirement}"]\n',
+        f'[project]\nname = "zjcode"\ndependencies = ["{requirement}"]\n',
         encoding="utf-8",
     )
 
@@ -122,12 +122,12 @@ def test_real_distribution_groups_entries_by_extra() -> None:
 
 
 def test_real_distribution_skips_self_references() -> None:
-    # Composite extras like `all-providers` list `deepagents-code[...]`
+    # Composite extras like `all-providers` list `zjcode[...]`
     # entries; those should never surface as packages themselves.
     extras = get_extras_status()
     for pkgs in extras.values():
         for pkg_name, _version in pkgs:
-            assert pkg_name.lower() != "deepagents-code"
+            assert pkg_name.lower() != "zjcode"
 
 
 def test_missing_packages_are_omitted() -> None:
@@ -218,7 +218,7 @@ def test_extra_for_package_returns_declaring_known_extra() -> None:
     mock_dist = MagicMock()
     mock_dist.requires = [
         "langchain-google-vertexai>=3.2.3,<4.0.0 ; extra == 'vertex'",
-        "deepagents-code[anthropic,baseten] ; extra == 'all-providers'",
+        "zjcode[anthropic,baseten] ; extra == 'all-providers'",
     ]
 
     with patch("deepagents_code.extras_info.distribution", return_value=mock_dist):
@@ -248,18 +248,18 @@ def test_resolve_install_hint_falls_back_to_package_command() -> None:
         patch("deepagents_code.extras_info.extra_for_package", return_value=None),
         patch(
             "deepagents_code.update_check.install_package_command",
-            return_value="uv tool install --with langchain-custom deepagents-code",
+            return_value="uv tool install --with langchain-custom zjcode",
         ) as mock_install_package_command,
     ):
         hint = resolve_install_hint(
-            "langchain-custom", distribution_name="deepagents-code-dev"
+            "langchain-custom", distribution_name="zjcode-dev"
         )
     mock_install_package_command.assert_called_once_with(
-        "langchain-custom", distribution_name="deepagents-code-dev"
+        "langchain-custom", distribution_name="zjcode-dev"
     )
     assert hint == InstallHint(
         extra=None,
-        command="uv tool install --with langchain-custom deepagents-code",
+        command="uv tool install --with langchain-custom zjcode",
     )
 
 
@@ -279,13 +279,13 @@ def test_resolve_install_hint_degrades_to_manual_on_error() -> None:
 def test_install_hint_rejects_both_extra_and_command() -> None:
     """Dual-action resolutions are impossible and must fail construction."""
     with pytest.raises(ValueError, match="both extra and command"):
-        InstallHint(extra="vertex", command="uv tool install deepagents-code")
+        InstallHint(extra="vertex", command="uv tool install zjcode")
 
 
 def test_skips_composite_self_referencing_extras() -> None:
     mock_dist = MagicMock()
     mock_dist.requires = [
-        "deepagents-code[anthropic,baseten] ; extra == 'some-bundle'",
+        "zjcode[anthropic,baseten] ; extra == 'some-bundle'",
         "langchain-anthropic>=1.0.0 ; extra == 'anthropic'",
     ]
 
@@ -492,7 +492,7 @@ class TestResolveSdkVersion:
         ):
             version, status = resolve_sdk_version()
         # Assert the SDK lookup happened without coupling to call ordering:
-        # `resolve_sdk_version` also looks up `deepagents-code` for the CLI.
+        # `resolve_sdk_version` also looks up `zjcode` for the CLI.
         assert ("deepagents",) in [call.args for call in mock.call_args_list]
         assert (version, status) == ("1.2.3", "resolved")
 
@@ -527,7 +527,7 @@ class TestResolveSdkVersion:
         code_dist.requires = ["deepagents==0.7.0a7"]
 
         def version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", "zjcode": "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -560,7 +560,7 @@ class TestResolveSdkVersion:
         )
 
         def version(name: str) -> str:
-            return {"deepagents": "0.7.1", "deepagents-code": "0.1.50"}[name]
+            return {"deepagents": "0.7.1", "zjcode": "0.1.50"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -592,7 +592,7 @@ class TestResolveSdkVersion:
         code_dist.requires = ["deepagents==0.7.0a8"]
 
         def version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", "zjcode": "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -614,7 +614,7 @@ class TestResolveSdkVersion:
     def test_windows_editable_paths_are_workspace_siblings(self) -> None:
         """PEP 610 drive paths compare equal across URL and Windows forms."""
         cli = _distribution_version(
-            name="deepagents-code",
+            name="zjcode",
             editable=True,
             source_path="/C:/repo/libs/code",
         )
@@ -1036,7 +1036,7 @@ class TestVersionAnnotations:
         satisfied: bool | None = None,
     ) -> VersionReport:
         return VersionReport(
-            cli=cli or _distribution_version(name="deepagents-code"),
+            cli=cli or _distribution_version(name="zjcode"),
             sdk=sdk or _distribution_version(),
             sdk_requirement=requirement,
             sdk_requirement_satisfied=satisfied,
@@ -1045,7 +1045,7 @@ class TestVersionAnnotations:
     def test_cli_annotation_empty_for_normal_install(self) -> None:
         """A non-editable install with agreeing versions gets no annotation."""
         info = _distribution_version(
-            name="deepagents-code", source_version="0.1.41", metadata_version="0.1.41"
+            name="zjcode", source_version="0.1.41", metadata_version="0.1.41"
         )
         assert format_cli_version_annotation(info) == ""
 
@@ -1057,7 +1057,7 @@ class TestVersionAnnotations:
         only drift — here there is none.
         """
         info = _distribution_version(
-            name="deepagents-code",
+            name="zjcode",
             source_version="0.1.41",
             metadata_version="0.1.41",
             editable=True,
@@ -1067,7 +1067,7 @@ class TestVersionAnnotations:
     def test_cli_annotation_shows_stale_metadata(self) -> None:
         """An editable CLI with stale metadata shows the drift, not `editable`."""
         info = _distribution_version(
-            name="deepagents-code",
+            name="zjcode",
             source_version="0.1.41",
             metadata_version="0.1.40",
             editable=True,
@@ -1098,7 +1098,7 @@ class TestVersionAnnotations:
     def test_sdk_annotation_uses_newer_exact_pin_for_editable_install(self) -> None:
         """A newer exact pin explains why the effective SDK version is ahead."""
         cli = _distribution_version(
-            name="deepagents-code", editable=True, source_path="/repo/libs/code"
+            name="zjcode", editable=True, source_path="/repo/libs/code"
         )
         sdk = _distribution_version(
             source_version="0.6.12",
@@ -1121,7 +1121,7 @@ class TestVersionAnnotations:
     def test_workspace_head_decorates_display_not_comparison_version(self) -> None:
         """The editable marker never changes the requirement comparison value."""
         cli = _distribution_version(
-            name="deepagents-code", editable=True, source_path="/repo/libs/code"
+            name="zjcode", editable=True, source_path="/repo/libs/code"
         )
         sdk = _distribution_version(
             source_version="0.6.12",
@@ -1148,7 +1148,7 @@ class TestVersionAnnotations:
     ) -> None:
         """Stale metadata cannot mask a missing or malformed source marker."""
         cli = _distribution_version(
-            name="deepagents-code", editable=True, source_path="/repo/libs/code"
+            name="zjcode", editable=True, source_path="/repo/libs/code"
         )
         sdk = _distribution_version(
             source_version=source_version,
@@ -1185,7 +1185,7 @@ class TestVersionAnnotations:
         workspace HEAD.
         """
         cli = _distribution_version(
-            name="deepagents-code", editable=True, source_path="/repo/libs/code"
+            name="zjcode", editable=True, source_path="/repo/libs/code"
         )
         sdk = _distribution_version(
             source_version="0.6.12",
@@ -1213,7 +1213,7 @@ class TestVersionAnnotations:
         must decline and the marker must still read as a mismatch.
         """
         cli = _distribution_version(
-            name="deepagents-code", editable=True, source_path="/repo/libs/code"
+            name="zjcode", editable=True, source_path="/repo/libs/code"
         )
         sdk = _distribution_version(
             source_version="0.6.12",
@@ -1231,7 +1231,7 @@ class TestVersionAnnotations:
         assert report.effective_sdk_version == "0.6.12"
         assert report.display_sdk_version == "0.6.12"
         assert (
-            "required by deepagents-code: <0.8,>=0.7 — mismatch"
+            "required by zjcode: <0.8,>=0.7 — mismatch"
             in format_sdk_version_annotation(report)
         )
 
@@ -1247,7 +1247,7 @@ class TestVersionAnnotations:
     ) -> None:
         """The sibling shape only holds when both installs are editable."""
         cli = _distribution_version(
-            name="deepagents-code",
+            name="zjcode",
             editable=cli_editable,
             source_path="/repo/libs/code",
         )
@@ -1266,7 +1266,7 @@ class TestVersionAnnotations:
             satisfied=False,
         )
         annotation = format_sdk_version_annotation(report)
-        assert "required by deepagents-code: <0.8,>=0.7 — mismatch" in annotation
+        assert "required by zjcode: <0.8,>=0.7 — mismatch" in annotation
 
     def test_sdk_annotation_shows_editable_drift_without_mismatch(self) -> None:
         """An editable source matching the exact pin is healthy.
@@ -1406,7 +1406,7 @@ class TestSdkRequirementFromCli:
         """A missing distribution yields `None` rather than raising."""
         with patch(
             "deepagents_code.extras_info.distribution",
-            side_effect=PackageNotFoundError("deepagents-code"),
+            side_effect=PackageNotFoundError("zjcode"),
         ):
             assert sdk_requirement_from_cli() is None
 
@@ -1505,7 +1505,7 @@ class TestCollectVersionInfo:
             ),
             patch(
                 "deepagents_code.extras_info.pkg_version",
-                side_effect=PackageNotFoundError("deepagents-code"),
+                side_effect=PackageNotFoundError("zjcode"),
             ),
             patch(
                 "deepagents_code.extras_info._cli_editable_info",
@@ -1526,7 +1526,7 @@ class TestCollectVersionInfo:
             ),
             patch(
                 "deepagents_code.extras_info.pkg_version",
-                side_effect=PackageNotFoundError("deepagents-code"),
+                side_effect=PackageNotFoundError("zjcode"),
             ),
             patch(
                 "deepagents_code.extras_info._cli_editable_info",
@@ -1634,7 +1634,7 @@ class TestCollectVersionInfo:
         code_dist.requires = ["deepagents==0.7.0a7"]
 
         def fake_version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", "zjcode": "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=fake_version),
@@ -1671,7 +1671,7 @@ class TestCollectVersionInfo:
         code_dist.requires = ["deepagents==0.7.0a8"]
 
         def fake_version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", "zjcode": "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=fake_version),
@@ -1699,7 +1699,7 @@ class TestCollectVersionInfo:
         code_dist.requires = ["deepagents==0.7.0a7"]
 
         def fake_version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.41"}[name]
+            return {"deepagents": "0.6.12", "zjcode": "0.1.41"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=fake_version),

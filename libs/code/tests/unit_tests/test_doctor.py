@@ -86,7 +86,7 @@ class TestCollectSections:
         ):
             diagnostics = collect_sections()[0]
         labels = {item.label: item.value for item in diagnostics.items}
-        assert labels["deepagents-code"] == __version__
+        assert labels["zjcode"] == __version__
         assert "Commit hash" in labels
         assert labels["Commit hash"]
         assert "Platform" in labels
@@ -118,7 +118,7 @@ class TestDiagnosticsVersionReport:
 
         report = VersionReport(
             cli=DistributionVersion(
-                "deepagents-code", __version__, __version__, True, "~/src", "resolved"
+                "zjcode", __version__, __version__, True, "~/src", "resolved"
             ),
             sdk=DistributionVersion(
                 "deepagents", "0.6.12", "0.6.12", True, "~/src/sdk", "resolved"
@@ -129,7 +129,7 @@ class TestDiagnosticsVersionReport:
         items = self._diagnostics(report)
         sdk = items["deepagents (SDK)"]
         assert sdk.ok is False
-        assert "required by deepagents-code: <0.8,>=0.7 — mismatch" in sdk.value
+        assert "required by zjcode: <0.8,>=0.7 — mismatch" in sdk.value
 
     def test_newer_exact_sdk_pin_is_informational_for_editable_sdk(self) -> None:
         """A newer exact dcode pin is healthy for an editable main SDK checkout."""
@@ -140,7 +140,7 @@ class TestDiagnosticsVersionReport:
 
         report = VersionReport(
             cli=DistributionVersion(
-                "deepagents-code",
+                "zjcode",
                 __version__,
                 __version__,
                 True,
@@ -172,7 +172,7 @@ class TestDiagnosticsVersionReport:
 
         report = VersionReport(
             cli=DistributionVersion(
-                "deepagents-code", __version__, "0.1.40", True, "~/src", "resolved"
+                "zjcode", __version__, "0.1.40", True, "~/src", "resolved"
             ),
             sdk=DistributionVersion(
                 "deepagents", "0.6.13", "0.6.12", True, "~/src/sdk", "resolved"
@@ -181,7 +181,7 @@ class TestDiagnosticsVersionReport:
             sdk_requirement_satisfied=True,
         )
         items = self._diagnostics(report)
-        cli = items["deepagents-code"]
+        cli = items["zjcode"]
         sdk = items["deepagents (SDK)"]
         assert cli.ok is True
         assert cli.value == f"{__version__} (installed metadata: 0.1.40)"
@@ -197,7 +197,7 @@ class TestDiagnosticsVersionReport:
 
         report = VersionReport(
             cli=DistributionVersion(
-                "deepagents-code",
+                "zjcode",
                 __version__,
                 __version__,
                 True,
@@ -226,7 +226,7 @@ class TestDiagnosticsVersionReport:
 
         report = VersionReport(
             cli=DistributionVersion(
-                "deepagents-code", __version__, __version__, False, None, "resolved"
+                "zjcode", __version__, __version__, False, None, "resolved"
             ),
             sdk=DistributionVersion(
                 "deepagents", None, None, False, None, "not_installed"
@@ -265,13 +265,13 @@ class TestCollectTracing:
 
     def test_not_configured_is_healthy(self) -> None:
         """An unconfigured, keyless setup is informational, not a failure."""
-        section = self._section(enabled=False, project="deepagents-code")
+        section = self._section(enabled=False, project="zjcode")
         assert section.title == "Tracing"
         assert section.ok is True
         labels = {item.label: item.value for item in section.items}
         assert labels["Tracing"] == "not configured"
         assert labels["Credentials"] == "not set"
-        assert labels["Project"] == "deepagents-code"
+        assert labels["Project"] == "zjcode"
 
     def test_explicitly_disabled_reads_disabled(self) -> None:
         """An explicit opt-out reads `disabled`, not `not configured`."""
@@ -283,15 +283,15 @@ class TestCollectTracing:
 
     def test_default_project_is_marked(self) -> None:
         """An unconfigured project shows the default marker."""
-        section = self._section(project="deepagents-code", project_is_default=True)
+        section = self._section(project="zjcode", project_is_default=True)
         labels = {item.label: item.value for item in section.items}
-        assert labels["Project"] == "deepagents-code (default)"
+        assert labels["Project"] == "zjcode (default)"
 
     def test_explicit_project_has_no_default_marker(self) -> None:
         """An explicitly set project name is reported verbatim."""
-        section = self._section(project="deepagents-code", project_is_default=False)
+        section = self._section(project="zjcode", project_is_default=False)
         labels = {item.label: item.value for item in section.items}
-        assert labels["Project"] == "deepagents-code"
+        assert labels["Project"] == "zjcode"
 
     def test_unset_project_renders_unset(self) -> None:
         """A missing project renders the `(unset)` placeholder."""
@@ -733,7 +733,7 @@ class TestRunDoctorCommand:
         assert "Updates" in output
         assert "Tracing" in output
         assert "Configuration" in output
-        assert "deepagents-code" in output
+        assert "zjcode" in output
         assert "dcode config" in output
         assert "dcode config get <key>" in output
         assert "dcode --version" in output

@@ -174,8 +174,8 @@ class TestContractValueSemantics:
             user_id=None,
         )
         assert metadata["ls_agent_purpose"] == "coding"
-        assert metadata["ls_integration"] == "deepagents-code"
-        assert metadata["ls_agent_runtime"] == "Deep Agents Code"
+        assert metadata["ls_integration"] == "zjcode"
+        assert metadata["ls_agent_runtime"] == "zjcode"
         assert metadata["ls_trace_schema_version"] == "coding-agent-v1"
         assert metadata["thread_id"] == "t1"
 

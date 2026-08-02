@@ -94,7 +94,7 @@ class TestLaunchGoalCriteriaPreferenceScreen:
 
         assert options.highlighted == 0
         assert "How should Auto mode handle goal criteria?" in content
-        assert "~/.deepagents/config.toml" in content
+        assert "~/.zjcode/config.toml" in content
         assert "DEEPAGENTS_CODE_GOAL_AUTO_ACCEPT_CRITERIA" in content
 
     async def test_enter_chooses_review(self) -> None:

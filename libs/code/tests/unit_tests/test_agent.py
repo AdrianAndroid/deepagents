@@ -2591,7 +2591,7 @@ class TestCreateCliAgentProjectContext:
     ) -> tuple[Mock, Path]:
         """Build a shell-enabled CLI agent and return the `LocalShellBackend` mock.
 
-        The agent's `deepagents-code` override is placed in `os.environ` so the
+        The agent's `zjcode` override is placed in `os.environ` so the
         returned `call_args` reflect how the user's original `LANGSMITH_PROJECT`
         is restored or dropped for shell commands.
 
@@ -2632,7 +2632,7 @@ class TestCreateCliAgentProjectContext:
         mock_agent = Mock()
         mock_agent.with_config.return_value = mock_agent
         mock_backend = Mock()
-        monkeypatch.setenv("LANGSMITH_PROJECT", "deepagents-code")
+        monkeypatch.setenv("LANGSMITH_PROJECT", "zjcode")
 
         fake_model = _make_fake_chat_model()
         with (
@@ -2662,7 +2662,7 @@ class TestCreateCliAgentProjectContext:
         """Shell backend root follows the cwd; agent override is dropped.
 
         With no user `LANGSMITH_PROJECT` (`user_langchain_project is None`),
-        the agent's `deepagents-code` override must not leak into the shell
+        the agent's `zjcode` override must not leak into the shell
         env — it is popped so the user's code does not trace into the agent's
         project.
         """
