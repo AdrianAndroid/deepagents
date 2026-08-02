@@ -577,7 +577,7 @@ def get_latest_version(
     try:
         resp = requests.get(
             PYPI_URL,
-            timeout=3,
+            timeout=10,
             **_pypi_request_kwargs(bypass_cache=bypass_cache),
         )
         resp.raise_for_status()
@@ -719,7 +719,7 @@ def release_prerelease_pins(
         url = f"{PYPI_URL.removesuffix('/json')}/{version}/json"
         resp = requests.get(
             url,
-            timeout=3,
+            timeout=10,
             **_pypi_request_kwargs(bypass_cache=bypass_cache),
         )
         resp.raise_for_status()
@@ -984,7 +984,7 @@ def get_sdk_release_time(
     try:
         resp = requests.get(
             SDK_PYPI_URL,
-            timeout=3,
+            timeout=10,
             **_pypi_request_kwargs(bypass_cache=bypass_cache),
         )
         resp.raise_for_status()

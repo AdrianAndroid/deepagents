@@ -5831,8 +5831,9 @@ class DeepAgentsApp(App):
             if latest is None:
                 await self._mount_message(
                     AppMessage(
-                        "Could not determine the latest version. "
-                        "Check your network and try again.",
+                        "Could not determine the latest version from PyPI. "
+                        "This may be temporary — check your network and try again. "
+                        "The PyPI CDN can take a few seconds to propagate new releases.",
                     ),
                 )
                 return
