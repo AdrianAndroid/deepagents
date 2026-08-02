@@ -505,7 +505,7 @@ class CLICompactionMiddleware(SummarizationToolMiddleware):
         than an override, it must be kept in parity when the SDK's compaction
         flow changes; the closest-fitting SDK-side fix (a `force=` seam on
         `_run_compact`) is out of scope for this PR, which is confined to
-        Deep Agents Code. `test_forced_compact_matches_sdk_summarizer_calls`
+        zjcode. `test_forced_compact_matches_sdk_summarizer_calls`
         guards the summarizer-method call set against drift, but only by
         *existence*: it catches a renamed or removed dependency, not a changed
         signature nor a new step added to `_run_compact` (e.g. if the SDK later

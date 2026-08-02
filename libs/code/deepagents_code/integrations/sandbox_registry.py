@@ -2,12 +2,12 @@
 
 Merges three provider sources into one registry:
 
-1. Built-in providers curated in this repo (installed as `deepagents-code`
+1. Built-in providers curated in this repo (installed as `zjcode`
    extras).
 2. Entry-point providers published by third-party packages under the
    `deepagents_code.sandbox_providers` group.
 3. Config-declared providers from `[sandboxes.providers]` in
-   `~/.deepagents/config.toml` (escape hatch for internal/local packages).
+   `~/.zjcode/config.toml` (escape hatch for internal/local packages).
 
 Precedence on name collision: config > entry point > built-in, so a user can
 always override discovery via their config file.
@@ -52,7 +52,7 @@ BUILTIN_METADATA: dict[str, SandboxProviderMetadata] = {
     "langsmith": SandboxProviderMetadata(
         name="langsmith",
         working_dir="/root",  # `$HOME` in the LangSmith sandbox
-        # Bundled with `deepagents-code` via `langsmith[sandbox]`; no extra.
+        # Bundled with `zjcode` via `langsmith[sandbox]`; no extra.
         supports_snapshot_name=True,
     ),
     "modal": SandboxProviderMetadata(

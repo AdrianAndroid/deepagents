@@ -1,4 +1,4 @@
-"""GLM-5.2 harness profile for Deep Agents Code.
+"""GLM-5.2 harness profile for zjcode.
 
 Bundles a concise execution-focused prompt suffix with one-shot recovery for the
 measured Fireworks headless terminal-stall failure mode.
@@ -105,7 +105,7 @@ approach.
 Fix only failures caused by your work. Stop immediately once every requested artifact \
 is complete and the assertions pass; do not add speculative extras.
 </execution>"""
-"""Text appended to the Deep Agents system prompt for GLM-5.2."""
+"""Text appended to the zjcode system prompt for GLM-5.2."""
 
 _TERMINAL_STALL_RECOVERY_SUFFIX = """\
 <terminal_stall_recovery>

@@ -1,4 +1,4 @@
-# Deep Agents Code Development Guide
+# zjcode Development Guide
 
 New to the package? Start with [`ARCHITECTURE.md`](./ARCHITECTURE.md) for a high-level map of how the TUI, the `langgraph dev` server subprocess, and the agent graph fit together.
 
@@ -31,7 +31,7 @@ If you only want to sync dependencies without installing hooks, run `uv sync --g
 Run the TUI from `libs/code` in your local checkout:
 
 ```bash
-uv run deepagents-code
+uv run zjcode
 ```
 
 `uv run` uses the project environment with the package installed editable, so source changes take effect on the next launch. If you want a persistent `dcode-dev` command that stays separate from a released install, use the local dev install setup below.
@@ -71,9 +71,9 @@ Run `make help` to see every available target.
 
 ## LangSmith tracing projects
 
-When LangSmith tracing is enabled and a `LANGSMITH_API_KEY` is available, `deepagents-code` traces its own agent runs to LangSmith. A key alone is not enough for environment-supplied keys — set `LANGSMITH_TRACING=true`. Keys stored via `/auth` auto- enable tracing unless you explicitly opt out (for example `DEEPAGENTS_CODE_LANGSMITH_TRACING=false`).
+When LangSmith tracing is enabled and a `LANGSMITH_API_KEY` is available, `zjcode` traces its own agent runs to LangSmith. A key alone is not enough for environment-supplied keys — set `LANGSMITH_TRACING=true`. Keys stored via `/auth` auto- enable tracing unless you explicitly opt out (for example `DEEPAGENTS_CODE_LANGSMITH_TRACING=false`).
 
-By default those runs land in the `deepagents-code` project, but the team routes shared runs to a GA project (`shared-deepagents-code`) that is monitored by LangSmith Engine, which raises high-priority Slack alerts on suspected issues.
+By default those runs land in the `zjcode` project, but the team routes shared runs to a GA project (`shared-zjcode`) that is monitored by LangSmith Engine, which raises high-priority Slack alerts on suspected issues.
 
 **Do not point local development at the GA project.** Active development produces failures, half-finished branches, and experiments that Engine flags as issues — noise that buries the alerts that matter for the production project and costs the team triage time. Keep dev and prod runs in separate projects so Engine alerting on the GA project stays high-signal (this also mirrors LangSmith best practice of splitting dev and prod environments into distinct projects).
 
@@ -81,8 +81,8 @@ Route your local runs to a dev-scoped project via `DEEPAGENTS_CODE_LANGSMITH_PRO
 
 ```bash
 # A shared dev bucket, or your own personal project — anything but the GA project
-export DEEPAGENTS_CODE_LANGSMITH_PROJECT=shared-deepagents-code-dev
-uv run deepagents-code
+export DEEPAGENTS_CODE_LANGSMITH_PROJECT=shared-zjcode-dev
+uv run zjcode
 ```
 
 Set the same override for [local dev installs](#local-dev-installs) (`dcode-dev`), not only ad-hoc `uv run` sessions. You can also set it persistently under `[tracing]` in the config file (`tracing.langsmith_project`) or from the `/auth` screen. The startup splash and `/trace` show the project a run is writing to — confirm it is not the GA project before doing noisy work.
@@ -91,12 +91,12 @@ When onboarding a new tracing project to Engine, capture the nature of that proj
 
 ## Debugging
 
-Deep Agents Code runs as two processes: the **Textual TUI** you interact with, and a **`langgraph dev` subprocess** that hosts the agent graph. Each writes its own log, and a single switch turns both on:
+zjcode runs as two processes: the **Textual TUI** you interact with, and a **`langgraph dev` subprocess** that hosts the agent graph. Each writes its own log, and a single switch turns both on:
 
 ```bash
 cd libs/code
 export DEEPAGENTS_CODE_DEBUG=1
-uv run deepagents-code
+uv run zjcode
 ```
 
 | Variable | Effect |
@@ -148,7 +148,7 @@ The tail is fed by an always-on in-memory ring buffer (`_debug_buffer.install_lo
 
 A *local dev install* gives you a persistent `dcode-dev` command that launches your checkout directly. It lives in a dedicated editable venv under `~/.local/share/dcode-dev`, symlinked into `~/.local/bin/dcode-dev`. It can sit alongside a released `dcode` without interfering:
 
-- `dcode` / `deepagents-code` — the released tool, installed via `curl -LsSf https://langch.in/dcode | bash` (the install script).
+- `dcode` / `zjcode` — the released tool, installed via `curl -LsSf https://langch.in/dcode | bash` (the install script).
 - `dcode-dev` — your local checkout.
 
 That lets you compare released behavior against local, and fall back to a known-good build if your checkout breaks. Either way, the dedicated venv keeps the dev binary's dependency experiments out of the repo's locked `uv sync` environment.
@@ -200,7 +200,7 @@ Create the dev wrapper script once:
 
 ```bash
 cat > /tmp/dev_deepagents.py << 'PYEOF'
-"""Dev wrapper to run Deep Agents Code with textual devtools."""
+"""Dev wrapper to run zjcode with textual devtools."""
 import sys
 sys.argv = ["deepagents"] + sys.argv[1:]
 

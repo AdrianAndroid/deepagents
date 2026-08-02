@@ -1,4 +1,4 @@
-"""Chat input widget for deepagents-code with autocomplete and history support."""
+"""Chat input widget for zjcode with autocomplete and history support."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def _default_history_path() -> Path:
     """Return the default history file path.
 
     Extracted as a function so tests can monkeypatch it to a temp path,
-    preventing test runs from polluting `~/.deepagents/.state/history.jsonl`.
+    preventing test runs from polluting `~/.zjcode/.state/history.jsonl`.
     """
     from deepagents_code.model_config import DEFAULT_STATE_DIR
 

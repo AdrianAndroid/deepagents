@@ -1,7 +1,7 @@
 """User-level credential storage for model providers.
 
 Persists API keys (and, in the future, OAuth tokens) under
-`~/.deepagents/.state/auth.json` (file mode 0600, parent 0700) so users can
+`~/.zjcode/.state/auth.json` (file mode 0600, parent 0700) so users can
 enter credentials directly in the TUI rather than exporting environment
 variables before launch.
 
@@ -72,7 +72,7 @@ class ApiKeyCredential(TypedDict):
 
     Set only for the `langsmith` tracing service when the user supplies a
     custom project in `/auth`; absent means traces fall back to the default
-    (`deepagents-code`). Not a secret — it is shown in the `/auth` advanced
+    (`zjcode`). Not a secret — it is shown in the `/auth` advanced
     panel and applied to `LANGSMITH_PROJECT` at startup.
     """
 

@@ -145,7 +145,7 @@ def build_version_text() -> str:
         sdk_annotation = ""
 
     text = (
-        f"deepagents-code {__version__}{cli_annotation}\n"
+        f"zjcode {__version__}{cli_annotation}\n"
         f"deepagents (SDK) {sdk_version}{sdk_annotation}"
     )
 
@@ -302,7 +302,7 @@ def _render_teardown_thread_hints(
         console.print()
         console.print("[dim]Resume this thread with:[/dim]")
         # Echo the command the user actually launched (a shim or the
-        # `deepagents-code` alias), not a hardcoded `dcode` they may not have.
+        # `zjcode` alias), not a hardcoded `dcode` they may not have.
         hint = Text(invoked_name(), style="cyan")
         hint.append(" -r ", style="cyan")
         hint.append(str(thread_id), style="cyan")
@@ -992,7 +992,7 @@ def _warn_if_interpreter_disabled_by_sandbox(args: argparse.Namespace) -> None:
     it (the middleware is unsupported under a remote sandbox). This prints to
     stderr on the non-interactive (`-n`) path; the interactive TUI surfaces the
     same advisory as a startup notification (see
-    `DeepAgentsApp._notify_interpreter_disabled_by_sandbox`).
+    `zjcodeApp._notify_interpreter_disabled_by_sandbox`).
 
     Keyed on the raw `args.interpreter` tri-state so an explicit
     `--no-interpreter` opt-out stays silent (the predicate only fires for the
@@ -1068,7 +1068,7 @@ def _warn_if_interpreter_tools_without_interpreter(
 
     This drives the non-interactive (`-n`) path and prints to stderr. The
     interactive TUI surfaces the same advisory as a startup notification (see
-    `DeepAgentsApp._notify_interpreter_tools_without_interpreter`).
+    `zjcodeApp._notify_interpreter_tools_without_interpreter`).
 
     Attributes are accessed directly (not via `getattr` defaults) so an argparse
     `dest` rename fails loudly in tests rather than silently disabling the warning.
@@ -1086,7 +1086,7 @@ def _warn_if_interpreter_tools_without_interpreter(
 
 
 def _recent_agent_is_valid(name: str) -> bool:
-    """Return `True` when `~/.deepagents/<name>/` still exists on disk.
+    """Return `True` when `~/.zjcode/<name>/` still exists on disk.
 
     Used to guard against a stale `[agents].recent` entry pointing at an
     agent the user has since deleted — in that case we silently fall back
@@ -1098,13 +1098,13 @@ def _recent_agent_is_valid(name: str) -> bool:
     undo that deferral.
 
     `is_dir()` is wrapped in `try/except OSError` so permission errors on
-    `~/.deepagents` (symlink loops, EACCES) don't crash the launch — we
+    `~/.zjcode` (symlink loops, EACCES) don't crash the launch — we
     treat them the same as "not valid" and fall back to the default.
     """
     from pathlib import Path as _Path
 
     try:
-        return (_Path.home() / ".deepagents" / name).is_dir()
+        return (_Path.home() / ".zjcode" / name).is_dir()
     except OSError:
         logger.warning(
             "Could not validate recent agent %r; falling back to default",
@@ -1138,7 +1138,7 @@ def check_cli_dependencies() -> None:
         print("\nReinstall dcode with the recommended installer:")  # noqa: T201  # CLI output for missing dependencies
         print("  curl -LsSf https://langch.in/dcode | bash")  # noqa: T201  # CLI output for missing dependencies
         print("\nOr install the tool directly via uv:")  # noqa: T201  # CLI output for missing dependencies
-        print("  uv tool install -U deepagents-code")  # noqa: T201  # CLI output for missing dependencies
+        print("  uv tool install -U zjcode")  # noqa: T201  # CLI output for missing dependencies
         sys.exit(1)
 
 
@@ -1146,7 +1146,7 @@ _RIPGREP_URL = "https://github.com/BurntSushi/ripgrep#installation"
 """Fallback installation URL when no platform package manager is detected."""
 
 _SUPPRESS_HINT_CLI = (
-    'To suppress, edit ~/.deepagents/config.toml:\n\\[warnings]\nsuppress = \\["<key>"]'
+    'To suppress, edit ~/.zjcode/config.toml:\n\\[warnings]\nsuppress = \\["<key>"]'
 )
 """Suppression hint for non-interactive output.
 
@@ -1222,7 +1222,7 @@ def check_optional_tools(*, config_path: Path | None = None) -> list[str]:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         List of missing tool names (e.g. `["ripgrep"]`).
@@ -1248,7 +1248,7 @@ def _auto_install_ripgrep_cli(
 ) -> list[str]:
     """Attempt the one-shot managed `rg` install for the headless CLI path.
 
-    Mirrors the interactive `DeepAgentsApp._ensure_managed_ripgrep` flow for
+    Mirrors the interactive `zjcodeApp._ensure_managed_ripgrep` flow for
     the non-interactive launch, where there is no Textual app to surface
     notices through. A checksum mismatch is reported loudly and a generic
     failure as a warning; both leave `"ripgrep"` in the returned list so the
@@ -1625,7 +1625,7 @@ def parse_args() -> argparse.Namespace:
         return [parent]
 
     parser = argparse.ArgumentParser(
-        description=("Deep Agents - AI Coding Assistant"),
+        description=("zjcode - AI Coding Assistant"),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,
     )
@@ -1845,7 +1845,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Treat NAME as a package added via `uv --with` "
-            "(for a custom provider package), not a deepagents-code extra"
+            "(for a custom provider package), not a zjcode extra"
         ),
     )
     install_parser.add_argument(
@@ -2133,7 +2133,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--trust-project-hooks",
         action="store_true",
-        help="Trust project-level `.deepagents/hooks.json` command handlers "
+        help="Trust project-level `.zjcode/hooks.json` command handlers "
         "(required for headless/CI runs that should load repository hooks)",
     )
     parser.add_argument(
@@ -2192,7 +2192,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "With --install or `install`, treat NAME as a package added via "
             "`uv --with` (for a custom provider package), not a "
-            "deepagents-code extra"
+            "zjcode extra"
         ),
     )
     parser.add_argument(
@@ -2214,7 +2214,7 @@ def parse_args() -> argparse.Namespace:
         # Never surfaced: argparse only emits `version=` when the flag is
         # actually passed, which takes the `build_version_text()` branch above.
         # This placeholder only exists because `version=` requires a value.
-        version_text = f"deepagents-code {__version__}"
+        version_text = f"zjcode {__version__}"
     parser.add_argument(
         "-v",
         "--version",
@@ -2273,7 +2273,7 @@ def _resolve_and_validate_sandbox(
         """
         if registry.config_error:
             return (
-                f"\n\nNote: ~/.deepagents/config.toml could not be used "
+                f"\n\nNote: ~/.zjcode/config.toml could not be used "
                 f"({registry.config_error}); any providers or default it "
                 "declares were ignored."
             )
@@ -2284,7 +2284,7 @@ def _resolve_and_validate_sandbox(
         if not default:
             parser.error(
                 "--sandbox was given with no value but no [sandboxes].default "
-                "is configured in ~/.deepagents/config.toml. Pass a provider "
+                "is configured in ~/.zjcode/config.toml. Pass a provider "
                 "name explicitly or set [sandboxes].default." + _config_note()
             )
         args.sandbox = default
@@ -2298,7 +2298,7 @@ def _resolve_and_validate_sandbox(
             "publishes it and re-run:\n"
             "  /install <package-name> --package\n"
             f"or declare [sandboxes.providers.{args.sandbox}] in "
-            "~/.deepagents/config.toml." + _config_note()
+            "~/.zjcode/config.toml." + _config_note()
         )
 
     metadata = registry.get_metadata(args.sandbox)
@@ -3860,7 +3860,7 @@ def cli_main() -> None:
             except ImportError as exc:
                 msg = (
                     f"ACP dependencies not available: {exc}\n"
-                    "Install with: uv tool install --reinstall -U deepagents-code "
+                    "Install with: uv tool install --reinstall -U zjcode "
                     "--with deepagents-acp\n"
                 )
                 sys.stderr.write(msg)
@@ -4251,7 +4251,7 @@ def cli_main() -> None:
                 logger.warning("--auto-update failed: filesystem error", exc_info=True)
                 console.print(
                     "[bold red]Error:[/bold red] Failed to toggle auto-updates. "
-                    "Check permissions for ~/.deepagents/"
+                    "Check permissions for ~/.zjcode/"
                 )
                 sys.exit(1)
             except Exception:
@@ -4271,7 +4271,7 @@ def cli_main() -> None:
             else:
                 console.print(
                     "[bold red]Error:[/bold red] Could not clear default model. "
-                    "Check permissions for ~/.deepagents/"
+                    "Check permissions for ~/.zjcode/"
                 )
                 sys.exit(1)
             sys.exit(0)
@@ -4306,7 +4306,7 @@ def cli_main() -> None:
             else:
                 console.print(
                     "[bold red]Error:[/bold red] Could not save default model. "
-                    "Check permissions for ~/.deepagents/"
+                    "Check permissions for ~/.zjcode/"
                 )
                 sys.exit(1)
             sys.exit(0)
@@ -4638,7 +4638,7 @@ def cli_main() -> None:
                 # A stderr warning here would be clobbered by the alternate
                 # screen the moment the TUI launches; the app surfaces the
                 # advisory as a startup notification instead (see
-                # `DeepAgentsApp._notify_interpreter_tools_without_interpreter`).
+                # `zjcodeApp._notify_interpreter_tools_without_interpreter`).
 
                 from deepagents_code.approval_mode import ApprovalMode
 

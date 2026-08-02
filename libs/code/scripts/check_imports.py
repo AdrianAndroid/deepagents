@@ -21,7 +21,7 @@ if __name__ == "__main__":
     has_failure = False
     with tempfile.TemporaryDirectory() as home:
         # Point the home directory at a throwaway dir so importing a module can't
-        # read or depend on the developer's real `~` state (e.g. `~/.deepagents`
+        # read or depend on the developer's real `~` state (e.g. `~/.zjcode`
         # config, MCP auth tokens). `Path.home()` resolves from `HOME` on POSIX
         # and `USERPROFILE` / `HOMEDRIVE`+`HOMEPATH` on Windows, so override all
         # of them to keep the isolation cross-platform.

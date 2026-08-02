@@ -99,6 +99,25 @@ set.
 DEBUG_FILE = "DEEPAGENTS_CODE_DEBUG_FILE"
 """Path for the debug log file (default: `DEFAULT_DEBUG_FILE`)."""
 
+NO_MOUSE = "DEEPAGENTS_CODE_NO_MOUSE"
+"""Disable mouse tracking in TUI.
+
+Set to a truthy value to disable mouse event handling. Useful for web terminals
+(1Panel, ttyd, wetty) that leak garbled mouse-report sequences into input.
+"""
+
+PYPI_URL = "DEEPAGENTS_CODE_PYPI_URL"
+"""Override PyPI JSON API URL for version checks.
+
+Allows pointing to a private PyPI mirror or test instance.
+"""
+
+SDK_PYPI_URL = "DEEPAGENTS_CODE_SDK_PYPI_URL"
+"""Override SDK PyPI JSON API URL.
+
+Allows pointing to a private PyPI mirror for the deepagents SDK package.
+"""
+
 DEFAULT_DEBUG_FILE = "/tmp/deepagents_debug.log"  # noqa: S108  # opt-in debug log
 """Default path for the debug log when `DEBUG_FILE` is unset."""
 
@@ -152,7 +171,7 @@ across sources, so neither can silently empty a deny set in the other. This is
 process env the user controls, not a repo file, so it does not weaken the
 user-level-only trust boundary: a committed *project* `.env` is blocked from
 setting it (see `config._PROJECT_DOTENV_DENIED_ENV_KEYS`); only the user's
-shell, launch env, or global `~/.deepagents/.env` can.
+shell, launch env, or global `~/.zjcode/.env` can.
 """
 
 EXPERIMENTAL = "DEEPAGENTS_CODE_EXPERIMENTAL"
@@ -230,7 +249,7 @@ LANGSMITH_REPLICA_PROJECTS = "DEEPAGENTS_CODE_LANGSMITH_REPLICA_PROJECTS"
 """Comma-separated LangSmith project names to *also* write agent traces to.
 
 When set (and tracing is active), each agent run is dual-written to the primary
-deepagents-code project *and* one extra project via LangSmith write replicas.
+zjcode project *and* one extra project via LangSmith write replicas.
 
 Only the first listed project is used: the LangGraph server mirrors a run to a
 single extra project, so any additional entries are dropped (with a warning).
@@ -338,7 +357,7 @@ RIPGREP_INSTALLER = "DEEPAGENTS_CODE_RIPGREP_INSTALLER"
 """Select how ripgrep is provisioned: `managed` (default) or `system`.
 
 `managed` downloads the pinned, SHA-256-verified upstream binary into
-`~/.deepagents/bin` (no sudo). `system` skips that download so power users can
+`~/.zjcode/bin` (no sudo). `system` skips that download so power users can
 rely on their distro package / existing toolchain instead; the install script's
 `system` mode keeps the brew/apt/cargo path. A system `rg` already on `PATH` is
 reused under either setting. Unrecognized values fall back to `managed`. See
@@ -399,7 +418,7 @@ LangSmith variable overrides its canonical counterpart (e.g. both
 different values).
 
 The override is intentional: the prefixed value overwrites the canonical
-variable inside the Deep Agents Code process (so the LangSmith SDK, which
+variable inside the zjcode process (so the LangSmith SDK, which
 only reads canonical names, picks it up). The value you exported in your own
 shell is unaffected, since a process cannot change its parent's environment.
 Off by default; set to a truthy value (`1`, `true`, `yes`, `on`) to suppress

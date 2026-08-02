@@ -959,7 +959,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 yield project_label
                 project_input = Input(
                     value=self._existing_project,
-                    placeholder="LANGSMITH_PROJECT (default: deepagents-code)",
+                    placeholder="LANGSMITH_PROJECT (default: zjcode)",
                     id="auth-prompt-project",
                 )
                 project_input.display = self._advanced_visible
@@ -967,7 +967,7 @@ class AuthPromptScreen(ModalScreen[AuthResult]):
                 project_hint_widget = Static(
                     Content.from_markup(
                         "Route agent traces to this LangSmith project. "
-                        "Leave blank to use the default [bold]deepagents-code[/bold]."
+                        "Leave blank to use the default [bold]zjcode[/bold]."
                     ),
                     classes="auth-prompt-meta",
                     id="auth-prompt-project-hint",
@@ -1658,7 +1658,7 @@ class AuthManagerScreen(ModalScreen[None]):
         )
         return Content.assemble(
             "Lists installed model providers, services like web search, and any "
-            "providers you've configured in ~/.deepagents/config.toml. Greyed-out "
+            "providers you've configured in ~/.zjcode/config.toml. Greyed-out "
             "providers aren't installed yet — select one to install it. ",
             ("Docs", link_style),
         )
@@ -1745,7 +1745,7 @@ class AuthManagerScreen(ModalScreen[None]):
 
         Args:
             provider: The uninstalled provider the user selected.
-            extra: The `deepagents-code` extra that installs `provider`.
+            extra: The `zjcode` extra that installs `provider`.
         """
         from deepagents_code.tui.widgets.install_confirm import (
             InstallProviderConfirmScreen,

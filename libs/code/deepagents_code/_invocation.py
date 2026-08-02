@@ -2,7 +2,7 @@
 
 Hints that tell the user how to resume a thread have to echo a command the user
 can actually paste back. `dcode` is only one of the names that reach this code:
-the package ships both `deepagents-code` and `dcode` console scripts, and
+the package ships both `zjcode` and `dcode` console scripts, and
 per-project shims (a renamed symlink in `~/.local/bin` pointing at a worktree's
 `bin/dcode`) are a common way to run several checkouts side by side. Hardcoding
 `dcode` tells those users to run a command that may not exist.
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_INVOKED_NAME = "dcode"
 """Command name assumed when the launch name cannot be determined."""
 
-STANDARD_INVOKED_NAMES = frozenset({"dcode", "deepagents-code"})
+STANDARD_INVOKED_NAMES = frozenset({"dcode", "zjcode"})
 """Console scripts shipped in `pyproject.toml` (`[project.scripts]`).
 
 Anything else — a per-checkout shim or a user alias — is non-standard and gets a
@@ -88,7 +88,7 @@ def invoked_name() -> str:
 
     Returns:
         The console-script name the user invoked (for example `dcode`,
-            `deepagents-code`, or a shim name), or `DEFAULT_INVOKED_NAME` when it
+            `zjcode`, or a shim name), or `DEFAULT_INVOKED_NAME` when it
             cannot be determined.
     """
     override = os.environ.get(INVOKED_AS)

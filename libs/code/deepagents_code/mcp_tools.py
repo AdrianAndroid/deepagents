@@ -944,7 +944,7 @@ def project_root_for_mcp_config_path(
     parent = path.parent
     if fallback is not None and not path.is_absolute():
         parent = fallback if str(parent) == "." else fallback / parent
-    if parent.name == ".deepagents":
+    if parent.name == ".zjcode":
         return parent.parent
     return parent
 
@@ -988,8 +988,8 @@ def filter_trusted_project_servers(
 
 
 MCP_CONFIG_DISCOVERY_PATHS: tuple[tuple[str, str], ...] = (
-    ("~/.deepagents/.mcp.json", "user-level"),
-    ("<project-root>/.deepagents/.mcp.json", "project subdir"),
+    ("~/.zjcode/.mcp.json", "user-level"),
+    ("<project-root>/.zjcode/.mcp.json", "project subdir"),
     ("<project-root>/.mcp.json", "project root"),
 )
 """Display strings for the auto-discovered MCP config paths.
@@ -1016,12 +1016,12 @@ def discover_mcp_configs(
     Returns:
         Existing config file paths, ordered from lowest to highest precedence.
     """
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     project_root = _resolve_project_config_base(project_context)
 
     candidates = [
         user_dir / ".mcp.json",
-        project_root / ".deepagents" / ".mcp.json",
+        project_root / ".zjcode" / ".mcp.json",
         project_root / ".mcp.json",
     ]
 
@@ -1046,7 +1046,7 @@ def classify_discovered_configs(
     Returns:
         Tuple of `(user_configs, project_configs)`.
     """
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     user: list[Path] = []
     project: list[Path] = []
     for path in config_paths:

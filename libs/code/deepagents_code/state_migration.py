@@ -1,6 +1,6 @@
-"""One-time migration of legacy state files into `~/.deepagents/.state/`.
+"""One-time migration of legacy state files into `~/.zjcode/.state/`.
 
-Earlier versions wrote internal state directly under `~/.deepagents/`,
+Earlier versions wrote internal state directly under `~/.zjcode/`,
 mixing it with user-facing agent directories (so e.g. `mcp-tokens/`
 showed up in `deepagents agents list`). State now lives in a dedicated
 `.state/` subdirectory; this module moves any legacy files into place
@@ -36,7 +36,7 @@ _LEGACY_NAMES: tuple[str, ...] = (
     "history.jsonl",
     ONBOARDING_MARKER_FILENAME,
 )
-"""Names directly under `~/.deepagents/` that now live in `.state/`.
+"""Names directly under `~/.zjcode/` that now live in `.state/`.
 
 `sessions.db-wal` and `sessions.db-shm` are SQLite sidecar files that may
 or may not be present depending on whether the database was opened in WAL
@@ -67,9 +67,9 @@ def migrate_legacy_state(
 
     Args:
         config_dir: Directory holding legacy state. Defaults to
-            `~/.deepagents/`.
+            `~/.zjcode/`.
         state_dir: Destination directory for state files. Defaults to
-            `~/.deepagents/.state/`.
+            `~/.zjcode/.state/`.
     """
     try:
         if not config_dir.is_dir():

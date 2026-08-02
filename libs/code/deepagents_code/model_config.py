@@ -252,7 +252,7 @@ class ProviderAuthSource(StrEnum):
     """Origin of a `CONFIGURED` credential, used to discriminate display."""
 
     STORED = "stored"
-    """Persisted in a local credential store under `~/.deepagents/.state`.
+    """Persisted in a local credential store under `~/.zjcode/.state`.
 
     Usually the `/auth` API-key map (`auth.json`), but also covers the
     file-backed ChatGPT OAuth token used by the codex provider
@@ -322,7 +322,7 @@ class ProviderAuthStatus:
             return self.detail
         return (
             f"provider '{self.provider}' is not recognized. "
-            "Add it to ~/.deepagents/config.toml with an api_key_env field"
+            "Add it to ~/.zjcode/config.toml with an api_key_env field"
         )
 
 
@@ -515,19 +515,19 @@ class ProviderConfig(TypedDict, total=False):
     """
 
 
-DEFAULT_CONFIG_DIR = Path.home() / ".deepagents"
-"""Directory for user-level Deep Agents configuration (`~/.deepagents`)."""
+DEFAULT_CONFIG_DIR = Path.home() / ".zjcode"
+"""Directory for user-level zjcode configuration (`~/.zjcode`)."""
 
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.toml"
-"""Path to the user's model configuration file (`~/.deepagents/config.toml`)."""
+"""Path to the user's model configuration file (`~/.zjcode/config.toml`)."""
 
 DEFAULT_STATE_DIR = DEFAULT_CONFIG_DIR / ".state"
-"""Directory for app-managed internal state (`~/.deepagents/.state`).
+"""Directory for app-managed internal state (`~/.zjcode/.state`).
 
 Holds files the app writes for its own bookkeeping — OAuth tokens, the
 sessions database, version-check caches, input history. Kept separate from
 top-level user-facing config and agent directories so listing/iterating
-`~/.deepagents` doesn't conflate state with agents.
+`~/.zjcode` doesn't conflate state with agents.
 """
 
 RECENT_MODELS_FILENAME = "recent_models.json"
@@ -1857,7 +1857,7 @@ def resolve_provider_credential(provider: str) -> str | None:
 
     Lookup order:
 
-    1. Stored API key in `~/.deepagents/.state/auth.json` (added via `/auth`).
+    1. Stored API key in `~/.zjcode/.state/auth.json` (added via `/auth`).
     2. Canonical env var via `resolve_env_var()` (which honors the
         `DEEPAGENTS_CODE_` prefix and dotenv files).
 
@@ -2564,7 +2564,7 @@ class ModelConfig:
         lifetime of the process. Use `clear_caches()` to reset.
 
         Args:
-            config_path: Path to config file. Defaults to ~/.deepagents/config.toml.
+            config_path: Path to config file. Defaults to ~/.zjcode/config.toml.
 
         Returns:
             Parsed `ModelConfig` instance.
@@ -2993,7 +2993,7 @@ def _save_toml_field(
         value: String or boolean value to persist.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -3050,7 +3050,7 @@ def save_goal_auto_accept_criteria(
     Args:
         enabled: Whether Auto should accept goal criteria automatically.
         config_path: Path to config file. Defaults to
-            `~/.deepagents/config.toml`.
+            `~/.zjcode/config.toml`.
 
     Returns:
         `True` when the preference was saved, otherwise `False`.
@@ -3075,7 +3075,7 @@ def _save_model_field(
         model_spec: The model to save in `provider:model` format.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -3093,7 +3093,7 @@ def save_default_model(model_spec: str, config_path: Path | None = None) -> bool
         model_spec: The model to set as default in `provider:model` format.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -3113,7 +3113,7 @@ def clear_default_model(config_path: Path | None = None) -> bool:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if the key was removed (or was already absent), False on I/O error.
@@ -3167,7 +3167,7 @@ def save_effort_for_model(
         effort: Reasoning effort label selected by the user.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         `True` if save succeeded, `False` if it failed.
@@ -3185,7 +3185,7 @@ def load_effort_for_model(
         model_spec: Model in `provider:model` format.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         The persisted effort label, or `None`. `None` is returned both when no
@@ -3252,7 +3252,7 @@ def clear_effort_for_model(
         model_spec: Model in `provider:model` format.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         `True` if the entry was removed or absent, `False` if clearing failed.
@@ -3345,7 +3345,7 @@ def is_warning_suppressed(key: str, config_path: Path | None = None) -> bool:
         key: Warning identifier to check (e.g., `'ripgrep'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         `True` if the warning is suppressed, `False` otherwise (including
@@ -3401,7 +3401,7 @@ def suppress_warning(key: str, config_path: Path | None = None) -> bool:
         key: Warning identifier to suppress (e.g., `'ripgrep'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         `True` if save succeeded, `False` if it failed due to I/O errors.
@@ -3459,7 +3459,7 @@ def unsuppress_warning(key: str, config_path: Path | None = None) -> bool:
         key: Warning identifier to unsuppress (e.g., `'ripgrep'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         `True` if save succeeded, `False` if it failed due to I/O errors.
@@ -3856,7 +3856,7 @@ class McpServerTrustLists:
     """User-level allow/deny lists for project MCP servers.
 
     Sourced only from the user's own configuration — the home `config.toml`, the
-    global `~/.deepagents/.env`, and shell-exported env — never from a repo, so a
+    global `~/.zjcode/.env`, and shell-exported env — never from a repo, so a
     committed `.mcp.json` cannot self-approve. Persisted approvals for fixed
     remote URLs bind to one validated local Git repository. Local commands and
     interpolated remote URLs bind to the exact resolved worktree. All include the
@@ -4141,7 +4141,7 @@ def load_mcp_server_trust_lists(
     """Load per-server project MCP allow/deny lists from user-level config.
 
     Security boundary: this reads the `[mcp]` table only from the user-level
-    `config.toml` (`DEFAULT_CONFIG_PATH`, i.e. `~/.deepagents/config.toml`) and
+    `config.toml` (`DEFAULT_CONFIG_PATH`, i.e. `~/.zjcode/config.toml`) and
     the `DEEPAGENTS_CODE_DANGEROUSLY_ENABLE_PROJECT_MCP_SERVERS` /
     `DEEPAGENTS_CODE_DISABLED_PROJECT_MCP_SERVERS` process env vars — never from
     a project's `.mcp.json` or any repo-committed file. There is no
@@ -4322,7 +4322,7 @@ def add_enabled_project_mcp_servers(
         names: Server names to add to the allowlist. Blank/whitespace-only
             names are ignored; a call with no usable names is a no-op success.
         config_path: Config file to write. Defaults to `DEFAULT_CONFIG_PATH`
-            (`~/.deepagents/config.toml`). Callers should not point this at a
+            (`~/.zjcode/config.toml`). Callers should not point this at a
             project path: the loader only ever reads the user-level config, so
             an allowlist written elsewhere is never honored.
         project_root: Project root whose MCP server definitions were approved.
@@ -4856,7 +4856,7 @@ def save_recent_model(model_spec: str, config_path: Path | None = None) -> bool:
         model_spec: The model to save in `provider:model` format.
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -4967,7 +4967,7 @@ def save_recent_agent(agent_name: str, config_path: Path | None = None) -> bool:
         agent_name: The agent directory name (e.g., `'coder'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -4981,7 +4981,7 @@ def load_recent_agent(config_path: Path | None = None) -> str | None:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         The saved agent name, or `None` if the file or key is missing or
@@ -5001,7 +5001,7 @@ def save_default_agent(agent_name: str, config_path: Path | None = None) -> bool
         agent_name: The agent directory name (e.g., `'coder'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if save succeeded, False if it failed due to I/O errors.
@@ -5018,7 +5018,7 @@ def clear_default_agent(config_path: Path | None = None) -> bool:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         True if the key was removed (or was already absent), False on I/O error.
@@ -5066,7 +5066,7 @@ def load_default_agent(config_path: Path | None = None) -> str | None:
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         The saved agent name, or `None` if the file or key is missing or
@@ -5082,7 +5082,7 @@ def _load_agents_field(field: str, config_path: Path | None = None) -> str | Non
         field: Key under the `[agents]` table (e.g., `'recent'`, `'default'`).
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         The trimmed string value, or `None` if the file, section, or key

@@ -82,7 +82,7 @@ effectively unbounded traversal. A resolved value above the ceiling is rejected
 and falls through to the next layer / default.
 """
 
-LANGSMITH_PROJECT_DEFAULT = "deepagents-code"
+LANGSMITH_PROJECT_DEFAULT = "zjcode"
 """Project agent traces fall back to when no project env var is set.
 
 Single source of truth shared by the `tracing.langsmith_project` option and
@@ -254,7 +254,7 @@ class ConfigOption:
     """
 
     install_extra: str | None = None
-    """Optional `deepagents-code[...]` extra that provides `dependency_module`."""
+    """Optional `zjcode[...]` extra that provides `dependency_module`."""
 
     provider: str | None = None
     """Provider/service name a credential option authenticates, or `None`.
@@ -369,7 +369,7 @@ _INVALID = object()
 
 
 def load_config_toml() -> dict[str, Any]:
-    """Load `~/.deepagents/config.toml`.
+    """Load `~/.zjcode/config.toml`.
 
     Returns:
         The parsed config mapping, or `{}` when the file is absent or invalid.
@@ -828,7 +828,7 @@ _PROVIDER_DEPENDENCIES: dict[str, tuple[str, str]] = {
 
 
 def provider_install_extra(provider: str) -> str | None:
-    """Return the `deepagents-code` extra that installs `provider`, if known.
+    """Return the `zjcode` extra that installs `provider`, if known.
 
     Args:
         provider: Provider name (e.g. `"baseten"`, `"google_genai"`).

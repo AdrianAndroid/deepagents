@@ -1,7 +1,7 @@
 """The `dcode tools` command group: provision managed external tools.
 
 `dcode tools install` fetches the pinned, SHA-256-verified ripgrep binary into
-`~/.deepagents/bin` (the same managed path used on first run) and is also handy
+`~/.zjcode/bin` (the same managed path used on first run) and is also handy
 for repairing a missing or stale `rg`. The install script calls this verb
 instead of re-encoding the pinned version + checksum table in bash.
 

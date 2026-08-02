@@ -163,7 +163,7 @@ def _get_harness_tool_descriptions(
     Returns:
         Copy of the matching harness profile's tool-description overrides.
     """
-    # deepagents-code exactly pins the SDK, and these are the same resolution
+    # zjcode exactly pins the SDK, and these are the same resolution
     # helpers used by `create_deep_agent` for its filesystem middleware.
     from deepagents.profiles.harness.harness_profiles import (
         _get_harness_profile,  # noqa: PLC2701  # Mirrors SDK profile lookup.
@@ -904,7 +904,7 @@ def _resolve_ptc_option(
 ) -> list[str] | None:
     """Resolve the configured PTC allowlist to a concrete list of tool names.
 
-    Names are *not* validated against `tools`. The Deep Agents SDK injects the
+    Names are *not* validated against `tools`. The zjcode SDK injects the
     filesystem, `task`, and `execute` tools via middleware in
     `create_deep_agent` — *after* this point — so they are absent from `tools`
     here, and the SDK exposes no importable list of them. `CodeInterpreterMiddleware`
@@ -1055,13 +1055,13 @@ def load_async_subagents(config_path: Path | None = None) -> list[AsyncSubAgent]
     Args:
         config_path: Path to config file.
 
-            Defaults to `~/.deepagents/config.toml`.
+            Defaults to `~/.zjcode/config.toml`.
 
     Returns:
         List of `AsyncSubAgent` specs (empty if section is absent or invalid).
     """
     if config_path is None:
-        config_path = Path.home() / ".deepagents" / "config.toml"
+        config_path = Path.home() / ".zjcode" / "config.toml"
 
     if not config_path.exists():
         return []
@@ -1108,7 +1108,7 @@ def load_async_subagents(config_path: Path | None = None) -> list[AsyncSubAgent]
 
 
 _AGENT_DIR_MARKER = "AGENTS.md"
-"""Filename that marks a `~/.deepagents/<name>/` directory as an agent profile.
+"""Filename that marks a `~/.zjcode/<name>/` directory as an agent profile.
 
 Discovery is fail-closed: only directories containing this marker are listed by
 the `/agent` picker. Real agents always create it (empty on first use when
@@ -1121,7 +1121,7 @@ and surface that directory as a selectable agent.
 
 @functools.lru_cache(maxsize=1)
 def _reserved_agent_dir_names() -> frozenset[str]:
-    """Return non-agent directory names reserved by the app under `~/.deepagents/`.
+    """Return non-agent directory names reserved by the app under `~/.zjcode/`.
 
     These directories are created by the app for its own use and must never
     appear in the agent picker — even if they contain an `AGENTS.md` file
@@ -1145,7 +1145,7 @@ def _reserved_agent_dir_names() -> frozenset[str]:
 
 
 def _is_agent_dir_entry(entry: Path) -> bool:
-    """Return whether a `~/.deepagents/` entry should be listed as an agent.
+    """Return whether a `~/.zjcode/` entry should be listed as an agent.
 
     Fail-closed on the `AGENTS.md` marker: a directory is an agent only when
     that file exists as a regular (non-symlink) file inside it.
@@ -1172,9 +1172,9 @@ def _is_agent_dir_entry(entry: Path) -> bool:
 
 
 def get_available_agent_names() -> list[str]:
-    """Return a sorted list of available agent names from `~/.deepagents/`.
+    """Return a sorted list of available agent names from `~/.zjcode/`.
 
-    Scans the user's `.deepagents` directory and returns each real
+    Scans the user's `.zjcode` directory and returns each real
     subdirectory that contains the `AGENTS.md` agent marker and is not an
     app-reserved name. Fail-closed: bare directories, reserved app state
     (`bin/`, `plugins/`, `conversation_history/`), symlinks, and hidden
@@ -1229,7 +1229,7 @@ def list_agents(*, output_format: OutputFormat = "text") -> None:
             return
         console.print("[yellow]No agents found.[/yellow]")
         console.print(
-            "[dim]Agents will be created in ~/.deepagents/ "
+            "[dim]Agents will be created in ~/.zjcode/ "
             "when you first use them.[/dim]",
             style=theme.MUTED,
         )
@@ -1485,7 +1485,7 @@ def get_system_prompt(
     prompt_dir = Path(__file__).parent
     template = (prompt_dir / "system_prompt.md").read_text()
 
-    skills_path = f"~/.deepagents/{assistant_id}/skills"
+    skills_path = f"~/.zjcode/{assistant_id}/skills"
 
     if interactive:
         mode_description = "an interactive TUI on the user's computer"
@@ -2211,7 +2211,7 @@ def create_cli_agent(
 ) -> tuple[Pregel[Any, Any, Any, Any], CompositeBackend]:
     """Create a CLI-configured agent with flexible options.
 
-    This is the main entry point for creating a Deep Agents Code agent, usable
+    This is the main entry point for creating a zjcode agent, usable
     both internally and from external code (e.g., benchmarking frameworks).
 
     Args:
@@ -2628,8 +2628,8 @@ def create_cli_agent(
     # Add skills middleware
     if enable_skills:
         # Lowest to highest precedence:
-        # built-in -> plugins -> user .deepagents -> user .agents
-        # -> project .deepagents -> project .agents
+        # built-in -> plugins -> user .zjcode -> user .agents
+        # -> project .zjcode -> project .agents
         # -> user .claude (experimental) -> project .claude (experimental)
         # Plugin skills are namespaced as `{plugin_id}:{skill_name}` to avoid
         # collisions between plugins and user/project skills.
@@ -2683,7 +2683,7 @@ def create_cli_agent(
             # Create environment for shell commands.
             # Restore the user's original LANGSMITH_PROJECT so their code traces
             # separately. When they had none, drop the agent's override (the
-            # `deepagents-code` default applied at bootstrap) entirely so shell
+            # `zjcode` default applied at bootstrap) entirely so shell
             # commands don't inherit it.
             shell_env = os.environ.copy()
             if settings.user_langchain_project is not None:

@@ -33,7 +33,7 @@ class NotificationSettingsScreen(ModalScreen[None]):
     """Modal dialog for managing warning preferences.
 
     Each checkbox maps to a key in `[warnings].suppress` in
-    `~/.deepagents/config.toml`. Toggling a checkbox immediately
+    `~/.zjcode/config.toml`. Toggling a checkbox immediately
     persists the change.
     """
 
@@ -164,7 +164,7 @@ class NotificationSettingsScreen(ModalScreen[None]):
                     event.checkbox.value = not enabled
                 self.app.notify(
                     "Could not save notification preference. "
-                    "Check file permissions for ~/.deepagents/config.toml.",
+                    "Check file permissions for ~/.zjcode/config.toml.",
                     severity="warning",
                     timeout=6,
                     markup=False,

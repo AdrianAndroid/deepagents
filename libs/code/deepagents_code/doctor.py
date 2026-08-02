@@ -188,7 +188,7 @@ def _collect_diagnostics() -> DiagnosticSection:
     return DiagnosticSection(
         title="Diagnostics",
         items=[
-            DiagnosticItem("deepagents-code", cli_value),
+            DiagnosticItem("zjcode", cli_value),
             DiagnosticItem("deepagents (SDK)", sdk_version, ok=sdk_ok),
             DiagnosticItem("Commit hash", _commit_hash(path)),
             DiagnosticItem("Python", platform.python_version()),

@@ -1,12 +1,12 @@
-# 🧠🤖 Deep Agents Code
+# 🧠🤖 zjcode
 
-[![PyPI - Version](https://img.shields.io/pypi/v/deepagents-code?label=%20)](https://pypi.org/project/deepagents-code/#history)
-[![PyPI - License](https://img.shields.io/pypi/l/deepagents-code)](https://opensource.org/licenses/MIT)
-[![PyPI - Downloads](https://img.shields.io/pepy/dt/deepagents-code)](https://pypistats.org/packages/deepagents-code)
+[![PyPI - Version](https://img.shields.io/pypi/v/zjcode?label=%20)](https://pypi.org/project/zjcode/#history)
+[![PyPI - License](https://img.shields.io/pypi/l/zjcode)](https://opensource.org/licenses/MIT)
+[![PyPI - Downloads](https://img.shields.io/pepy/dt/zjcode)](https://pypistats.org/packages/zjcode)
 [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langchain_oss.svg?style=social&label=Follow%20%40LangChain)](https://x.com/langchain_oss)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/langchain-ai/deepagents/main/libs/code/images/tui.png" alt="Deep Agents Code" width="600"/>
+  <img src="https://raw.githubusercontent.com/langchain-ai/deepagents/main/libs/code/images/tui.png" alt="zjcode" width="600"/>
 </p>
 
 ## Quick Install
@@ -29,9 +29,9 @@ dcode
 
 ## 🤔 What is this?
 
-The fastest way to start using Deep Agents. `deepagents-code` is a pre-built coding agent in your terminal — similar to Claude Code or Cursor — powered by any LLM that supports tool calling. One install command and you're up and running, no code required.
+The fastest way to start using zjcode. `zjcode` is a pre-built coding agent in your terminal — similar to Claude Code or Cursor — powered by any LLM that supports tool calling. One install command and you're up and running, no code required.
 
-**What `deepagents-code` adds on top of the SDK:**
+**What `zjcode` adds on top of the SDK:**
 
 - **Interactive TUI** — rich terminal interface with streaming responses
 - **Conversation resume** — pick up where you left off across sessions
@@ -50,10 +50,10 @@ Do not run `dcode` in a directory you do not trust without a sandbox backend. Fo
 
 ## 📖 Resources
 
-- **[Documentation](https://docs.langchain.com/deepagents-code)**
+- **[Documentation](https://docs.langchain.com/zjcode)**
 - **[Changelog](https://github.com/langchain-ai/deepagents/blob/main/libs/code/CHANGELOG.md)**
 - **[Source code](https://github.com/langchain-ai/deepagents/tree/main/libs/code)**
-- **[Deep Agents SDK](https://github.com/langchain-ai/deepagents)** — underlying agent harness
+- **[zjcode SDK](https://github.com/langchain-ai/deepagents)** — underlying agent harness
 - [LangChain Academy](https://academy.langchain.com/) — Comprehensive, free courses on LangChain libraries and products, made by the LangChain team.
 - [Code of Conduct](https://github.com/langchain-ai/langchain/?tab=coc-ov-file) — community guidelines and standards
 

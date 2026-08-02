@@ -14,7 +14,7 @@ from deepagents_code.sessions import format_path
 if TYPE_CHECKING:
     from textual.app import ComposeResult
 
-    from deepagents_code.app import DeepAgentsApp
+    from deepagents_code.app import zjcodeApp
 
 
 CwdSwitchChoice = Literal["switch", "stay", "abort"]
@@ -235,8 +235,8 @@ class CwdSwitchPromptScreen(ModalScreen[CwdSwitchChoice]):
 
     def action_quit_or_interrupt(self) -> None:
         """Delegate Ctrl+C to the app-level quit/interrupt handler."""
-        cast("DeepAgentsApp", self.app).action_quit_or_interrupt()
+        cast("zjcodeApp", self.app).action_quit_or_interrupt()
 
     def action_quit_app(self) -> None:
         """Delegate Ctrl+D to the app-level quit handler."""
-        cast("DeepAgentsApp", self.app).action_quit_app()
+        cast("zjcodeApp", self.app).action_quit_app()

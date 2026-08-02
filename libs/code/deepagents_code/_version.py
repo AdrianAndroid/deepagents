@@ -1,13 +1,20 @@
-"""Version information and lightweight constants for `deepagents-code`."""
+"""Version information and lightweight constants for `zjcode`."""
 
 # Keep the `x-release-please-version` annotation — release-please uses it to
 # bump `__version__` in sync with `pyproject.toml` on every release PR.
 __version__ = "0.1.51"  # x-release-please-version
 
-DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
-"""URL for `deepagents-code` documentation."""
+# zjcode 品牌定制
+DISTRIBUTION_NAME = "zjcode"
+"""分发名称，用于 PyPI 包名和品牌标识。"""
 
-PYPI_URL = "https://pypi.org/pypi/deepagents-code/json"
+BRAND_NAME = "zjcode"
+"""品牌显示名称。"""
+
+DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
+"""URL for `zjcode` documentation."""
+
+PYPI_URL = f"https://pypi.org/pypi/{DISTRIBUTION_NAME}/json"
 """PyPI JSON API endpoint for version checks."""
 
 SDK_PYPI_URL = "https://pypi.org/pypi/deepagents/json"
@@ -22,5 +29,5 @@ CHANGELOG_URL = (
 )
 """URL for the full changelog."""
 
-USER_AGENT = f"deepagents-code/{__version__} update-check"
+USER_AGENT = f"{DISTRIBUTION_NAME}/{__version__} update-check"
 """User-Agent header sent with PyPI requests."""

@@ -37,7 +37,7 @@ _EPHEMERAL_PORT = 0
 The server is internal and ephemeral — callers reach it via `ServerProcess.url`,
 never a typed-in address — so it deliberately avoids binding the well-known
 `langgraph dev` default (2024). Leaving 2024 free lets users run their own
-`langgraph dev` projects alongside `deepagents-code` without a port collision.
+`langgraph dev` projects alongside `zjcode` without a port collision.
 """
 
 _HEALTH_POLL_INTERVAL_LOCAL = 0.1

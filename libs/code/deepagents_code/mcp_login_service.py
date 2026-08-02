@@ -404,7 +404,7 @@ def _policy_error_message(policy_error: str) -> str:
     """Return the user-facing message for an unreadable trust policy."""
     return (
         f"Refusing to trust project MCP servers: {policy_error}. Fix "
-        "~/.deepagents/config.toml, or pass --mcp-config <path> to load "
+        "~/.zjcode/config.toml, or pass --mcp-config <path> to load "
         "a file explicitly."
     )
 

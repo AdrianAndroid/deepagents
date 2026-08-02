@@ -2,7 +2,7 @@
 
 Disabled servers are skipped at config merge time so their tools never
 reach the agent and no connection is attempted. State lives under
-`[mcp].disabled_servers` in `~/.deepagents/config.toml`, alongside the
+`[mcp].disabled_servers` in `~/.zjcode/config.toml`, alongside the
 user's other MCP configuration.
 
 The store keys on server *name* alone. Two configs that both declare a

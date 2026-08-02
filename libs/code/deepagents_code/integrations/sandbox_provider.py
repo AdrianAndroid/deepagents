@@ -1,4 +1,4 @@
-"""Sandbox provider interface used by Deep Agents Code."""
+"""Sandbox provider interface used by zjcode."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class SandboxInstallHint:
     """How to install the package that provides a sandbox backend.
 
-    Built-in providers ship as `deepagents-code` extras (`kind="extra"`);
+    Built-in providers ship as `zjcode` extras (`kind="extra"`);
     third-party providers install as arbitrary packages (`kind="package"`).
     The distinction lets error messages emit the correct install command
     (`/install daytona` vs. `/install acme-dcode-sandbox --package`).

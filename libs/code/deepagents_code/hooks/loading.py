@@ -2,8 +2,8 @@
 
 Precedence (highest first, earlier in reduction order):
 
-1. Project: `{project_root}/.deepagents/hooks.json`
-2. User: `~/.deepagents/hooks.json` (or `config_dir/hooks.json` in tests)
+1. Project: `{project_root}/.zjcode/hooks.json`
+2. User: `~/.zjcode/hooks.json` (or `config_dir/hooks.json` in tests)
 3. Plugin: `hooks.json` documents contributed by enabled plugins
 
 Sources are concatenated per event. Precedence is reduction order, not execution
@@ -144,9 +144,9 @@ def project_hooks_path(project_root: Path) -> Path:
         project_root: Project root directory.
 
     Returns:
-        `{project_root}/.deepagents/hooks.json`.
+        `{project_root}/.zjcode/hooks.json`.
     """
-    return project_root / ".deepagents" / "hooks.json"
+    return project_root / ".zjcode" / "hooks.json"
 
 
 def user_hooks_path(config_dir: Path | None = None) -> Path:
@@ -156,7 +156,7 @@ def user_hooks_path(config_dir: Path | None = None) -> Path:
         config_dir: Alternate user config directory (tests).
 
     Returns:
-        `{config_dir}/hooks.json`, defaulting to `~/.deepagents/hooks.json`.
+        `{config_dir}/hooks.json`, defaulting to `~/.zjcode/hooks.json`.
     """
     return (config_dir or DEFAULT_CONFIG_DIR) / "hooks.json"
 

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class AgentSelectorScreen(ModalScreen[str | None]):
     """Modal dialog for switching between available agents.
 
-    Displays agent profiles from `~/.deepagents/` (directories that contain an
+    Displays agent profiles from `~/.zjcode/` (directories that contain an
     `AGENTS.md` marker) in an `OptionList`. Returns the selected agent name on
     Enter, or `None` on Esc (no change). `Ctrl+S` toggles the highlighted
     agent as the persisted default (`[agents].default`), mirroring the model
@@ -141,7 +141,7 @@ class AgentSelectorScreen(ModalScreen[str | None]):
                 help_text = self._help_text(glyphs)
             else:
                 yield Static(
-                    "No agents found in ~/.deepagents/.\n"
+                    "No agents found in ~/.zjcode/.\n"
                     "Run dcode with -a <name> to create one.",
                     classes="agent-selector-help",
                 )

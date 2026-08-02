@@ -64,12 +64,12 @@ class _BootstrapState:
     """Caller's `LANGSMITH_PROJECT` before the app overrides it for traces."""
 
     original_tracing_env: dict[str, str | None] = dataclass_field(default_factory=dict)
-    """Caller's tracing-enable env before Deep Agents Code mutates flags."""
+    """Caller's tracing-enable env before zjcode mutates flags."""
 
     original_tracing_api_keys: dict[str, str | None] = dataclass_field(
         default_factory=dict
     )
-    """Caller's tracing API keys before Deep Agents Code overwrites them.
+    """Caller's tracing API keys before zjcode overwrites them.
 
     Two bootstrap steps can overwrite the canonical `LANGSMITH_API_KEY` (and
     its `LANGCHAIN_API_KEY` alias): the `DEEPAGENTS_CODE_`-prefixed override and
@@ -138,7 +138,7 @@ _DOTENV_DENIED_ENV_KEYS = frozenset(
 
 A project `.env` is untrusted (it travels with a cloned repo), so it must not be
 able to set variables that turn loading the `.env` into code execution in the
-subprocesses Deep Agents Code spawns. The set spans four threat categories;
+subprocesses zjcode spawns. The set spans four threat categories;
 every entry is here for one of these reasons, so do not remove one without
 checking which category it belongs to:
 
@@ -186,7 +186,7 @@ boundary the feature exists to hold.
 
 Unlike `_DOTENV_DENIED_ENV_KEYS` (denied from *any* `.env` because they turn
 `.env` loading into code execution), these are denied only from the *project*
-`.env`: the user's own global `~/.deepagents/.env` and their shell exports are
+`.env`: the user's own global `~/.zjcode/.env` and their shell exports are
 legitimate, trusted sources and continue to set them. The loader reads plain
 `os.environ`, so blocking injection here — before the value ever reaches
 `os.environ` — is what keeps that read trustworthy.
@@ -214,11 +214,11 @@ def _find_dotenv_from_start_path(start_path: Path) -> Path | None:
     return None
 
 
-# Global user-level .env (~/.deepagents/.env); sentinel when Path.home() fails.
+# Global user-level .env (~/.zjcode/.env); sentinel when Path.home() fails.
 try:
-    _GLOBAL_DOTENV_PATH = Path.home() / ".deepagents" / ".env"
+    _GLOBAL_DOTENV_PATH = Path.home() / ".zjcode" / ".env"
 except RuntimeError:
-    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.deepagents/.env")
+    _GLOBAL_DOTENV_PATH = Path("/nonexistent/.zjcode/.env")
 
 
 def _preview_dotenv_environ(*, start_path: Path | None = None) -> dict[str, str]:
@@ -321,7 +321,7 @@ def _load_dotenv(
     Loads in order (first write wins, `override=False`):
 
     1. Project/CWD `.env` — project-specific values
-    2. `~/.deepagents/.env` — global user defaults
+    2. `~/.zjcode/.env` — global user defaults
 
     Both layers use `override=False` (the python-dotenv default) so that
     shell-exported variables always take precedence over dotenv files.
@@ -398,7 +398,7 @@ def _load_dotenv(
             exc_info=True,
         )
 
-    # 2. Global (~/.deepagents/.env) — fills in any vars not already set by
+    # 2. Global (~/.zjcode/.env) — fills in any vars not already set by
     # the shell or the project dotenv.
     # try/except wraps both is_file() and load_dotenv() to cover the TOCTOU
     # window where the file can vanish between stat and open.
@@ -544,7 +544,7 @@ def _quiet_sdk_logging() -> None:
     last-resort stderr handler and can bleed into command output or the
     alternate-screen TUI. Route them to the debug log when
     `DEEPAGENTS_CODE_DEBUG` is set, otherwise attach a `NullHandler` so they stay
-    off the terminal. Other Deep Agents loggers remain untouched so actionable
+    off the terminal. Other zjcode loggers remain untouched so actionable
     runtime warnings are still visible.
     """
     from deepagents_code._debug import configure_debug_logging
@@ -756,7 +756,7 @@ def _apply_default_langsmith_project() -> None:
 
     When tracing is active but neither the prefixed override nor a base
     `LANGSMITH_PROJECT` is set, ingestion would land in the SDK's `default`
-    project while `get_langsmith_project_name` advertises `deepagents-code`.
+    project while `get_langsmith_project_name` advertises `zjcode`.
     Set the default explicitly so the displayed/looked-up name matches where
     traces are actually ingested (and `/trace` resolves once a run flushes).
     """
@@ -1245,7 +1245,7 @@ Kept short so tracing metadata can never stall app flows.
 
 
 def _get_deepagents_version() -> str | None:
-    """Resolve the installed Deep Agents SDK version for diagnostics.
+    """Resolve the installed zjcode SDK version for diagnostics.
 
     Editable installs can leave package metadata behind the source checkout, so
     this uses the shared resolver that prefers the editable source marker and
@@ -1253,7 +1253,7 @@ def _get_deepagents_version() -> str | None:
     trails dcode's exact pin reports the pinned release baseline instead.
 
     Returns:
-        The resolved Deep Agents SDK version, or `None` when unavailable.
+        The resolved zjcode SDK version, or `None` when unavailable.
     """
     # Imported lazily on purpose: `extras_info` pulls in `packaging`, which we
     # keep off `config`'s module-import path (the startup hot path). Do not
@@ -1316,7 +1316,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
     path: str | None = None
 
     try:
-        dist = distribution("deepagents-code")
+        dist = distribution("zjcode")
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)
@@ -1339,7 +1339,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
 
 
 def _is_editable_install() -> bool:
-    """Check if deepagents-code is installed in editable mode.
+    """Check if zjcode is installed in editable mode.
 
     Uses PEP 610 `direct_url.json` metadata to detect editable installs.
 
@@ -1450,39 +1450,24 @@ def newline_shortcut() -> str:
 
 
 _UNICODE_BANNER = f"""
-██████╗  ███████╗ ███████╗ ██████╗    ▄▓▓▄
-██╔══██╗ ██╔════╝ ██╔════╝ ██╔══██╗  ▓•███▙
-██║  ██║ █████╗   █████╗   ██████╔╝  ░▀▀████▙▖
-██║  ██║ ██╔══╝   ██╔══╝   ██╔═══╝      █▓████▙▖
-██████╔╝ ███████╗ ███████╗ ██║          ▝█▓█████▙
-╚═════╝  ╚══════╝ ╚══════╝ ╚═╝           ░▜█▓████▙
-                                          ░█▀█▛▀▀▜▙▄
-                                        ░▀░▀▒▛░░  ▝▀▘
-
- █████╗   ██████╗  ███████╗ ███╗   ██╗ ████████╗ ███████╗
-██╔══██╗ ██╔════╝  ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██╔════╝
-███████║ ██║  ███╗ █████╗   ██╔██╗ ██║    ██║    ███████╗
-██╔══██║ ██║   ██║ ██╔══╝   ██║╚██╗██║    ██║    ╚════██║
-██║  ██║ ╚██████╔╝ ███████╗ ██║ ╚████║    ██║    ███████║
-╚═╝  ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚══════╝
-                                                  v{__version__}
+        ▀██                         ██  ██
+▄▄▄▄▄▄   ██ ▄▄    ▄▄▄▄     ▄▄▄     ▄▄▄ ▄▄▄   ▄▄▄▄   ▄▄ ▄▄▄
+▀  ▄█▀   ██▀ ██  ▀▀ ▄██  ▄█  ▀█▄    ██  ██  ▀▀ ▄██   ██  ██
+ ▄█▀     ██  ██  ▄█▀ ██  ██   ██    ██  ██  ▄█▀ ██   ██  ██
+██▄▄▄▄█ ▄██▄ ██▄ ▀█▄▄▀█▀  ▀█▄▄█▀    ██ ▄██▄ ▀█▄▄▀█▀ ▄██▄ ██▄
+                                 ▄▄ █▀
+                                  ▀▀`
+██████████████████████████████████████████ v{__version__}
 """
 _ASCII_BANNER = f"""
- ____  ____  ____  ____
-|  _ \\| ___|| ___||  _ \\
-| | | | |_  | |_  | |_) |
-| |_| |  _| |  _| |  __/
-|____/|____||____||_|
-
-    _    ____  ____  _   _  _____  ____
-   / \\  / ___|| ___|| \\ | ||_   _|/ ___|
-  / _ \\| |  _ | |_  |  \\| |  | |  \\___ \\
- / ___ \\ |_| ||  _| | |\\  |  | |   ___) |
-/_/   \\_\\____||____||_| \\_|  |_|  |____/
-                                  v{__version__}
+     _
+  __| | ___  ___ _ __   __ _  __ _  ___ _ __ | |_ ___
+ / _` |/ _ \/ _ \ '_ \ / _` |/ _` |/ _ \ '_ \| __/ _ \
+| (_| |  __/  __/ | | | (_| | (_| |  __/ | | | || (_) |
+ \__,_|\___|\___|_| |_|\__,_|\__, |\___|_| |_|\__\___/
+                               |___/
+============================================== v{__version__}
 """
-
-
 def get_banner() -> str:
     """Get the appropriate banner for the current charset mode.
 
@@ -1609,10 +1594,10 @@ def _get_repository_metadata() -> RepositoryMetadata | None:
 CODING_AGENT_PURPOSE = "coding"
 """Fixed `ls_agent_purpose` literal identifying the coding-agent trace class."""
 
-CODING_AGENT_INTEGRATION = "deepagents-code"
+CODING_AGENT_INTEGRATION = "zjcode"
 """Stable `ls_integration` id for this plugin (unchanged for backward-compat)."""
 
-CODING_AGENT_RUNTIME = "Deep Agents Code"
+CODING_AGENT_RUNTIME = "zjcode"
 """User-facing `ls_agent_runtime` name."""
 
 CODING_AGENT_TRACE_SCHEMA_VERSION = "coding-agent-v1"
@@ -1631,15 +1616,15 @@ def build_coding_agent_metadata(
 ) -> dict[str, Any]:
     """Build the shared coding-agent-v1 trace-metadata block.
 
-    Implements the `coding-agent-v1` contract for Deep Agents Code:
+    Implements the `coding-agent-v1` contract for zjcode:
     one helper that stamps the identity block, plugin/runtime versions, turn
     markers, and repo/git/cwd attribution. The six identity/version keys and
     `thread_id` are always present; the optional keys whose value is unknown are
     omitted (per the contract), so callers can pass `None` for any of them.
 
-    Because Deep Agents Code is itself the runtime — there is no separate CLI
+    Because zjcode is itself the runtime — there is no separate CLI
     package — `ls_integration_version` and `ls_agent_runtime_version` both come
-    from the `deepagents-code` package version (`__version__`). The underlying
+    from the `zjcode` package version (`__version__`). The underlying
     `deepagents` SDK version is surfaced separately as
     `dcode_client_deepagents_version` by `build_stream_config`.
 
@@ -1737,8 +1722,8 @@ def build_stream_config(
     nested metadata dictionaries so both versions survive at stream time.
 
     Also records `dcode_client_deepagents_version` as a dcode-client diagnostic.
-    This describes the Deep Agents package installed alongside the TUI, which
-    can differ from a remote graph's Deep Agents runtime version. Editable
+    This describes the zjcode package installed alongside the TUI, which
+    can differ from a remote graph's zjcode runtime version. Editable
     installs carry an `+editable` suffix, matching how the SDK stamps
     `lc_versions["deepagents"]`; for sibling monorepo packages that suffix
     identifies workspace HEAD relative to the pinned published SDK baseline.
@@ -1799,7 +1784,7 @@ def build_stream_config(
     # Legacy / diagnostic keys preserved for backward-compatibility during the
     # coding-agent-v1 rollout (not part of the contract).
     metadata["lc_versions"] = {
-        "deepagents-code": _format_lc_version(
+        "zjcode": _format_lc_version(
             __version__, editable=_is_editable_install()
         )
     }
@@ -1982,7 +1967,7 @@ def _parse_interpreter_ptc(
 
 
 def _read_config_toml_retries() -> dict[str, Any] | None:
-    """Read and lightly validate `[retries]` from `~/.deepagents/config.toml`.
+    """Read and lightly validate `[retries]` from `~/.zjcode/config.toml`.
 
     Provider sub-table names are checked against the set of providers the app
     knows how to authenticate so a mistyped provider (e.g. `[retries.fireorks]`)
@@ -2204,7 +2189,7 @@ def _resolve_retry_param_name(provider: str) -> str:
 
 
 def _read_config_toml_skills_dirs() -> list[str] | None:
-    """Read `[skills].extra_allowed_dirs` from `~/.deepagents/config.toml`.
+    """Read `[skills].extra_allowed_dirs` from `~/.zjcode/config.toml`.
 
     Returns:
         List of path strings, or `None` if the key is absent or the file
@@ -2255,7 +2240,7 @@ def _parse_extra_skills_dirs(
         env_raw: Value of `DEEPAGENTS_CODE_EXTRA_SKILLS_DIRS` (colon-separated), or
             `None` if unset.
         config_toml_dirs: List of path strings from
-            `[skills].extra_allowed_dirs` in `~/.deepagents/config.toml`.
+            `[skills].extra_allowed_dirs` in `~/.zjcode/config.toml`.
 
     Returns:
         List of resolved `Path` objects, or `None` if not configured.
@@ -2311,7 +2296,7 @@ automatically.
 
 @dataclass
 class Settings:
-    """Global settings and environment detection for deepagents-code.
+    """Global settings and environment detection for zjcode.
 
     This class is initialized once at startup and provides access to:
     - Available models and API keys
@@ -2372,7 +2357,7 @@ class Settings:
     in `load_skill_content`.
 
     Set via `DEEPAGENTS_CODE_EXTRA_SKILLS_DIRS` env var (colon-separated) or
-    `[skills].extra_allowed_dirs` in `~/.deepagents/config.toml`.
+    `[skills].extra_allowed_dirs` in `~/.zjcode/config.toml`.
     """
 
     enable_interpreter: bool = INTERPRETER_ENABLE_DEFAULT
@@ -2714,12 +2699,12 @@ class Settings:
 
     @property
     def user_deepagents_dir(self) -> Path:
-        """Base user-level `.deepagents` directory.
+        """Base user-level `.zjcode` directory.
 
         Returns:
-            Path to `~/.deepagents`
+            Path to `~/.zjcode`
         """
-        return Path.home() / ".deepagents"
+        return Path.home() / ".zjcode"
 
     @staticmethod
     def get_user_agent_md_path(agent_name: str) -> Path:
@@ -2731,17 +2716,17 @@ class Settings:
             agent_name: Name of the agent
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/AGENTS.md
+            Path to ~/.zjcode/{agent_name}/AGENTS.md
         """
-        return Path.home() / ".deepagents" / agent_name / "AGENTS.md"
+        return Path.home() / ".zjcode" / agent_name / "AGENTS.md"
 
     def get_project_agent_md_path(self) -> list[Path]:
         """Get project-level AGENTS.md paths.
 
-        Checks both `{project_root}/.deepagents/AGENTS.md` and
+        Checks both `{project_root}/.zjcode/AGENTS.md` and
         `{project_root}/AGENTS.md`, returning all that exist. If both are
         present, both are loaded and their instructions are combined, with
-        `.deepagents/AGENTS.md` first.
+        `.zjcode/AGENTS.md` first.
 
         Returns:
             Existing AGENTS.md paths.
@@ -2775,7 +2760,7 @@ class Settings:
             agent_name: Name of the agent
 
         Returns:
-            Path to ~/.deepagents/{agent_name}
+            Path to ~/.zjcode/{agent_name}
 
         Raises:
             ValueError: If the agent name contains invalid characters.
@@ -2786,7 +2771,7 @@ class Settings:
                 "contain letters, numbers, hyphens, underscores, and spaces."
             )
             raise ValueError(msg)
-        return Path.home() / ".deepagents" / agent_name
+        return Path.home() / ".zjcode" / agent_name
 
     def ensure_agent_dir(self, agent_name: str) -> Path:
         """Ensure the global agent directory exists and return its path.
@@ -2795,7 +2780,7 @@ class Settings:
             agent_name: Name of the agent
 
         Returns:
-            Path to ~/.deepagents/{agent_name}
+            Path to ~/.zjcode/{agent_name}
 
         Raises:
             ValueError: If the agent name contains invalid characters.
@@ -2817,7 +2802,7 @@ class Settings:
             agent_name: Name of the agent
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/skills/
+            Path to ~/.zjcode/{agent_name}/skills/
         """
         return self.get_agent_dir(agent_name) / "skills"
 
@@ -2828,7 +2813,7 @@ class Settings:
             agent_name: Name of the agent
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/skills/
+            Path to ~/.zjcode/{agent_name}/skills/
         """
         skills_dir = self.get_user_skills_dir(agent_name)
         skills_dir.mkdir(parents=True, exist_ok=True)
@@ -2838,17 +2823,17 @@ class Settings:
         """Get project-level skills directory path.
 
         Returns:
-            Path to {project_root}/.deepagents/skills/, or None if not in a project
+            Path to {project_root}/.zjcode/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "skills"
+        return self.project_root / ".zjcode" / "skills"
 
     def ensure_project_skills_dir(self) -> Path | None:
         """Ensure project-level skills directory exists and return its path.
 
         Returns:
-            Path to {project_root}/.deepagents/skills/, or None if not in a project
+            Path to {project_root}/.zjcode/skills/, or None if not in a project
         """
         if not self.project_root:
             return None
@@ -2865,7 +2850,7 @@ class Settings:
             agent_name: Name of the agent (e.g., "deepagents")
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/agents/
+            Path to ~/.zjcode/{agent_name}/agents/
         """
         return self.get_agent_dir(agent_name) / "agents"
 
@@ -2873,11 +2858,11 @@ class Settings:
         """Get project-level agents directory path for custom subagent definitions.
 
         Returns:
-            Path to {project_root}/.deepagents/agents/, or None if not in a project
+            Path to {project_root}/.zjcode/agents/, or None if not in a project
         """
         if not self.project_root:
             return None
-        return self.project_root / ".deepagents" / "agents"
+        return self.project_root / ".zjcode" / "agents"
 
     @property
     def user_agents_dir(self) -> Path:
@@ -2948,7 +2933,7 @@ class Settings:
         """Get user-configured extra skill directories.
 
         Set via `DEEPAGENTS_CODE_EXTRA_SKILLS_DIRS` (colon-separated paths) or
-        `[skills].extra_allowed_dirs` in `~/.deepagents/config.toml`.
+        `[skills].extra_allowed_dirs` in `~/.zjcode/config.toml`.
 
         Returns:
             List of extra skill directory paths, or empty list if not configured.
@@ -3126,7 +3111,7 @@ def get_langsmith_project_name() -> str | None:
     `settings.deepagents_langchain_project` (from
     `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `LANGSMITH_PROJECT` from the
     environment (note: this may already have been overridden at bootstrap time
-    to match `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `'deepagents-code'`.
+    to match `DEEPAGENTS_CODE_LANGSMITH_PROJECT`), then `'zjcode'`.
 
     Returns:
         Project name string when LangSmith tracing is active, None otherwise.
@@ -3893,9 +3878,9 @@ def _assemble_langsmith_thread_url(project_url: str, thread_id: str) -> str:
         thread_id: Thread identifier to append.
 
     Returns:
-        Full thread URL with the `deepagents-code` utm tag.
+        Full thread URL with the `zjcode` utm tag.
     """
-    return f"{project_url.rstrip('/')}/t/{thread_id}?utm_source=deepagents-code"
+    return f"{project_url.rstrip('/')}/t/{thread_id}?utm_source=zjcode"
 
 
 def fetch_langsmith_project_url_or_raise(project_name: str) -> str:
@@ -4240,13 +4225,13 @@ def _get_default_model_spec() -> str:
     raise NoCredentialsConfiguredError(msg)
 
 
-_OPENROUTER_APP_URL = "https://pypi.org/project/deepagents-code/"
+_OPENROUTER_APP_URL = "https://pypi.org/project/zjcode/"
 """Default `app_url` (maps to `HTTP-Referer`) for OpenRouter attribution.
 
 See https://openrouter.ai/docs/app-attribution for details.
 """
 
-_OPENROUTER_APP_TITLE = "Deep Agents Code"
+_OPENROUTER_APP_TITLE = "zjcode"
 """Default `app_title` (maps to `X-Title`) for OpenRouter attribution."""
 
 _OPENROUTER_APP_CATEGORIES: list[str] = ["cli-agent"]
@@ -5000,7 +4985,7 @@ def validate_model_capabilities(model: BaseChatModel, model_name: str) -> None:
             "does not support tool calling."
         )
         console.print(
-            "\nDeep Agents requires tool calling for agent functionality. "
+            "\nzjcode requires tool calling for agent functionality. "
             "Please choose a model that supports tool calling."
         )
         console.print("\nSee MODELS.md for supported models.")

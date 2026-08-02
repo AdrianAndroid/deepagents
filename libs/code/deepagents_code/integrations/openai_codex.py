@@ -123,8 +123,8 @@ class CodexAuthStatus:
 def default_store_path() -> Path:
     """Return the ChatGPT OAuth token store path.
 
-    Stored under Deep Agents' own state dir
-    (`~/.deepagents/.state/chatgpt-auth.json`) so the credential lives
+    Stored under zjcode' own state dir
+    (`~/.zjcode/.state/chatgpt-auth.json`) so the credential lives
     alongside the rest of the app's state rather than in `langchain_openai`'s
     default `~/.langchain`.
     """
@@ -143,7 +143,7 @@ def get_status(*, store_path: Path | None = None) -> CodexAuthStatus:
 
     Args:
         store_path: Override the token store path. Defaults to
-            `default_store_path()` (`~/.deepagents/.state/chatgpt-auth.json`).
+            `default_store_path()` (`~/.zjcode/.state/chatgpt-auth.json`).
 
     Returns:
         A `CodexAuthStatus` populated from the on-disk token, or one with
@@ -285,7 +285,7 @@ async def run_browser_login(
         interaction: UI hooks for surfacing the URL / notices. A default
             stdout-based implementation is used when `None`.
         store_path: Override the token store path. Defaults to
-            `default_store_path()` (`~/.deepagents/.state/chatgpt-auth.json`).
+            `default_store_path()` (`~/.zjcode/.state/chatgpt-auth.json`).
         open_browser: Whether to call `webbrowser.open`. Disable in
             headless environments or tests.
         cancel_event: Optional event the caller can set to abandon the

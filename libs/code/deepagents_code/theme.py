@@ -4,7 +4,7 @@ Single source of truth for color values used in Python code (Rich markup,
 `Content.styled`, `Content.from_markup`).  CSS-side styling should reference
 Textual CSS variables: built-in variables
 (`$primary`, `$background`, `$text-muted`, `$error-muted`, etc.) are set via
-`register_theme()` in `DeepAgentsApp.__init__`, while the few app-specific
+`register_theme()` in `zjcodeApp.__init__`, while the few app-specific
 variables (`$mode-bash`, `$mode-command`, `$mode-incognito`, `$skill`,
 `$skill-hover`, `$tool`, `$tool-hover`) are backed by these constants via
 `App.get_theme_variable_defaults()`.
@@ -13,7 +13,7 @@ Code that needs custom CSS variable values should call
 `get_css_variable_defaults(dark=...)`. For the full semantic color palette, look
 up the `ThemeColors` instance via `get_registry()`.
 
-Users can define custom themes in `~/.deepagents/config.toml` under
+Users can define custom themes in `~/.zjcode/config.toml` under
 `[themes.<name>]` sections. Each new theme section must include `label` (str);
 `dark` (bool) defaults to `False` if omitted (set to `True` for dark themes).
 Color fields are optional and fall back to the built-in dark/light palette based
@@ -562,7 +562,7 @@ def _load_user_themes(
     """
     if config_path is None:
         try:
-            config_path = Path.home() / ".deepagents" / "config.toml"
+            config_path = Path.home() / ".zjcode" / "config.toml"
         except RuntimeError:
             logger.debug("Cannot determine home directory; skipping user theme loading")
             return
@@ -721,7 +721,7 @@ DEFAULT_THEME = "langchain"
 def reload_registry() -> MappingProxyType[str, ThemeEntry]:
     """Rebuild the theme registry from disk.
 
-    Re-reads `~/.deepagents/config.toml` for user-defined themes so that
+    Re-reads `~/.zjcode/config.toml` for user-defined themes so that
     `/reload` can pick up config changes without restarting the app.
 
     Returns:

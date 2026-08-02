@@ -64,9 +64,9 @@ def list_skills(
     Precedence order (lowest to highest):
     0. `built_in_skills_dir` (`<package>/built_in_skills/`)
     1. `plugin_skill_sources`
-    2. `user_skills_dir` (`~/.deepagents/{agent}/skills/`)
+    2. `user_skills_dir` (`~/.zjcode/{agent}/skills/`)
     3. `user_agent_skills_dir` (`~/.agents/skills/`)
-    4. `project_skills_dir` (`.deepagents/skills/`)
+    4. `project_skills_dir` (`.zjcode/skills/`)
     5. `project_agent_skills_dir` (`.agents/skills/`)
     6. `user_claude_skills_dir` (`~/.claude/skills/`, experimental)
     7. `project_claude_skills_dir` (`.claude/skills/`, experimental)
@@ -76,8 +76,8 @@ def list_skills(
     Args:
         built_in_skills_dir: Path to built-in skills shipped with the package.
         plugin_skill_sources: Plugin skill source directories with namespaces.
-        user_skills_dir: Path to `~/.deepagents/{agent}/skills/`.
-        project_skills_dir: Path to `.deepagents/skills/`.
+        user_skills_dir: Path to `~/.zjcode/{agent}/skills/`.
+        project_skills_dir: Path to `.zjcode/skills/`.
         user_agent_skills_dir: Path to `~/.agents/skills/` (alias).
         project_agent_skills_dir: Path to `.agents/skills/` (alias).
         user_claude_skills_dir: Path to `~/.claude/skills/` (experimental).
@@ -140,7 +140,7 @@ def list_skills(
                 if source_label == "built-in":
                     extra["metadata"] = {
                         **skill["metadata"],
-                        "deepagents-code-version": _cli_version,
+                        "zjcode-version": _cli_version,
                     }
                 extended = cast("ExtendedSkillMetadata", {**skill, **extra})
                 merge_skill(
@@ -209,7 +209,7 @@ def load_skill_content(
             f"Skill path {skill_path} resolves outside all allowed skill "
             "directories. If this is a symlink, add the target directory to "
             f"{EXTRA_SKILLS_DIRS} or [skills].extra_allowed_dirs "
-            "in ~/.deepagents/config.toml."
+            "in ~/.zjcode/config.toml."
         )
         raise PermissionError(msg)
 

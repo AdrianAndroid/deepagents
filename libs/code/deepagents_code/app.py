@@ -135,7 +135,7 @@ _monotonic = time.monotonic
 
 _DEFERRED_START_NOTICE = (
     "No model is configured yet. Run `/model` to choose one. "
-    "Deep Agents will ask for credentials for the selected provider."
+    "zjcode will ask for credentials for the selected provider."
 )
 
 
@@ -173,7 +173,7 @@ def _parse_rubric_max_iterations(raw: str) -> tuple[int | None, str | None]:
 # would not mutually exclude against those. See that lock's docstring.
 
 _DEEPAGENTS_IMPORT_LOCK = threading.RLock()
-"""Serializes process-local cold imports into the Deep Agents SDK graph.
+"""Serializes process-local cold imports into the zjcode SDK graph.
 
 The SDK currently has a package-to-backend circular import that is safe when a
 single thread imports it re-entrantly, but can trip CPython's per-module import
@@ -275,7 +275,7 @@ def _coerce_session_cost_usd(value: object) -> float:
 
 _PRICING_UNAVAILABLE_MESSAGE = (
     "We couldn't calculate costs because the pricing data failed to load. "
-    "Reinstalling Deep Agents Code should restore cost estimates; see the debug "
+    "Reinstalling zjcode should restore cost estimates; see the debug "
     "log for details. Untracked usage may still count toward subscription "
     "limits or incur charges."
 )
@@ -586,7 +586,7 @@ def _create_model_with_deepagents_import_lock(
     extra_kwargs: dict[str, Any] | None = None,
     profile_overrides: dict[str, Any] | None = None,
 ) -> ModelResult:
-    """Create a model while serializing Deep Agents SDK import entry.
+    """Create a model while serializing zjcode SDK import entry.
 
     Args:
         model_spec: Model specification in `provider:model` format.
@@ -936,7 +936,7 @@ def _load_theme_preference() -> str:
     2. `[ui.terminal_themes]` mapping keyed by `TERM_PROGRAM` — wins over the
         saved preference so a user moving between terminals (e.g. dark iTerm,
         light Apple Terminal) gets the right theme automatically.
-    3. `[ui].theme` in `~/.deepagents/config.toml` (saved preference, used
+    3. `[ui].theme` in `~/.zjcode/config.toml` (saved preference, used
         when no terminal mapping matches).
     4. `theme.DEFAULT_THEME`.
 
@@ -998,7 +998,7 @@ def _load_theme_preference() -> str:
 def _load_message_timestamps_visible() -> bool:
     """Load the saved message-timestamp-footer visibility preference.
 
-    Reads `[ui].show_message_timestamps` from `~/.deepagents/config.toml`.
+    Reads `[ui].show_message_timestamps` from `~/.zjcode/config.toml`.
 
     Returns:
         The saved preference, or `False` when it is unset or unreadable.
@@ -1039,7 +1039,7 @@ def _load_show_scrollbar() -> bool:
     """Load the chat scrollbar visibility preference.
 
     Reads `DEEPAGENTS_CODE_SHOW_SCROLLBAR` env var, falling back to
-    `[ui].show_scrollbar` from `~/.deepagents/config.toml`, and finally `False`.
+    `[ui].show_scrollbar` from `~/.zjcode/config.toml`, and finally `False`.
 
     Returns:
         The resolved preference.
@@ -1088,7 +1088,7 @@ def _load_debug_console_click_to_copy() -> bool:
     r"""Load the `Ctrl+\` Debug Console click-to-copy preference.
 
     Reads `DEEPAGENTS_CODE_DEBUG_CONSOLE_CLICK_TO_COPY` env var, falling back to
-    `[ui].debug_console_click_to_copy` from `~/.deepagents/config.toml`, and
+    `[ui].debug_console_click_to_copy` from `~/.zjcode/config.toml`, and
     finally `False` (click-to-copy off; Enter-to-copy is always available).
 
     Returns:
@@ -1228,7 +1228,7 @@ def _save_theme_preference_result(name: str) -> _ConfigWriteResult:
 
 
 def save_theme_preference(name: str) -> bool:
-    """Persist theme preference to `~/.deepagents/config.toml`.
+    """Persist theme preference to `~/.zjcode/config.toml`.
 
     Args:
         name: Textual theme name to save.
@@ -1240,7 +1240,7 @@ def save_theme_preference(name: str) -> bool:
 
 
 def _load_bool_ui_preference(key: str, *, log_label: str) -> bool:
-    """Load a boolean `[ui]` preference from `~/.deepagents/config.toml`.
+    """Load a boolean `[ui]` preference from `~/.zjcode/config.toml`.
 
     These preferences have no in-app command; the file is edited manually. The
     loader is intentionally forgiving: any problem reading or parsing the config
@@ -1290,7 +1290,7 @@ def _load_bool_ui_preference(key: str, *, log_label: str) -> bool:
 
 
 def _load_cursor_blink_preference() -> bool:
-    """Load the saved cursor-blink preference from `~/.deepagents/config.toml`.
+    """Load the saved cursor-blink preference from `~/.zjcode/config.toml`.
 
     The chat input cursor blink can be turned off by setting
     `[ui].cursor_blink = false` in the config file. There is no in-app command
@@ -1307,7 +1307,7 @@ def _load_cursor_style_preference() -> CursorStyle:
     """Resolve the chat input cursor style.
 
     Precedence follows `resolve_scalar`: the `DEEPAGENTS_CODE_CURSOR_STYLE` env
-    var wins, then `[ui].cursor_style` in `~/.deepagents/config.toml`, falling
+    var wins, then `[ui].cursor_style` in `~/.zjcode/config.toml`, falling
     back to `"block"` when unset or invalid.
 
     Returns:
@@ -1331,7 +1331,7 @@ def _load_cursor_style_preference() -> CursorStyle:
 
 
 def _load_terminal_progress_preference() -> bool:
-    """Load the `OSC 9;4` progress preference from `~/.deepagents/config.toml`.
+    """Load the `OSC 9;4` progress preference from `~/.zjcode/config.toml`.
 
     The terminal taskbar/dock/tab progress indicator (where supported) can be
     turned off by setting `[ui].terminal_progress = false` in the config file.
@@ -2456,7 +2456,7 @@ class TextualSessionState:
         """Client-side Hooks v2 coordinator.
 
         Starts inert so state built outside a running app still satisfies its
-        consumers; `DeepAgentsApp` replaces it with a loaded manager.
+        consumers; `zjcodeApp` replaces it with a loaded manager.
         """
 
     def hook_identity(self) -> HookSessionIdentity:
@@ -2740,7 +2740,7 @@ class _BottomChrome(Container):
     chat input. This container's height changes whenever the chat input grows,
     or the startup tip / goal status / subagent panels appear, so it announces
     its own resizes and lets the app re-anchor the rack (see
-    `DeepAgentsApp._anchor_toast_rack`).
+    `zjcodeApp._anchor_toast_rack`).
     """
 
     class Resized(Message, namespace="bottom_chrome"):
@@ -2768,7 +2768,7 @@ class _MainScreen(Screen[None]):
     Overrides Textual's default `"*"`, which would focus the earlier-composed,
     still-focusable `_ChatScroll` (`#chat`) instead. The first automatic focus
     pass runs before the nested chat text area is mounted, so
-    `DeepAgentsApp.on_mount` applies the startup focus synchronously once the
+    `zjcodeApp.on_mount` applies the startup focus synchronously once the
     input exists. This selector remains the focus target when the screen later
     resumes without a focused widget.
     """
@@ -2800,10 +2800,10 @@ class _GoalGradeObservation:
     """Correlation ID minted by `RubricMiddleware` for the observed grade."""
 
 
-class DeepAgentsApp(App):
-    """Main Textual application for deepagents-code."""
+class zjcodeApp(App):
+    """Main Textual application for zjcode."""
 
-    TITLE = "Deep Agents"
+    TITLE = "zjcode"
     """Textual application title."""
 
     CSS_PATH = "app.tcss"
@@ -2952,7 +2952,7 @@ class DeepAgentsApp(App):
         sub_title: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the Deep Agents application.
+        """Initialize the zjcode application.
 
         Args:
             agent: Pre-configured LangGraph agent, or `None` when server
@@ -3080,7 +3080,7 @@ class DeepAgentsApp(App):
         self._assistant_id = assistant_id
         """Current session agent identity.
 
-        Scopes per-agent memory (`~/.deepagents/<id>/`) and skill discovery,
+        Scopes per-agent memory (`~/.zjcode/<id>/`) and skill discovery,
         keys `FileOpTracker` file-op history, and is attached to LangSmith
         traces as `assistant_id` / `agent_name`. Mutated by `/agents` swaps
         and by `-r` resume when the resumed thread belongs to a different
@@ -4945,7 +4945,7 @@ class DeepAgentsApp(App):
         )
 
         try:
-            # Discovery and prewarm import overlapping parts of the Deep Agents
+            # Discovery and prewarm import overlapping parts of the zjcode
             # graph in separate workers. Let prewarm finish first so CPython's
             # per-module import locks cannot form a cycle.
             await self._await_prewarm_imports()
@@ -5031,7 +5031,7 @@ class DeepAgentsApp(App):
     def _discover_skills_and_roots_with_import_lock(
         self,
     ) -> tuple[list[ExtendedSkillMetadata], list[Path]]:
-        """Discover skills while serializing Deep Agents SDK import entry.
+        """Discover skills while serializing zjcode SDK import entry.
 
         Returns:
             Tuple of `(skill metadata list, pre-resolved containment roots)`.
@@ -5609,7 +5609,7 @@ class DeepAgentsApp(App):
         swallowed (logged at WARNING): the affected module simply cold-loads
         on first use instead. This guard is load-bearing when the installed
         package is replaced in place mid-session — e.g. a concurrent
-        `uv tool upgrade deepagents-code`, which rewrites the tool
+        `uv tool upgrade zjcode`, which rewrites the tool
         environment's files. A module that hasn't been imported yet can be
         transiently absent on disk during that swap, and the deferred import
         then raises `ModuleNotFoundError`. Letting that propagate would crash
@@ -5618,7 +5618,7 @@ class DeepAgentsApp(App):
         the time the user actually triggers the import.
         """
         try:
-            DeepAgentsApp._load_deferred_modules()
+            zjcodeApp._load_deferred_modules()
         except Exception:
             logger.warning(
                 "Import prewarm failed; deferred modules will cold-load on first use",
@@ -5960,7 +5960,7 @@ class DeepAgentsApp(App):
         Parses optional `--prerelease` and `--deps` flags from the raw command
         line; any other option is rejected with a usage message. `--deps`
         re-resolves dependencies to their newest in-range versions even when
-        `deepagents-code` itself is already current.
+        `zjcode` itself is already current.
 
         Args:
             command: The raw slash-command line as typed, including any options.
@@ -6183,8 +6183,8 @@ class DeepAgentsApp(App):
         handler's `try/except` no longer wraps it.
 
         Args:
-            current: Currently running `deepagents-code` version.
-            latest: Latest available `deepagents-code` version.
+            current: Currently running `zjcode` version.
+            latest: Latest available `zjcode` version.
             include_prereleases: Whether the app upgrade and dependency refresh
                 resolve alpha/beta/rc releases; `None` follows the installed
                 version's channel.
@@ -6246,11 +6246,11 @@ class DeepAgentsApp(App):
         upgrade_include_prereleases: bool | None,
         pin_upgrade_version: str | None,
     ) -> None:
-        """Install a newer `deepagents-code` release and report the outcome.
+        """Install a newer `zjcode` release and report the outcome.
 
         Args:
-            current: Currently running `deepagents-code` version.
-            latest: Target `deepagents-code` version.
+            current: Currently running `zjcode` version.
+            latest: Target `zjcode` version.
             include_prereleases: Passed to `perform_upgrade`, so this is what
                 decides whether the install itself resolves alpha/beta/rc
                 releases; `None` follows the installed version's channel.
@@ -6334,7 +6334,7 @@ class DeepAgentsApp(App):
             dep_changes = [
                 change
                 for change in parse_dependency_changes(output)
-                if change.name != "deepagents-code"
+                if change.name != "zjcode"
             ]
             if dep_changes:
                 await self._mount_message(
@@ -6374,7 +6374,7 @@ class DeepAgentsApp(App):
     ) -> None:
         """Re-resolve dependencies to their newest in-range versions.
 
-        Reinstalls the current `deepagents-code` version with an upgraded
+        Reinstalls the current `zjcode` version with an upgraded
         dependency resolution, then reports which dependencies actually moved.
         Used by the `/update --deps` and already-current refresh flows. Editable
         installs are rejected by the caller before this runs; the refresh is
@@ -6385,7 +6385,7 @@ class DeepAgentsApp(App):
         Args:
             include_prereleases: Whether to include alpha/beta/rc releases;
                 `None` follows the installed version's channel.
-            app_update_version: Newer `deepagents-code` version discovered by
+            app_update_version: Newer `zjcode` version discovered by
                 the caller, if dependency refresh is intentionally staying on
                 the current app version.
         """
@@ -6427,15 +6427,15 @@ class DeepAgentsApp(App):
                 "format may have drifted.",
             )
         self_changes = [
-            change for change in changes if change.name == "deepagents-code"
+            change for change in changes if change.name == "zjcode"
         ]
-        dep_changes = [change for change in changes if change.name != "deepagents-code"]
+        dep_changes = [change for change in changes if change.name != "zjcode"]
         if not dep_changes and not self_changes:
             if app_update_version is not None:
                 await self._mount_message(
                     AppMessage(
                         "Dependencies are already up to date. "
-                        "A deepagents-code update is available: "
+                        "A zjcode update is available: "
                         f"v{app_update_version}.",
                     ),
                 )
@@ -6448,7 +6448,7 @@ class DeepAgentsApp(App):
         message_parts: list[str] = []
         if self_changes:
             message_parts.append(
-                f"Updated deepagents-code:\n{format_dependency_changes(self_changes)}"
+                f"Updated zjcode:\n{format_dependency_changes(self_changes)}"
             )
         if dep_changes:
             message_parts.append(
@@ -6456,7 +6456,7 @@ class DeepAgentsApp(App):
             )
         if app_update_version is not None:
             message_parts.append(
-                f"A deepagents-code update is available: v{app_update_version}."
+                f"A zjcode update is available: v{app_update_version}."
             )
         await self._mount_message(
             AppMessage(
@@ -6473,8 +6473,8 @@ class DeepAgentsApp(App):
         """Ask whether `/update --deps` should take an app update first.
 
         Args:
-            current: Currently running `deepagents-code` version.
-            latest: Latest available `deepagents-code` version.
+            current: Currently running `zjcode` version.
+            latest: Latest available `zjcode` version.
 
         Returns:
             `True` only when the user explicitly chooses the app update; `False`
@@ -6569,7 +6569,7 @@ class DeepAgentsApp(App):
 
         Adds an optional extra (e.g. `daytona`, `fireworks`) to the installed
         dcode tool by re-running
-        `uv tool install --reinstall -U 'deepagents-code[<extra>]'`.
+        `uv tool install --reinstall -U 'zjcode[<extra>]'`.
         Refuses unknown extras unless the user passes a `--force` token.
 
         Args:
@@ -6631,7 +6631,7 @@ class DeepAgentsApp(App):
     async def _install_extra_unlocked(
         self, extra: str, *, force: bool = False, auto_restart: bool = False
     ) -> bool:
-        """Install a `deepagents-code` extra, mounting progress and restart offer.
+        """Install a `zjcode` extra, mounting progress and restart offer.
 
         Shared by the `/install <extra>` command and the model selector's
         install-on-select flow. Mounts its own status/error messages and offers
@@ -6839,7 +6839,7 @@ class DeepAgentsApp(App):
         """Install an arbitrary package into the dcode tool env via `uv --with`.
 
         Backs `/install <package> --package`, the escape hatch for a provider
-        whose package is not a `deepagents-code` extra (e.g. a custom
+        whose package is not a `zjcode` extra (e.g. a custom
         `class_path` model). Arbitrary packages have no curated allowlist, so a
         confirmation modal gates pulling in third-party code. `--force` (or
         `--yes`) bypasses the prompt and installs inline; otherwise the prompt
@@ -7092,14 +7092,14 @@ class DeepAgentsApp(App):
             age_suffix = await asyncio.to_thread(format_age_suffix, cli_version)
             cli_annotation = format_cli_version_annotation(report.cli)
             lines.append(
-                f"deepagents-code version: {cli_version}{age_suffix}{cli_annotation}"
+                f"zjcode version: {cli_version}{age_suffix}{cli_annotation}"
             )
         except ImportError:
             logger.debug("deepagents_code._version module not found")
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
         except Exception:
             logger.warning("Unexpected error looking up app version", exc_info=True)
-            lines.append("deepagents-code version: unknown")
+            lines.append("zjcode version: unknown")
 
         if report.sdk.status == "resolved":
             from deepagents_code.update_check import format_sdk_age_suffix
@@ -8579,7 +8579,7 @@ class DeepAgentsApp(App):
 
         Users who deliberately live in YOLO can mute the recurring toast from
         `/notifications`, or by adding `"yolo"` (`YOLO_WARNING_KEY`) to
-        `[warnings].suppress` in `~/.deepagents/config.toml`. Only the toast is
+        `[warnings].suppress` in `~/.zjcode/config.toml`. Only the toast is
         muted; see `YOLO_WARNING_KEY` for what suppression leaves untouched.
 
         Deliberately synchronous. Callers warn *before* awaiting anything, so
@@ -9492,7 +9492,7 @@ class DeepAgentsApp(App):
         if not saved:
             self.notify(
                 "Could not save the goal criteria preference. Auto will keep "
-                "asking for review; edit ~/.deepagents/config.toml to change it.",
+                "asking for review; edit ~/.zjcode/config.toml to change it.",
                 severity="warning",
                 markup=False,
             )
@@ -9904,7 +9904,7 @@ class DeepAgentsApp(App):
         if not ok:
             self.notify(
                 "Could not save onboarding state. Setup may run again next "
-                "launch — check permissions on ~/.deepagents/.state/.",
+                "launch — check permissions on ~/.zjcode/.state/.",
                 severity="warning",
                 markup=False,
             )
@@ -10760,7 +10760,7 @@ class DeepAgentsApp(App):
                 AppMessage(
                     "The `langsmith` package is not installed. "
                     "Install it with "
-                    "`uv tool install --reinstall -U deepagents-code "
+                    "`uv tool install --reinstall -U zjcode "
                     "--with langsmith` "
                     "to enable `/trace`.",
                 ),
@@ -12333,7 +12333,7 @@ class DeepAgentsApp(App):
         if not self._agent or not self._ui_adapter or not self._session_state:
             await self._mount_message(
                 ErrorMessage(
-                    "Goal criteria generation requires the Deep Agents Code server."
+                    "Goal criteria generation requires the zjcode server."
                 )
             )
             return
@@ -14717,7 +14717,7 @@ class DeepAgentsApp(App):
                 from deepagents_code.offload import offload_storage_is_ephemeral
 
                 # In local mode the archive may have landed in a temp fallback
-                # directory (persistent `~/.deepagents` was unwritable). The
+                # directory (persistent `~/.zjcode` was unwritable). The
                 # write succeeded, so context was freed and history is readable
                 # now, but it may not survive a restart -- say so rather than
                 # imply durable storage.
@@ -18597,7 +18597,7 @@ class DeepAgentsApp(App):
                     # __class__/self binding inside this nested coroutine, so
                     # name the class and instance.
                     try:
-                        super(DeepAgentsApp, self).exit(
+                        super(zjcodeApp, self).exit(
                             result=result,
                             return_code=return_code,
                             message=message,
@@ -19330,7 +19330,7 @@ class DeepAgentsApp(App):
             curated=curated,
             title="Choose a Recommended Model" if curated else None,
             description=(
-                "These models have performed well in Deep Agents evals and are "
+                "These models have performed well in zjcode evals and are "
                 "a solid starting set. You can explore the full model list "
                 "later with /model. Sandboxes and other integrations install "
                 "anytime with /install."
@@ -20584,7 +20584,7 @@ class DeepAgentsApp(App):
             cli_version="0.1.0",
             release_age=" (released 2 days ago)",
             installed_age="",
-            upgrade_cmd="uv tool upgrade deepagents-code",
+            upgrade_cmd="uv tool upgrade zjcode",
         )
         self._notice_registry.add(update_notification)
         self._update_modal_pending.set()
@@ -21142,7 +21142,7 @@ class DeepAgentsApp(App):
             else:
                 self.notify(
                     "Could not save notification preference. "
-                    "Check file permissions for ~/.deepagents/config.toml.",
+                    "Check file permissions for ~/.zjcode/config.toml.",
                     severity="warning",
                     timeout=6,
                     markup=False,
@@ -21412,7 +21412,7 @@ class DeepAgentsApp(App):
         """
         steps = (
             ("Debug mode: no package manager command was started.", 0.3),
-            (f"Resolving deepagents-code v{payload.latest}...", 0.8),
+            (f"Resolving zjcode v{payload.latest}...", 0.8),
             ("Looking up compatible build tags...", 0.2),
             ("Downloading wheel metadata...", 0.5),
             ("Downloading deepagents_code-9.9.9-py3-none-any.whl...", 0.2),
@@ -21654,7 +21654,7 @@ class DeepAgentsApp(App):
     ) -> bool:
         """Return whether plugin identities or any fingerprint changed."""
         return before.keys() != after.keys() or any(
-            DeepAgentsApp._plugin_fingerprint_changed(
+            zjcodeApp._plugin_fingerprint_changed(
                 before[plugin_id], after[plugin_id]
             )
             for plugin_id in before.keys() & after.keys()
@@ -21679,7 +21679,7 @@ class DeepAgentsApp(App):
             fingerprints[plugin.plugin_id] = _PluginFingerprint(
                 version=plugin.version,
                 manifest=plugin.manifest,
-                components=DeepAgentsApp._fingerprint_component_paths(
+                components=zjcodeApp._fingerprint_component_paths(
                     plugin.root, paths
                 ),
             )
@@ -22934,8 +22934,8 @@ class DeepAgentsApp(App):
     def _ensure_restart_prompt_loaded() -> None:
         """Load the restart-prompt modal before any in-place self-upgrade.
 
-        `/install` runs `uv tool install --reinstall -U 'deepagents-code[...]'`, which
-        rewrites deepagents-code's own on-disk package tree while this process
+        `/install` runs `uv tool install --reinstall -U 'zjcode[...]'`, which
+        rewrites zjcode's own on-disk package tree while this process
         is running. Modules already in `sys.modules` keep working from memory,
         but a *first* import after the rewrite reads the mutated (or
         partially-written) tree and raises `ModuleNotFoundError`.
@@ -23226,7 +23226,7 @@ class DeepAgentsApp(App):
             from deepagents_code.tui.widgets.restart_prompt import RestartPromptScreen
         except ModuleNotFoundError:
             # `/install` runs `uv tool install --reinstall -U
-            # 'deepagents-code[...]'`, which can rewrite deepagents-code's own
+            # 'zjcode[...]'`, which can rewrite zjcode's own
             # on-disk package tree mid-session
             # (see `_ensure_restart_prompt_loaded`). A first import of the modal
             # here may then fail with `ModuleNotFoundError`. Degrade to the
@@ -25081,7 +25081,7 @@ class DeepAgentsApp(App):
                 await self._mount_message(
                     ErrorMessage(
                         "Model switched for this session, but could not save "
-                        "preference. Check permissions for ~/.deepagents/",
+                        "preference. Check permissions for ~/.zjcode/",
                     ),
                 )
             else:
@@ -25226,7 +25226,7 @@ class DeepAgentsApp(App):
     async def _set_default_model(self, model_spec: str) -> None:
         """Set the default model in config without switching the current session.
 
-        Updates `[models].default` in `~/.deepagents/config.toml` so that
+        Updates `[models].default` in `~/.zjcode/config.toml` so that
         future app launches use this model. Does not affect the running session.
 
         Args:
@@ -25249,7 +25249,7 @@ class DeepAgentsApp(App):
             await self._mount_message(
                 ErrorMessage(
                     "Could not save default model. "
-                    "Check permissions for ~/.deepagents/",
+                    "Check permissions for ~/.zjcode/",
                 ),
             )
 
@@ -25272,7 +25272,7 @@ class DeepAgentsApp(App):
             await self._mount_message(
                 ErrorMessage(
                     "Could not clear default model. "
-                    "Check permissions for ~/.deepagents/",
+                    "Check permissions for ~/.zjcode/",
                 ),
             )
 
@@ -25384,14 +25384,14 @@ async def run_textual_app(
         title: Override the Textual `App.title` shown in the optional header
             bar (gated on `DEEPAGENTS_CODE_SHOW_HEADER`, or shown automatically
             when the installation is stale). When `None`, the default
-            `"Deep Agents"` is used.
+            `"zjcode"` is used.
         sub_title: Override the Textual `App.sub_title` shown in the optional
             header bar.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
     """
-    app = DeepAgentsApp(
+    app = zjcodeApp(
         agent=agent,
         assistant_id=assistant_id,
         backend=backend,

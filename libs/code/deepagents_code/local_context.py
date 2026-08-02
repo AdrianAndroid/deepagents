@@ -520,7 +520,7 @@ def _section_files() -> str:
     """
     return r"""# --- Files ---
 FILE_SUMMARY=$(
-  { ls -1 2>/dev/null; [ -e .deepagents ] && echo .deepagents; } |
+  { ls -1 2>/dev/null; [ -e .zjcode ] && echo .zjcode; } |
   sort -u |
   awk '
     BEGIN {

@@ -748,7 +748,7 @@ def _criteria_approval_description(
     ) -> str:
         objective = _criteria_objective(state)
         preface = (
-            f"Deep Agents Code wants to use {tool_name} while gathering context "
+            f"zjcode wants to use {tool_name} while gathering context "
             f"to propose acceptance criteria for: \u201c{objective}\u201d."
         )
         if isinstance(normal_description, str):
@@ -782,7 +782,7 @@ def _rubric_approval_description(
         runtime: Runtime[Any],
     ) -> str:
         preface = (
-            f"Deep Agents Code wants to use {tool_name} while verifying the "
+            f"zjcode wants to use {tool_name} while verifying the "
             "completed work against its acceptance criteria."
         )
         if isinstance(normal_description, str):
@@ -1456,7 +1456,7 @@ def _create_goal_criteria_agent(
     ).with_config(
         {
             "recursion_limit": _REPOSITORY_RECURSION_LIMIT,
-            "run_name": "Deep Agents Code goal criteria generation",
+            "run_name": "zjcode goal criteria generation",
         }
     )
 
@@ -1501,6 +1501,6 @@ def create_goal_criteria_fallback_agent(
     ).with_config(
         {
             "recursion_limit": _FALLBACK_RECURSION_LIMIT,
-            "run_name": "Deep Agents Code goal criteria fallback",
+            "run_name": "zjcode goal criteria fallback",
         }
     )

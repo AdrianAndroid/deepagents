@@ -309,7 +309,7 @@ class ServerConfig:
     """Override for `settings.interpreter_ptc`.
 
     `None` means "fall through to whatever `settings.interpreter_ptc` resolves
-    to from `~/.deepagents/config.toml`". A string is one of `"safe"`/`"all"`;
+    to from `~/.zjcode/config.toml`". A string is one of `"safe"`/`"all"`;
     a list is an explicit allowlist of tool names that may also include the
     `"safe"` preset (expanded at agent-build time); `"all"` is rejected inside
     a list.

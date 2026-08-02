@@ -1,12 +1,12 @@
 # `libs/code` agent guide
 
-`deepagents-code` is the interactive coding agent — the Textual REPL, headless `-x` mode, MCP integration, skills, sandbox bootstrap, and slash-command surface. Forked from `deepagents-cli` at the 0.1.0 split.
+`zjcode` is the interactive coding agent — the Textual REPL, headless `-x` mode, MCP integration, skills, sandbox bootstrap, and slash-command surface. Forked from `deepagents-cli` at the 0.1.0 split.
 
 For monorepo-wide conventions (commit titles, lint, testing, docs, CI, benchmarks), see the root `AGENTS.md`. For a high-level map of the package (client/server processes, request lifecycle, module map), see `ARCHITECTURE.md`.
 
 ## Textual (terminal UI framework)
 
-`deepagents-code` uses [Textual](https://textual.textualize.io/).
+`zjcode` uses [Textual](https://textual.textualize.io/).
 
 **Key Textual resources:**
 
@@ -103,13 +103,13 @@ Rule of thumb: say **chat input** for the main composer and name any other surfa
 
 ## SDK dependency pin
 
-`deepagents-code` pins an exact `deepagents==X.Y.Z` version in `pyproject.toml`. When developing features that depend on new SDK functionality, bump this pin as part of the same PR. A CI check verifies the pin is not older than the current SDK version at release time (unless bypassed with `dangerous-skip-sdk-pin-check`); pins ahead of the workspace SDK are allowed for intentional prerelease coordination.
+`zjcode` pins an exact `deepagents==X.Y.Z` version in `pyproject.toml`. When developing features that depend on new SDK functionality, bump this pin as part of the same PR. A CI check verifies the pin is not older than the current SDK version at release time (unless bypassed with `dangerous-skip-sdk-pin-check`); pins ahead of the workspace SDK are allowed for intentional prerelease coordination.
 
 For a persistent editable `dcode-dev` install that stays separate from a released install, see [Local dev installs](./DEVELOPMENT.md#local-dev-installs) in the development guide.
 
 ## Startup performance
 
-`deepagents-code` must stay fast to launch. Never import heavy packages (e.g., `deepagents`, LangChain, LangGraph) at module level or in the argument-parsing path. These imports pull in large dependency trees and add seconds to every invocation, including trivial commands like `deepagents-code -v`.
+`zjcode` must stay fast to launch. Never import heavy packages (e.g., `deepagents`, LangChain, LangGraph) at module level or in the argument-parsing path. These imports pull in large dependency trees and add seconds to every invocation, including trivial commands like `zjcode -v`.
 
 - Keep top-level imports in `main.py` and other entry-point modules minimal.
 - Defer heavy imports to the point where they are actually needed (inside functions/methods).
@@ -130,11 +130,11 @@ Debug logging is configured **once**, on the `deepagents_code` package logger, b
 
 ## CLI help screen
 
-The `deepagents-code --help` screen is hand-maintained in `ui.show_help()`, separate from the argparse definitions in `main.parse_args()`. When adding a new CLI flag, update **both** files. A drift-detection test (`test_args.TestHelpScreenDrift`) fails if a flag is registered in argparse but missing from the help screen.
+The `zjcode --help` screen is hand-maintained in `ui.show_help()`, separate from the argparse definitions in `main.parse_args()`. When adding a new CLI flag, update **both** files. A drift-detection test (`test_args.TestHelpScreenDrift`) fails if a flag is registered in argparse but missing from the help screen.
 
 ## Command name in hints
 
-Hints that tell the user to run something (for example the teardown `-r <thread>` resume hint) must render `_invocation.invoked_name()` rather than a literal `dcode`. The package ships two console scripts (`dcode` and `deepagents-code`), and per-checkout shims — a renamed symlink pointing at a worktree's `bin/dcode` — are a common way to run several installs side by side, so a hardcoded name sends those users to a command they do not have. `invoked_name()` resolves from `sys.argv[0]` (an internal env sentinel carries it across the auto-update re-exec, which drops argv[0]) and falls back to `dcode` when the launch name is not a plausible command. The hand-maintained `--help` usage lines still hardcode `dcode`.
+Hints that tell the user to run something (for example the teardown `-r <thread>` resume hint) must render `_invocation.invoked_name()` rather than a literal `dcode`. The package ships two console scripts (`dcode` and `zjcode`), and per-checkout shims — a renamed symlink pointing at a worktree's `bin/dcode` — are a common way to run several installs side by side, so a hardcoded name sends those users to a command they do not have. `invoked_name()` resolves from `sys.argv[0]` (an internal env sentinel carries it across the auto-update re-exec, which drops argv[0]) and falls back to `dcode` when the launch name is not a plausible command. The hand-maintained `--help` usage lines still hardcode `dcode`.
 
 ## Splash screen tips
 
@@ -148,7 +148,7 @@ To add a new slash command: (1) add a `SlashCommand` entry to `COMMANDS`, (2) se
 
 ## Adding a new model provider
 
-`deepagents-code` supports LangChain-based chat model providers as optional dependencies. To add a new provider, update these files (all entries alphabetically sorted):
+`zjcode` supports LangChain-based chat model providers as optional dependencies. To add a new provider, update these files (all entries alphabetically sorted):
 
 1. `deepagents_code/model_config.py` — add `"provider_name": "ENV_VAR_NAME"` to `PROVIDER_API_KEY_ENV`
 2. `deepagents_code/model_config.py` — if the provider reads a *dedicated* endpoint env var, add `"provider_name": ("CANONICAL_BASE_URL", "ALTERNATE", ...)` to `PROVIDER_BASE_URL_ENV` (see guidelines below); omit the provider entirely when it has no provider-specific endpoint variable

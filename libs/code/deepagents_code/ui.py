@@ -87,7 +87,7 @@ def show_help() -> None:
     banner_color = theme.PRIMARY_DEV if _is_editable_install() else theme.PRIMARY
     console.print()
     console.print(
-        f"[bold {banner_color}]deepagents-code[/bold {banner_color}]"
+        f"[bold {banner_color}]zjcode[/bold {banner_color}]"
         f" v{__version__}{install_type}"
     )
     console.print()
@@ -288,7 +288,7 @@ def show_list_help() -> None:
     console.print("  dcode list [options]")
     console.print()
     console.print(
-        "List all agents found in ~/.deepagents/. Each agent has its own",
+        "List all agents found in ~/.zjcode/. Each agent has its own",
     )
     console.print(
         "AGENTS.md system prompt and separate thread history.",
@@ -389,9 +389,9 @@ def show_skills_help() -> None:
     )
     console.print(
         "  1. .agents/skills/                 project skills\n"
-        "  2. .deepagents/skills/             project skills (alias)\n"
+        "  2. .zjcode/skills/             project skills (alias)\n"
         "  3. ~/.agents/skills/               user skills\n"
-        "  4. ~/.deepagents/<agent>/skills/   user skills (alias)\n"
+        "  4. ~/.zjcode/<agent>/skills/   user skills (alias)\n"
         "  5. <package>/built_in_skills/      built-in skills",
     )
     console.print()
@@ -509,7 +509,7 @@ def show_skills_trust_help() -> None:
     console.print(
         "Directories are trusted when you approve a skill that resolves "
         "outside the standard skill roots (for example, a symlink target). "
-        "Trust is stored in ~/.deepagents/.state/skill_trust.json."
+        "Trust is stored in ~/.zjcode/.state/skill_trust.json."
     )
     console.print()
     console.print("[bold]Examples:[/bold]", style=theme.PRIMARY)
@@ -627,7 +627,7 @@ def show_tools_install_help() -> None:
         "Download the pinned, SHA-256-verified ripgrep binary into",
     )
     console.print(
-        "~/.deepagents/bin (no sudo). Reuses a system `rg` already on PATH and",
+        "~/.zjcode/bin (no sudo). Reuses a system `rg` already on PATH and",
     )
     console.print(
         "is also handy for repairing a missing or stale managed binary.",
@@ -659,7 +659,7 @@ def show_install_help() -> None:
     console.print("  dcode install NAME [options]")
     console.print()
     console.print(
-        "Install an optional deepagents-code extra into the current dcode",
+        "Install an optional zjcode extra into the current dcode",
     )
     console.print(
         "environment (for example a sandbox provider or model provider).",

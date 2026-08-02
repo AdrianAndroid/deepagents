@@ -46,7 +46,7 @@ _ANSI_THEMES: Final[frozenset[str]] = frozenset({"ansi-dark", "ansi-light"})
 """Theme names whose color palette is determined by the terminal emulator
 rather than by the app, so link styles use bold instead of a parsed color."""
 
-_LANGSMITH_UTM_SOURCE: Final[str] = "deepagents-code"
+_LANGSMITH_UTM_SOURCE: Final[str] = "zjcode"
 """UTM source tag appended to LangSmith project URLs in the welcome banner."""
 
 _THREAD_COPY_LABEL: Final[str] = "Thread ID"
@@ -54,13 +54,13 @@ _THREAD_COPY_LABEL: Final[str] = "Thread ID"
 
 
 def _langsmith_project_link(project_url: str) -> str:
-    """Append the Deep Agents source tag to a LangSmith project URL.
+    """Append the zjcode source tag to a LangSmith project URL.
 
     Args:
         project_url: LangSmith project URL.
 
     Returns:
-        Project URL with the Deep Agents source tag.
+        Project URL with the zjcode source tag.
     """
     return f"{project_url}?utm_source={_LANGSMITH_UTM_SOURCE}"
 
@@ -76,7 +76,7 @@ def _langsmith_project_link_style(
     Args:
         project_url: LangSmith project URL.
         ansi: Whether the active theme is an ANSI terminal theme.
-        colors: Active Deep Agents theme colors.
+        colors: Active zjcode theme colors.
 
     Returns:
         Link style for a LangSmith project name.
@@ -92,7 +92,7 @@ def _local_tag_style(*, ansi: bool, colors: theme.ThemeColors) -> str | TStyle:
 
     Args:
         ansi: Whether the active theme is an ANSI terminal theme.
-        colors: Active Deep Agents theme colors.
+        colors: Active zjcode theme colors.
 
     Returns:
         A bold markup style under ANSI themes (whose palette the terminal owns,
@@ -109,7 +109,7 @@ def _debug_tag_style(*, ansi: bool, colors: theme.ThemeColors) -> str | TStyle:
 
     Args:
         ansi: Whether the active theme is an ANSI terminal theme.
-        colors: Active Deep Agents theme colors.
+        colors: Active zjcode theme colors.
 
     Returns:
         A bold yellow markup style under ANSI themes (whose palette the terminal
@@ -126,7 +126,7 @@ def _experimental_tag_style(*, ansi: bool, colors: theme.ThemeColors) -> str | T
 
     Args:
         ansi: Whether the active theme is an ANSI terminal theme.
-        colors: Active Deep Agents theme colors.
+        colors: Active zjcode theme colors.
 
     Returns:
         A bold magenta markup style under ANSI themes (whose palette the terminal

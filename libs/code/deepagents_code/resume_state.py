@@ -14,7 +14,7 @@ Written from inside the graph on successful model turns:
     was actually using instead of falling back to the user's global default.
 
 Written through the main graph or by the TUI client via `aupdate_state` (see
-`DeepAgentsApp._persist_goal_rubric_state`) — these are user/agent-owned. Their
+`zjcodeApp._persist_goal_rubric_state`) — these are user/agent-owned. Their
 write sites are called out below:
 
 - `_goal_objective` / `_goal_status` / `_goal_rubric` / `_goal_status_note` —

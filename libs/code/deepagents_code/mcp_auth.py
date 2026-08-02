@@ -249,7 +249,7 @@ def _token_file_lock(path: Path) -> LockType:
 
 
 def _tokens_dir() -> Path:
-    """Return `~/.deepagents/.state/mcp-tokens/`.
+    """Return `~/.zjcode/.state/mcp-tokens/`.
 
     The deferred import lets tests redirect token storage into a temp
     directory by patching `deepagents_code.model_config.DEFAULT_STATE_DIR`.
@@ -306,21 +306,21 @@ async def _join_task_deferring_cancellation(
 
 
 class FileTokenStorage(TokenStorage):
-    """File-backed `TokenStorage` under `~/.deepagents/.state/mcp-tokens/`."""
+    """File-backed `TokenStorage` under `~/.zjcode/.state/mcp-tokens/`."""
 
     def __init__(self, server_name: str, *, server_url: str | None = None) -> None:
         """Bind this storage to a configured MCP server identity.
 
         Raises:
             ValueError: If `server_name` contains characters that would let
-                it escape the `~/.deepagents/.state/mcp-tokens/` directory
+                it escape the `~/.zjcode/.state/mcp-tokens/` directory
                 when used as the token-file basename.
         """
         if not _SAFE_SERVER_NAME_RE.fullmatch(server_name):
             msg = (
                 f"Invalid MCP server name {server_name!r}: token storage "
                 "names must match [A-Za-z0-9_-]+ to keep the on-disk path "
-                "inside ~/.deepagents/.state/mcp-tokens/."
+                "inside ~/.zjcode/.state/mcp-tokens/."
             )
             raise ValueError(msg)
         self._server_name = server_name

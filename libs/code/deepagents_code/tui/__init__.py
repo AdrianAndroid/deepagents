@@ -1,1 +1,1 @@
-"""Textual user interface package for `deepagents-code`."""
+"""Textual user interface package for `zjcode`."""

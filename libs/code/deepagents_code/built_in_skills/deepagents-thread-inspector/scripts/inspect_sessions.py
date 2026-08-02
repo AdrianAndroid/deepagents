@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect conversations in the local Deep Agents Code session store."""
+"""Inspect conversations in the local zjcode session store."""
 
 from __future__ import annotations
 
@@ -44,13 +44,13 @@ def _ensure_runtime() -> None:
         return
     if os.environ.get("DEEPAGENTS_THREAD_INSPECTOR_REEXEC") == "1":
         msg = (
-            "The selected Python runtime does not contain Deep Agents Code "
+            "The selected Python runtime does not contain zjcode "
             "dependencies."
         )
         raise SystemExit(msg)
 
     candidates: list[Path] = []
-    for command in ("dcode", "deepagents-code"):
+    for command in ("dcode", "zjcode"):
         executable = shutil.which(command)
         if not executable:
             continue
@@ -97,7 +97,7 @@ def _ensure_runtime() -> None:
                 env,
             )
 
-    msg = "Could not import Deep Agents Code dependencies or locate dcode on PATH."
+    msg = "Could not import zjcode dependencies or locate dcode on PATH."
     raise SystemExit(msg)
 
 
@@ -105,7 +105,7 @@ def _default_db_path() -> Path:
     explicit = os.environ.get("DEEPAGENTS_SESSIONS_DB")
     if explicit:
         return Path(explicit).expanduser()
-    return Path.home() / ".deepagents" / ".state" / "sessions.db"
+    return Path.home() / ".zjcode" / ".state" / "sessions.db"
 
 
 def _connect_read_only(path: Path) -> sqlite3.Connection:
@@ -527,7 +527,7 @@ def _turns(
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Inspect Deep Agents Code thread state without modifying the database."
+            "Inspect zjcode thread state without modifying the database."
         )
     )
     parser.add_argument("thread_id", nargs="?", help="Full thread ID or unique prefix")
@@ -565,7 +565,7 @@ def main() -> None:
 
     Raises:
         SystemExit: If the command-line arguments are invalid, the local session
-            store is missing or unsupported, or the Deep Agents Code runtime
+            store is missing or unsupported, or the zjcode runtime
             cannot be located.
     """
     args = _build_parser().parse_args()

@@ -156,7 +156,7 @@ class _ModelData(NamedTuple):
         default_spec: The configured default model spec, or `None`.
         profiles: Spec string to profile entry mapping.
         recent_specs: Most-recent-first `provider:model` specs read from
-            `~/.deepagents/.state/recent_models.json`.
+            `~/.zjcode/.state/recent_models.json`.
         install_extras: Each surfaced-but-uninstalled provider mapped to the
             extra that installs it.
     """

@@ -1,7 +1,7 @@
 """Auto-install pinned upstream binaries for optional tools.
 
 Today this only manages `ripgrep`. The SDK shells out to `rg` via `PATH`,
-so installing into `~/.deepagents/bin/` and prepending that directory to
+so installing into `~/.zjcode/bin/` and prepending that directory to
 `os.environ["PATH"]` is sufficient — no SDK change required.
 
 The pinned `RIPGREP_VERSION` and `RIPGREP_ASSETS` table is the single
@@ -63,7 +63,7 @@ RIPGREP_ASSETS: dict[tuple[str, str], tuple[str, str]] = {
 }
 """`(sys.platform, normalized arch) -> (asset filename, sha256 hex)`."""
 
-BIN_DIR: Path = Path.home() / ".deepagents" / "bin"
+BIN_DIR: Path = Path.home() / ".zjcode" / "bin"
 """Directory holding managed binaries. Prepended to `PATH` on startup."""
 
 _DOWNLOAD_TIMEOUT_SECONDS = 120
@@ -456,7 +456,7 @@ def _install_ripgrep_sync(asset: str, sha256: str) -> Path:
     filesystem and therefore atomic on POSIX. Windows keeps replacing the
     user-facing `rg.exe` directly because symlink support varies by developer
     mode and policy. POSIX installs use a versioned real binary plus a relative
-    `rg` symlink so moving or bind-mounting `~/.deepagents` does not bake in
+    `rg` symlink so moving or bind-mounting `~/.zjcode` does not bake in
     the original home directory path. `_verify_sha256` propagates
     `ChecksumMismatchError` to abort install before any move.
 
@@ -468,7 +468,7 @@ def _install_ripgrep_sync(asset: str, sha256: str) -> Path:
 
     BIN_DIR.mkdir(parents=True, exist_ok=True)
     url = f"{_RELEASE_URL_PREFIX}/{asset}"
-    with tempfile.TemporaryDirectory(prefix=".deepagents-rg-", dir=BIN_DIR) as tmp_str:
+    with tempfile.TemporaryDirectory(prefix=".zjcode-rg-", dir=BIN_DIR) as tmp_str:
         tmp = Path(tmp_str)
         archive = tmp / asset
         _download_to(url, archive)

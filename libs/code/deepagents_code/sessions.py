@@ -1428,7 +1428,7 @@ async def delete_thread(thread_id: str) -> bool:
 
     Removes the thread's checkpoint/write rows, then makes a best-effort attempt
     to remove the per-thread offloaded conversation-history archive under
-    `~/.deepagents` (local mode) so deletion does not leave orphaned history
+    `~/.zjcode` (local mode) so deletion does not leave orphaned history
     behind. History cleanup failures are logged, not raised, and do not affect
     the return value, which reflects only whether checkpoint rows were removed.
 
@@ -1538,7 +1538,7 @@ async def list_threads_command(
             the default.
         sort_by: Sort field — `"updated"` or `"created"`.
 
-            When `None`, reads from config (`~/.deepagents/config.toml`).
+            When `None`, reads from config (`~/.zjcode/config.toml`).
         branch: Only show threads from this git branch.
         cwd: Only show threads whose stored `cwd` metadata equals this path
             (exact string match — no normalization or prefix matching). When
@@ -1547,7 +1547,7 @@ async def list_threads_command(
         verbose: When `True`, show all columns (branch, created, prompt).
         relative: Show timestamps as relative time (e.g., '5m ago').
 
-            When `None`, reads from config (`~/.deepagents/config.toml`).
+            When `None`, reads from config (`~/.zjcode/config.toml`).
         output_format: Output format — `'text'` (Rich) or `'json'`.
     """
     from deepagents_code.model_config import (

@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 DistributionMetadataStatus = Literal["resolved", "not_installed", "error"]
 """Outcome of a distribution version lookup.
 
-Used for any distribution (the `deepagents` SDK and the `deepagents-code`
+Used for any distribution (the `deepagents` SDK and the `zjcode`
 CLI alike). `"not_installed"` means the package metadata is genuinely absent;
 `"error"` means an unexpected failure occurred while reading it. Callers
 that don't care which kind of failure happened can treat both the same.
@@ -309,7 +309,7 @@ class DistributionVersion:
     """
 
     name: str
-    """Distribution name, such as `deepagents` or `deepagents-code`."""
+    """Distribution name, such as `deepagents` or `zjcode`."""
 
     source_version: str | None
     """Version read from the imported/source `_version.py`, when available."""
@@ -361,18 +361,18 @@ class VersionReport:
     """Network-free snapshot of the version facts diagnostics need.
 
     Bundles the running CLI and installed SDK version facts with the result of
-    comparing the `deepagents` requirement that `deepagents-code` declares
+    comparing the `deepagents` requirement that `zjcode` declares
     against the effective SDK version for diagnostics.
     """
 
     cli: DistributionVersion
-    """Version facts for the running `deepagents-code` distribution."""
+    """Version facts for the running `zjcode` distribution."""
 
     sdk: DistributionVersion
     """Version facts for the installed `deepagents` SDK distribution."""
 
     sdk_requirement: Requirement | None
-    """The `deepagents` requirement declared by `deepagents-code`, if found."""
+    """The `deepagents` requirement declared by `zjcode`, if found."""
 
     sdk_requirement_satisfied: bool | None
     """Whether the effective SDK version satisfies `sdk_requirement`.
@@ -414,7 +414,7 @@ class VersionReport:
 
 
 def _read_cli_source_version() -> str | None:
-    """Return the running `deepagents-code` source version, or `None`.
+    """Return the running `zjcode` source version, or `None`.
 
     Reads `deepagents_code._version.__version__`, which is always present for
     the running package but is imported defensively so best-effort diagnostics
@@ -427,13 +427,13 @@ def _read_cli_source_version() -> str | None:
         # a failure here means a broken checkout that masks the source version
         # and forces a fall back to potentially stale metadata. Warn for parity
         # with `_sdk_version_from_source`, which handles the same failure shape.
-        logger.warning("Could not read deepagents-code source version", exc_info=True)
+        logger.warning("Could not read zjcode source version", exc_info=True)
         return None
     return __version__ if isinstance(__version__, str) and __version__ else None
 
 
 def _cli_editable_info() -> tuple[bool, str | None]:
-    """Return the editable status and source path for `deepagents-code`.
+    """Return the editable status and source path for `zjcode`.
 
     Reuses the cached PEP 610 detection in `config` rather than reimplementing
     it, so both surfaces agree and stay patchable in tests.
@@ -447,13 +447,13 @@ def _cli_editable_info() -> tuple[bool, str | None]:
         return _is_editable_install(), _get_editable_install_path()
     except Exception:
         logger.debug(
-            "Could not determine deepagents-code editable status", exc_info=True
+            "Could not determine zjcode editable status", exc_info=True
         )
         return False, None
 
 
 def collect_cli_version_info() -> DistributionVersion:
-    """Collect version facts for the running `deepagents-code` distribution.
+    """Collect version facts for the running `zjcode` distribution.
 
     Returns:
         The structured CLI version facts. The status is `"resolved"` whenever a
@@ -464,22 +464,22 @@ def collect_cli_version_info() -> DistributionVersion:
     """
     source = _read_cli_source_version()
     try:
-        metadata: str | None = pkg_version("deepagents-code")
+        metadata: str | None = pkg_version("zjcode")
         status: DistributionMetadataStatus = "resolved"
     except PackageNotFoundError:
-        logger.debug("deepagents-code package metadata not found in environment")
+        logger.debug("zjcode package metadata not found in environment")
         metadata = None
         status = "resolved" if source else "not_installed"
     except Exception:  # Best-effort lookup; never propagate to the caller
         logger.warning(
-            "Unexpected error looking up deepagents-code metadata version",
+            "Unexpected error looking up zjcode metadata version",
             exc_info=True,
         )
         metadata = None
         status = "resolved" if source else "error"
     editable, path = _cli_editable_info()
     return DistributionVersion(
-        name="deepagents-code",
+        name="zjcode",
         source_version=source,
         metadata_version=metadata,
         editable=editable,
@@ -538,9 +538,9 @@ def collect_sdk_version_info() -> DistributionVersion:
 
 
 def sdk_requirement_from_cli(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> Requirement | None:
-    """Return the base `deepagents` requirement declared by `deepagents-code`.
+    """Return the base `deepagents` requirement declared by `zjcode`.
 
     Reads the installed distribution's `Requires-Dist` metadata and parses each
     entry with `packaging.Requirement`, returning the applicable base
@@ -741,11 +741,11 @@ def _editable_sdk_is_cli_workspace_sibling(
 def _uses_exact_requirement_as_effective_version(
     cli: DistributionVersion, sdk: DistributionVersion, requirement: Requirement | None
 ) -> bool:
-    """Whether an exact `deepagents-code` pin represents sibling workspace HEAD.
+    """Whether an exact `zjcode` pin represents sibling workspace HEAD.
 
     Main does not track every SDK alpha release in `libs/deepagents`, so the
     sibling SDK package in the same monorepo checkout can carry the previous
-    stable marker while `deepagents-code` intentionally declares a newer exact
+    stable marker while `zjcode` intentionally declares a newer exact
     alpha requirement. In that case the pin is the nearest published SDK baseline
     represented by the running workspace. Ranged requirements and unrelated
     editable SDK checkouts are never inferred this way.
@@ -964,7 +964,7 @@ def format_sdk_version_annotation(report: VersionReport) -> str:
         and report.sdk_requirement is not None
     ):
         required = _format_requirement_display(report.sdk_requirement)
-        parts.append(f"required by deepagents-code: {required} — mismatch")
+        parts.append(f"required by zjcode: {required} — mismatch")
     return _join_annotation_parts(parts)
 
 
@@ -1000,7 +1000,7 @@ _COMPOSITE_EXTRAS: frozenset[str] = frozenset({"all-providers", "all-sandboxes"}
 """Extras whose package set is already covered by other, more specific extras.
 
 Build backends flatten these meta-extras into their component packages
-rather than preserving the `deepagents-code[a,b,...]` self-reference, so
+rather than preserving the `zjcode[a,b,...]` self-reference, so
 name-based filtering is the only reliable way to drop them.
 """
 
@@ -1043,7 +1043,7 @@ STANDALONE_EXTRAS: frozenset[str] = frozenset({"media", "quickjs"})
 """Optional extras that don't fit the provider/sandbox taxonomy.
 
 `quickjs` is a core dependency as of 0.1.24, but the empty extra remains
-installable so older `deepagents-code[quickjs]` and `/install quickjs` workflows
+installable so older `zjcode[quickjs]` and `/install quickjs` workflows
 stay harmless.
 """
 
@@ -1126,7 +1126,7 @@ def _extract_extra_name(marker_str: str) -> str | None:
 
 
 def get_extras_status(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> ExtrasStatus:
     """Return installed optional dependencies grouped by extra.
 
@@ -1156,7 +1156,7 @@ def get_extras_status(
 
 
 def installed_extra_names(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
     *,
     strict: bool = False,
 ) -> set[str]:
@@ -1176,7 +1176,7 @@ def installed_extra_names(
 
 
 def get_optional_dependency_status(
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
     *,
     strict: bool = False,
 ) -> tuple[ExtraDependencyStatus, ...]:
@@ -1257,7 +1257,7 @@ def get_optional_dependency_status(
 
 def extra_for_package(
     package: str,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> str | None:
     """Return the installable extra that declares a package.
 
@@ -1321,7 +1321,7 @@ class InstallHint:
       "install the package manually" phrasing.
 
     Attributes:
-        extra: Preferred `deepagents-code` extra name, or `None`.
+        extra: Preferred `zjcode` extra name, or `None`.
         command: Ready-to-run install command for the raw package, or `None`.
             Never set when `extra` is set.
     """
@@ -1342,7 +1342,7 @@ class InstallHint:
 
 def resolve_install_hint(
     package: str,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = "zjcode",
 ) -> InstallHint:
     """Resolve how to recover from a missing provider package.
 

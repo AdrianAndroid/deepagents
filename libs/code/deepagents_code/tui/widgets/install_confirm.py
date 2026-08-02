@@ -175,7 +175,7 @@ class InstallProviderConfirmScreen(ModalScreen[bool]):
 
         Args:
             provider: The provider whose integration is missing.
-            extra: The `deepagents-code` extra that installs the provider.
+            extra: The `zjcode` extra that installs the provider.
             model_spec: The selected `provider:model` spec, surfaced in the body
                 by the model selector. Omitted by the `/auth` manager, which
                 installs a provider so a key can be added rather than to switch

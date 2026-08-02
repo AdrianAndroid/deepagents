@@ -1,4 +1,4 @@
-"""CLI install path for optional deepagents-code extras.
+"""CLI install path for optional zjcode extras.
 
 `dcode install <name>` installs a curated optional extra (for example a sandbox
 or model-provider dependency) into the current `dcode` environment. The legacy
@@ -64,7 +64,7 @@ def run_install_request(*, name: str, package: bool, yes: bool) -> int:
     Args:
         name: Extra or package name to install.
         package: When `True`, install `name` as an arbitrary package rather than
-            a `deepagents-code` extra.
+            a `zjcode` extra.
         yes: Skip interactive confirmation prompts.
 
     Returns:
@@ -181,7 +181,7 @@ def _run_install_package(*, name: str, yes: bool) -> int:
 
 
 def _run_install_extra(*, name: str, yes: bool) -> int:
-    """Install a deepagents-code optional extra into the current env.
+    """Install a zjcode optional extra into the current env.
 
     Returns:
         Process exit code.

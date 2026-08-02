@@ -163,7 +163,7 @@ class LaunchGoalCriteriaPreferenceScreen(ModalScreen[bool]):
             options.highlighted = 0
             yield options
             yield Static(
-                "You can change this at any time in ~/.deepagents/config.toml "
+                "You can change this at any time in ~/.zjcode/config.toml "
                 "or with DEEPAGENTS_CODE_GOAL_AUTO_ACCEPT_CRITERIA.",
                 classes="launch-init-note",
             )
@@ -318,9 +318,9 @@ class LaunchNameScreen(ModalScreen[str | None]):
             Widgets for the modal content.
         """
         with Vertical():
-            yield Static("Welcome to Deep Agents Code", classes="launch-init-title")
+            yield Static("Welcome to zjcode", classes="launch-init-title")
             yield Static(
-                Content.assemble("What should Deep Agents call you?"),
+                Content.assemble("What should zjcode call you?"),
                 classes="launch-init-copy",
             )
             yield Input(
@@ -373,7 +373,7 @@ class LaunchNameScreen(ModalScreen[str | None]):
         """Alias for `action_skip` invoked by the global Esc binding.
 
         Textual's `Screen.action_cancel` is the conventional cancel hook used
-        by the app-level Esc handler in `DeepAgentsApp`; routing it to
+        by the app-level Esc handler in `zjcodeApp`; routing it to
         `action_skip` keeps the screen-specific binding and the global path
         in sync.
         """

@@ -663,7 +663,7 @@ def _collapse_pastes_enabled() -> bool:
     """Resolve whether large pastes should be collapsed into placeholders.
 
     Reads `DEEPAGENTS_CODE_COLLAPSE_PASTES`, then `[ui].collapse_pastes` in
-    `~/.deepagents/config.toml`, defaulting to enabled. This is the single
+    `~/.zjcode/config.toml`, defaulting to enabled. This is the single
     source of truth shared with the chat input (`ChatInput` calls it once at
     construction).
 

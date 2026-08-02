@@ -109,7 +109,7 @@ class RubricGraderState(AgentState[GraderResponse]):
 class ReliableRubricMiddleware(RubricMiddleware):
     """Run a context-aware nested grader and retry transient transport failures.
 
-    The nested grader receives Deep Agents Code's verification middleware and
+    The nested grader receives zjcode's verification middleware and
     runtime context without requiring those application-specific capabilities in
     the SDK's `RubricMiddleware`. A transport retry re-invokes only the grader,
     never the task agent, so grader tools must be read-only or idempotent.

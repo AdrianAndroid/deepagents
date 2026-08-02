@@ -957,7 +957,7 @@ class ThreadSelectorScreen(ModalScreen[str | None]):
         self._option_widgets: list[ThreadOption] = []
         self._filter_text = ""
         self._filter_agent: str | None = None
-        # Configured agent names from `~/.deepagents/` (the `/agents` list),
+        # Configured agent names from `~/.zjcode/` (the `/agents` list),
         # loaded off the event loop in `_load_threads`. Unioned with
         # thread-derived names so the agent filter mirrors `/agents` even for
         # agents that have not produced any threads yet.

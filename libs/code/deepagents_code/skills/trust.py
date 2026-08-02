@@ -26,7 +26,7 @@ grants access the user never approved:
 
 Trust entries are app-managed bookkeeping (a set of approved directories), not
 user-facing configuration, so they live alongside the other state files under
-`~/.deepagents/.state/skill_trust.json` rather than in the hand-editable
+`~/.zjcode/.state/skill_trust.json` rather than in the hand-editable
 `config.toml`.
 """
 
@@ -87,7 +87,7 @@ class RevokeResult(Enum):
 
 
 def _default_store_path() -> Path:
-    """Return `~/.deepagents/.state/skill_trust.json`.
+    """Return `~/.zjcode/.state/skill_trust.json`.
 
     Resolved at call time (not import time) so tests can redirect storage by
     monkeypatching `deepagents_code.model_config.DEFAULT_STATE_DIR` — the same
@@ -292,7 +292,7 @@ def is_skill_dir_trusted(
     Args:
         target_dir: Directory to check; resolved before lookup.
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
 
     Returns:
         `True` if the resolved directory is present in the store.
@@ -315,7 +315,7 @@ def trust_skill_dir(
             before storing so a post-approval symlink swap cannot change what
             gets persisted.
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
 
     Returns:
         `True` if the entry was saved successfully.
@@ -380,7 +380,7 @@ def revoke_skill_dir_trust(
     Args:
         target_dir: Directory to revoke.
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
 
     Returns:
         `RevokeResult.REMOVED` if a matching entry was removed and persisted,
@@ -421,7 +421,7 @@ def clear_trusted_skill_dirs(*, store_path: Path | None = None) -> bool:
 
     Args:
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
 
     Returns:
         `True` if the store was cleared (or was already empty).
@@ -443,7 +443,7 @@ def list_trusted_skill_dirs(
 
     Args:
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
         strict: When `True`, an existing-but-unreadable store re-raises instead
             of degrading to an empty list. The audit command (`skills trust
             list`) passes `strict=True` so it can report an error rather than
@@ -476,7 +476,7 @@ def list_trusted_skill_dir_entries(
 
     Args:
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
         strict: Propagated to `_load_store`; see `list_trusted_skill_dirs`.
 
     Returns:
@@ -509,7 +509,7 @@ def load_trusted_skill_dirs(*, store_path: Path | None = None) -> list[Path]:
 
     Args:
         store_path: Path to the trust store file. Defaults to
-            `~/.deepagents/.state/skill_trust.json`.
+            `~/.zjcode/.state/skill_trust.json`.
 
     Returns:
         Canonical directory paths that still resolve to themselves; empty when

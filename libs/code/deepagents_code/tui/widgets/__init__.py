@@ -1,4 +1,4 @@
-"""Textual widgets for `deepagents-code`.
+"""Textual widgets for `zjcode`.
 
 Import directly from submodules, e.g.:
 

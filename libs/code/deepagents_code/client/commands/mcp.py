@@ -180,11 +180,11 @@ async def run_mcp_login(*, server: str, config_path: str | None) -> int:
         )
     except PermissionError as exc:
         # PermissionError typically means the user's home dir or the
-        # ~/.deepagents/.state/mcp-tokens/ tree isn't writable. Retrying
+        # ~/.zjcode/.state/mcp-tokens/ tree isn't writable. Retrying
         # without a hint sends users in circles.
         print(  # noqa: T201
             f"Login failed: cannot write to the MCP tokens store ({exc}). "
-            f"Check permissions on ~/.deepagents/.state/mcp-tokens/ and "
+            f"Check permissions on ~/.zjcode/.state/mcp-tokens/ and "
             f"retry `dcode mcp login {selection.server_name}`.",
             file=sys.stderr,
         )
@@ -224,16 +224,16 @@ def run_mcp_config() -> int:
     from deepagents_code.ui import console
 
     found = {str(p.resolve()) for p in discover_mcp_configs()}
-    user_dir = Path.home() / ".deepagents"
+    user_dir = Path.home() / ".zjcode"
     project_root = _resolve_project_config_base(None)
 
     rows: list[tuple[str, str, bool]] = []
     for display, label, resolved in (
-        ("~/.deepagents/.mcp.json", "user-level", user_dir / ".mcp.json"),
+        ("~/.zjcode/.mcp.json", "user-level", user_dir / ".mcp.json"),
         (
-            "<project-root>/.deepagents/.mcp.json",
+            "<project-root>/.zjcode/.mcp.json",
             "project subdir",
-            project_root / ".deepagents" / ".mcp.json",
+            project_root / ".zjcode" / ".mcp.json",
         ),
         ("<project-root>/.mcp.json", "project root", project_root / ".mcp.json"),
     ):

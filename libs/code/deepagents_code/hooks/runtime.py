@@ -91,7 +91,7 @@ class HooksRuntime:
                 runtime treats it as fixed for its lifetime.
             config_dir: Alternate user config directory for tests.
             transcript_root: Alternate transcript store root for tests.
-                Defaults to `~/.deepagents/transcripts` regardless of
+                Defaults to `~/.zjcode/transcripts` regardless of
                 `config_dir` (project and test hook configs must not relocate
                 the global transcript store).
             presenter: Shared user-facing presenter. A private one is created

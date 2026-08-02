@@ -1,7 +1,7 @@
 """Dedicated modal for the update-available notification.
 
 Shown automatically at startup when a newer version of
-`deepagents-code` is available on PyPI. Surfaces the same actions the
+`zjcode` is available on PyPI. Surfaces the same actions the
 notification center would offer for the update entry but with a
 focused, single-purpose presentation instead of the generic
 notification list.

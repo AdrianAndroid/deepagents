@@ -47,7 +47,7 @@ Emitted verbatim in the `--json` output, so it is a public contract; keep it a
 """
 
 BUILT_IN_GROUP = "Built-in"
-"""Display label for the group of tools bundled with `deepagents-code`."""
+"""Display label for the group of tools bundled with `zjcode`."""
 
 _FILESYSTEM_TOOL_NAMES = FS_TOOL_NAMES
 """Which enumerated tools the `fs_tools` allowlist governs.
@@ -102,7 +102,7 @@ class UnavailableServer:
     """Human-readable reason from discovery, or `""` when none was given.
 
     For config-load failures this is discovery's own reason string, which may
-    include the local config file path (e.g. `~/.deepagents/mcp.json: ...`) —
+    include the local config file path (e.g. `~/.zjcode/mcp.json: ...`) —
     the same text the interactive `/mcp` viewer shows. See `collect_mcp_catalog`.
     """
 

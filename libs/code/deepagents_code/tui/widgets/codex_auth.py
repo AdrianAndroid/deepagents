@@ -154,7 +154,7 @@ class CodexAuthScreen(ModalScreen[bool]):
             )
             yield Static(
                 Content.assemble(
-                    "Authorize Deep Agents to call ChatGPT Codex models on "
+                    "Authorize zjcode to call ChatGPT Codex models on "
                     "your behalf. We will open your default browser to "
                     "openai.com to sign in.",
                 ),

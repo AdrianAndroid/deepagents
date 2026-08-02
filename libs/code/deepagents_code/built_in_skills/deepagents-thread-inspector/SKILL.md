@@ -1,11 +1,11 @@
 ---
 name: deepagents-thread-inspector
-description: Inspect and explain conversations in the local Deep Agents Code SQLite session store. Use as a fallback when LangSmith trace tooling is unavailable, for offline or untraced sessions, or when asked to identify or summarize a local dcode thread, inspect checkpoint metadata, list recent local threads, or parse ~/.deepagents/.state/sessions.db and a thread UUID or prefix.
+description: Inspect and explain conversations in the local zjcode SQLite session store. Use as a fallback when LangSmith trace tooling is unavailable, for offline or untraced sessions, or when asked to identify or summarize a local dcode thread, inspect checkpoint metadata, list recent local threads, or parse ~/.zjcode/.state/sessions.db and a thread UUID or prefix.
 license: MIT
-compatibility: designed for deepagents-code
+compatibility: designed for zjcode
 ---
 
-# Deep Agents Thread Inspector
+# zjcode Thread Inspector
 
 If LangSmith tooling is available for a traced thread, prefer it. Otherwise, use `scripts/inspect_sessions.py` instead of manually decoding database blobs. It opens the database read-only and deserializes the root message channel with LangGraph's strict MsgPack loader — reading the materialized messages from the latest checkpoint, or replaying writes in checkpoint order when that fast path is unavailable — and emits JSON.
 
@@ -32,7 +32,7 @@ If the user does not know the ID, list recent threads first:
 python3 "$SKILL_DIR/scripts/inspect_sessions.py" --list 20
 ```
 
-Pass `--db PATH` only for a non-default session store. The default is `~/.deepagents/.state/sessions.db`; `DEEPAGENTS_SESSIONS_DB` can override it.
+Pass `--db PATH` only for a non-default session store. The default is `~/.zjcode/.state/sessions.db`; `DEEPAGENTS_SESSIONS_DB` can override it.
 
 ## Explain the result
 
@@ -47,4 +47,4 @@ Synthesize the JSON rather than pasting it verbatim.
 
 ## Safety
 
-Keep inspection read-only. Do not deserialize an untrusted database: checkpoint deserialization is intended for trusted local Deep Agents state. Do not mutate or delete session rows unless the user separately and explicitly requests it.
+Keep inspection read-only. Do not deserialize an untrusted database: checkpoint deserialization is intended for trusted local zjcode state. Do not mutate or delete session rows unless the user separately and explicitly requests it.

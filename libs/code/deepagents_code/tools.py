@@ -305,7 +305,7 @@ def _get_tavily_client() -> TavilyClient | None:
 
 @tool
 def get_current_thread_id() -> str:
-    """Get the current Deep Agents thread ID for LangSmith or MCP tooling.
+    """Get the current zjcode thread ID for LangSmith or MCP tooling.
 
     Returns:
         The current `configurable.thread_id`, or an explanatory message if missing.
@@ -479,7 +479,7 @@ def _fetch_with_redirects(url: str, *, timeout: int) -> Any:  # noqa: ANN401  # 
             response = session.get(
                 current_url,
                 timeout=timeout,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; DeepAgents/1.0)"},
+                headers={"User-Agent": "Mozilla/5.0 (compatible; zjcode/1.0)"},
                 allow_redirects=False,
             )
 

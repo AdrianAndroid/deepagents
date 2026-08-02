@@ -38,7 +38,7 @@ _TIPS: dict[str, int] = {
     "Use /agents to browse and switch between your available agents": 2,
     _TIP_SHIFT_TAB_WITH_YOLO: 2,
     "Use !! for incognito shell commands that stay out of model context": 1,
-    "Deep Agents can explain its own features and look up its docs. Ask it how to use.": 3,  # noqa: E501
+    "zjcode can explain its own features and look up its docs. Ask it how to use.": 3,  # noqa: E501
 }
 """Tips shown above the chat input. One is chosen at random per launch,
 weighted by these relative selection weights.

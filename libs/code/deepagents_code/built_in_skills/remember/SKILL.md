@@ -2,7 +2,7 @@
 name: remember
 description: "Review the current conversation and capture valuable knowledge — best practices, coding conventions, architecture decisions, workflows, and user feedback — into persistent memory (AGENTS.md) or reusable skills. Use when the user says: (1) remember this, (2) save what we learned, (3) update memory, (4) capture learnings."
 license: MIT
-compatibility: designed for deepagents-code
+compatibility: designed for zjcode
 ---
 
 Review our conversation and capture valuable knowledge. Focus especially on **best practices** we discussed or discovered—these are the most important things to preserve.
@@ -34,8 +34,8 @@ Use memory when the knowledge is:
 - Something to always keep in mind
 - A simple rule or pattern
 
-**Global** (`~/.deepagents/agent/AGENTS.md`): Universal preferences across all projects
-**Project** (`.deepagents/AGENTS.md`): Project-specific conventions and decisions
+**Global** (`~/.zjcode/agent/AGENTS.md`): Universal preferences across all projects
+**Project** (`.zjcode/AGENTS.md`): Project-specific conventions and decisions
 
 ### -> Skill for reusable workflows and methodologies
 **Create a skill when** we developed:
@@ -53,7 +53,7 @@ If we established best practices around a workflow or process, capture them in a
 **Example:** If we discussed best practices for code review, create a `code-review` skill that encodes those practices into a reusable workflow.
 
 ### Skill Location
-`~/.deepagents/agent/skills/<skill-name>/SKILL.md`
+`~/.zjcode/agent/skills/<skill-name>/SKILL.md`
 
 ### Skill Structure
 ```

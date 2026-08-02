@@ -141,7 +141,7 @@ class SlackProvider(OAuthProvider):
         """
         del redirect_uri
         return OAuthClientMetadata(
-            client_name="deepagents-code",
+            client_name="zjcode",
             redirect_uris=[AnyUrl(_SLACK_REDIRECT_URI)],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],

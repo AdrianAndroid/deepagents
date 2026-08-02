@@ -1,4 +1,4 @@
-"""Parsing for the `[sandboxes]` section of `~/.deepagents/config.toml`.
+"""Parsing for the `[sandboxes]` section of `~/.zjcode/config.toml`.
 
 Parallels the `[models]` provider configuration in `model_config.py`. Config
 providers declare a `class_path` (same trust model as model `class_path`),
@@ -114,7 +114,7 @@ class SandboxConfig:
 
         Args:
             config_path: Path to config file. Defaults to
-                `~/.deepagents/config.toml`.
+                `~/.zjcode/config.toml`.
 
         Returns:
             Parsed `SandboxConfig`. Returns an empty config if the file is

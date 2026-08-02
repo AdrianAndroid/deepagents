@@ -64,3 +64,20 @@ resume but are not user-authored, so they are filtered out of both the rendered
 transcript and a thread's initial prompt. Shared here so the single producer
 (`textual_adapter`) and its consumers (`app`, `sessions`) agree on one literal.
 """
+
+CONFIG_DOTDIR: Final[str] = ".zjcode"
+"""User-level config directory name (the `.zjcode` in `~/.zjcode/`).
+
+Single source of truth for the private-brand directory name. `model_config`
+builds the absolute `DEFAULT_CONFIG_DIR` from it, and prompt/help text that
+needs a portable `~/...` form references the name directly. Keep it in
+lock-step with `PROJECT_DOTDIR` when rebranding.
+"""
+
+PROJECT_DOTDIR: Final[str] = ".zjcode"
+"""Per-project config directory name (e.g. `<project-root>/.zjcode/`).
+
+Holds project-scoped skills, agents, `AGENTS.md`, and `.mcp.json`. Named here
+so the private-branded `zjcode` build stays consistent with the user-level
+`~/.zjcode` directory — both must move together when rebranding.
+"""

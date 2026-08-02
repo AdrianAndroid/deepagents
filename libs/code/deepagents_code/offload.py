@@ -16,7 +16,7 @@ _FALLBACK_ARTIFACTS_ROOT = "/dcode-artifacts-fallback"
 CONVERSATION_HISTORY_DIRNAME = "conversation_history"
 """Subdirectory of the offload root that holds per-thread conversation archives.
 
-Lives directly under `~/.deepagents/` in local mode. The `/agent` picker
+Lives directly under `~/.zjcode/` in local mode. The `/agent` picker
 excludes this reserved name in addition to requiring an `AGENTS.md` marker.
 """
 
@@ -59,7 +59,7 @@ _UNIQUE_OFFLOAD_FALLBACK_ROOT: Path | None = None
 def offload_storage_is_ephemeral() -> bool:
     """Return whether offload history is routed to non-persistent storage.
 
-    `True` when the persistent `~/.deepagents` location was unwritable and the
+    `True` when the persistent `~/.zjcode` location was unwritable and the
     most recent `_offload_fallback_root` fell back to a temporary directory that
     may not survive a restart. Only meaningful in local mode, where
     `_offload_fallback_root` runs in the same process as the UI; in
@@ -78,7 +78,7 @@ def _harden_dir(path: Path) -> None:
     """Create `path` if needed and restrict it to the current user.
 
     Only ever call this on directories owned by this process's storage (a temp
-    dir or a dedicated subdirectory), never on the shared `~/.deepagents` config
+    dir or a dedicated subdirectory), never on the shared `~/.zjcode` config
     root.
 
     Args:
@@ -158,7 +158,7 @@ def _artifacts_root() -> _ArtifactsStorage:
 def _offload_fallback_root() -> Path:
     """Return a writable base directory for offloaded conversation history.
 
-    Prefers the persistent per-user `~/.deepagents` directory so offloaded
+    Prefers the persistent per-user `~/.zjcode` directory so offloaded
     history survives across sessions and is easy to locate; falls back to a
     private temporary directory when the home directory cannot be resolved or
     written. This is the live root for the local-mode `conversation_history`
@@ -166,7 +166,7 @@ def _offload_fallback_root() -> Path:
 
     Archives always live in the `conversation_history` subdirectory of the
     returned root. The `0o700` hardening therefore targets that subdirectory,
-    never the shared `~/.deepagents` config root -- which also houses
+    never the shared `~/.zjcode` config root -- which also houses
     `config.toml`, `hooks.json`, `.env`, and `.state/`, whose permissions this
     must not disturb. A temporary fallback root is created solely for offload,
     so the whole directory is hardened in that case.
@@ -174,11 +174,11 @@ def _offload_fallback_root() -> Path:
     Note: the `S_ISDIR` check below (which uses `lstat`, deliberately not
     following the link) guards the paths it is applied to -- the
     `conversation_history` subdirectory and, in the fallback case, the temp
-    root -- not `~/.deepagents` itself, which is created with a plain `mkdir`.
+    root -- not `~/.zjcode` itself, which is created with a plain `mkdir`.
     So a `conversation_history` (or temp root) that is itself a symlink is
-    rejected, whereas a symlinked `~/.deepagents` pointing at a directory the
+    rejected, whereas a symlinked `~/.zjcode` pointing at a directory the
     current user owns is followed transparently and archives persist normally.
-    (A dangling `~/.deepagents` symlink still falls through to temporary
+    (A dangling `~/.zjcode` symlink still falls through to temporary
     storage, but via `mkdir` raising, not via this check.)
 
     Returns:
@@ -187,7 +187,7 @@ def _offload_fallback_root() -> Path:
     """
 
     def _prepare_user_dir() -> Path:
-        base = Path.home() / ".deepagents"
+        base = Path.home() / ".zjcode"
         # Ensure the shared config root exists and is usable, but leave its
         # permissions untouched -- hardening belongs on the archive subdir only.
         base.mkdir(parents=True, exist_ok=True)
@@ -248,7 +248,7 @@ def delete_offloaded_history(thread_id: str) -> bool:
     Deletes the per-thread markdown file written by the local-mode
     `conversation_history` backend (`{root}/conversation_history/{thread_id}.md`),
     resolving `root` with `_offload_fallback_root` so the persistent
-    `~/.deepagents` location and any temporary fallback are both covered.
+    `~/.zjcode` location and any temporary fallback are both covered.
 
     Best-effort: filesystem failures are logged and swallowed rather than
     raised, so a failed cleanup never blocks thread deletion. Resolving the
@@ -258,7 +258,7 @@ def delete_offloaded_history(thread_id: str) -> bool:
     returning `False`.
 
     In server/sandbox mode the archive lives on the sandbox backend rather than
-    the local `~/.deepagents` directory, so there is no local archive to remove.
+    the local `~/.zjcode` directory, so there is no local archive to remove.
 
     Args:
         thread_id: Thread whose offloaded history should be removed.
