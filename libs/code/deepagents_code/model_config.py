@@ -5268,4 +5268,239 @@ def _load_agents_field(field: str, config_path: Path | None = None) -> str | Non
     value = agents_section.get(field)
     if isinstance(value, str) and value.strip():
         return value.strip()
+
+
+# ---------------------------------------------------------------------------
+# Custom provider discovery and management
+# ---------------------------------------------------------------------------
+
+
+class ModelDiscoveryError(Exception):
+    """Raised when discovering models from a provider's /models endpoint fails.
+
+    The message is user-facing and safe to render verbatim in the TUI.
+    """
+
+
+def _provider_api_key_env(provider_id: str) -> str:
+    """Generate the API key environment variable name for a custom provider.
+
+    Args:
+        provider_id: The provider identifier (e.g., "my_gateway").
+
+    Returns:
+        The environment variable name (e.g., "MY_GATEWAY_API_KEY").
+    """
+    return f"{provider_id.upper().replace('-', '_')}_API_KEY"
+
+
+def fetch_provider_models(
+    base_url: str,
+    api_key: str | None = None,
+    *,
+    timeout: float = 10.0,
+    include_retiring: bool = True,
+) -> list[str]:
+    """Fetch available models from an OpenAI-compatible provider's /models endpoint.
+
+    Args:
+        base_url: The provider's base URL (e.g., "https://api.openai.com/v1").
+        api_key: Optional API key for authentication.
+        timeout: Request timeout in seconds.
+        include_retiring: Whether to include models marked as "Retiring" (Volcengine
+            Ark-specific lifecycle status). Always excludes "Shutdown" models.
+
+    Returns:
+        Sorted list of model identifiers.
+
+    Raises:
+        ModelDiscoveryError: If the request fails, returns an error status, or the
+            response format is unrecognized. The message is user-facing.
+    """
+    import httpx  # Lazy import to avoid pulling httpx at module load time
+
+    if not base_url:
+        raise ModelDiscoveryError("Base URL is required to discover models.")
+
+    url = base_url.rstrip("/") + "/models"
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        response = httpx.get(url, headers=headers, timeout=timeout)
+    except httpx.TimeoutException as exc:
+        raise ModelDiscoveryError(
+            f"Request to {url} timed out after {timeout:.0f}s."
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise ModelDiscoveryError(f"Could not reach {url}: {exc}") from exc
+
+    # Error status handling with user-friendly messages
+    if response.status_code == 401:
+        raise ModelDiscoveryError(
+            "Authentication failed (HTTP 401). Check the API key."
+        )
+    if response.status_code == 403:
+        raise ModelDiscoveryError(
+            "Forbidden (HTTP 403). The API key may lack permission."
+        )
+    if response.status_code == 404:
+        raise ModelDiscoveryError(
+            f"{url} returned 404. This provider may not expose /models."
+        )
+    if response.status_code >= 400:
+        error_preview = response.text[:200]
+        raise ModelDiscoveryError(
+            f"HTTP {response.status_code} from {url}: {error_preview}"
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise ModelDiscoveryError(f"Server returned non-JSON response: {exc}") from exc
+
+    # OpenAI format: {"data": [{"id": "model-name", ...}]}
+    # Some providers return a bare list or use "models" instead of "data"
+    if isinstance(payload, dict):
+        data = payload.get("data", payload.get("models", []))
+    else:
+        data = payload if isinstance(payload, list) else []
+
+    if not isinstance(data, list):
+        raise ModelDiscoveryError(
+            "Unexpected /models response shape: expected a list or "
+            f'{{"data": [...]}}, got {type(payload).__name__}'
+        )
+
+    model_ids: set[str] = set()
+    for entry in data:
+        if isinstance(entry, str):
+            model_ids.add(entry)
+            continue
+        if not isinstance(entry, dict):
+            continue
+
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if not isinstance(model_id, str) or not model_id:
+            continue
+
+        # Volcengine Ark-specific lifecycle filtering
+        status = entry.get("status")
+        if isinstance(status, str):
+            if status == "Shutdown":
+                continue
+            if not include_retiring and status == "Retiring":
+                continue
+
+        model_ids.add(model_id)
+
+    return sorted(model_ids)
+
+
+def save_custom_provider(
+    provider_id: str,
+    display_name: str,
+    base_url: str,
+    models: list[str] | None = None,
+    class_path: str = "langchain_openai:ChatOpenAI",
+    api_key_env: str | None = None,
+    api_key: str | None = None,
+    default_model: str | None = None,
+    max_input_tokens: int | None = None,
+    config_path: Path | None = None,
+) -> bool:
+    """Save a custom OpenAI-compatible provider to config.toml.
+
+    Creates or updates the `[models.providers.<provider_id>]` section with
+    the given configuration. The API key (if provided) is stored separately via
+    `auth_store`.
+
+    Args:
+        provider_id: Unique identifier for the provider (e.g., "my_gateway").
+        display_name: Human-readable name shown in the UI.
+        base_url: Provider API base URL.
+        models: List of model identifiers available from this provider.
+        class_path: Fully-qualified chat model class in `module:ClassName` format.
+        api_key_env: Name of the environment variable holding the API key.
+            Defaults to `ChatOpenAI`'s `OPENAI_API_KEY` when using the default
+            class path, or auto-derived from `provider_id` otherwise.
+        api_key: Optional API key value to store via `auth_store`.
+        default_model: Optional default model to use for this provider.
+        max_input_tokens: Optional context window size for the default model profile.
+        config_path: Path to config.toml. Defaults to `~/.zjcode/config.toml`.
+
+    Returns:
+        True if save succeeded, False on I/O error.
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+
+    model_list = list(models or [])
+    if default_model and default_model not in model_list:
+        model_list.append(default_model)
+
+    # Infer api_key_env if not provided
+    if not api_key_env:
+        if class_path == "langchain_openai:ChatOpenAI":
+            api_key_env = "OPENAI_API_KEY"
+        else:
+            api_key_env = _provider_api_key_env(provider_id)
+
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with _config_write_lock:
+            # Read existing config or start fresh
+            if config_path.exists():
+                with config_path.open("rb") as f:
+                    data = tomllib.load(f)
+            else:
+                data = {}
+
+            # Ensure the nested section structure exists
+            models_section = data.setdefault("models", {})
+            providers_section = models_section.setdefault("providers", {})
+
+            provider_config: ProviderConfig = {
+                "display_name": display_name,
+                "base_url": base_url,
+                "class_path": class_path,
+                "models": model_list,
+            }
+            if api_key_env:
+                provider_config["api_key_env"] = api_key_env
+            if default_model:
+                provider_config["default_model"] = default_model
+            if isinstance(max_input_tokens, int) and max_input_tokens > 0:
+                provider_config["profile"] = {"max_input_tokens": max_input_tokens}
+
+            providers_section[provider_id] = provider_config
+
+            # Atomic write via temp file + replace
+            fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    tomli_w.dump(data, f)
+                Path(tmp_path).replace(config_path)
+            except BaseException:
+                with contextlib.suppress(OSError):
+                    Path(tmp_path).unlink()
+                raise
+    except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
+        logger.exception("Could not save custom provider %s", provider_id)
+        return False
+
+    # Store the API key if provided (separate from TOML config)
+    if api_key:
+        try:
+            auth_store.set_stored_key(provider_id, api_key, base_url=base_url)
+        except RuntimeError:
+            logger.exception(
+                "Could not store API key for custom provider %s", provider_id
+            )
+            return False
+
+    clear_caches()
+    return True
     return None
