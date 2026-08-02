@@ -6867,7 +6867,7 @@ wheels = [
 
 [[package]]
 name = "zjcode"
-version = "0.0.8"
+version = "0.0.16"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
