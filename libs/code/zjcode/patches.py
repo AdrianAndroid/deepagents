@@ -86,11 +86,18 @@ def patch_path_constants() -> None:
             if old != model_config.DEFAULT_CONFIG_DIR:
                 patched += 1
 
-        # 修补 DEFAULT_CONFIG_FILE
+        # 修补 DEFAULT_CONFIG_FILE 和 DEFAULT_CONFIG_PATH
         if hasattr(model_config, "DEFAULT_CONFIG_FILE"):
             old = model_config.DEFAULT_CONFIG_FILE
             model_config.DEFAULT_CONFIG_FILE = Path.home() / ".zjcode" / "config.toml"
             if old != model_config.DEFAULT_CONFIG_FILE:
+                patched += 1
+
+        # DEFAULT_CONFIG_PATH 是模块级别计算的，必须单独修补
+        if hasattr(model_config, "DEFAULT_CONFIG_PATH"):
+            old = model_config.DEFAULT_CONFIG_PATH
+            model_config.DEFAULT_CONFIG_PATH = Path.home() / ".zjcode" / "config.toml"
+            if old != model_config.DEFAULT_CONFIG_PATH:
                 patched += 1
 
         # 修补 STATE_DIR
@@ -111,6 +118,67 @@ def patch_path_constants() -> None:
                     patched += 1
         except ImportError:
             pass
+
+        # 修补 DEFAULT_STATE_DIR
+        if hasattr(model_config, "DEFAULT_STATE_DIR"):
+            old = model_config.DEFAULT_STATE_DIR
+            model_config.DEFAULT_STATE_DIR = Path.home() / ".zjcode" / ".state"
+            if old != model_config.DEFAULT_STATE_DIR:
+                patched += 1
+
+        # 修补 sessions.py 中的路径（如果存在）
+        try:
+            from deepagents_code import sessions
+
+            # 查找所有大写的 _DIR 常量
+            for attr in dir(sessions):
+                if attr.isupper() and attr.endswith("_DIR") and not attr.startswith("_"):
+                    old_path = getattr(sessions, attr)
+                    if isinstance(old_path, Path) and ".deepagents" in str(old_path):
+                        new_path = Path(str(old_path).replace(".deepagents", ".zjcode"))
+                        setattr(sessions, attr, new_path)
+                        if old_path != new_path:
+                            patched += 1
+        except Exception as e:
+            logger.debug(f"[zjcode] Failed to patch sessions paths: {e}")
+
+        # 修补 config.py 中 Settings 类的 user_deepagents_dir property
+        try:
+            from deepagents_code.config import Settings
+
+            # 定义新的 getter
+            def user_zjcode_dir_getter(self):
+                return Path.home() / ".zjcode"
+
+            # 替换 property
+            Settings.user_deepagents_dir = property(user_zjcode_dir_getter)
+            patched += 1
+
+            # 替换 get_user_agent_md_path 静态方法
+            @staticmethod
+            def patched_get_user_agent_md_path(agent_name: str) -> Path:
+                return Path.home() / ".zjcode" / agent_name / "AGENTS.md"
+
+            Settings.get_user_agent_md_path = patched_get_user_agent_md_path
+            patched += 1
+
+            # 替换 get_agent_dir 方法
+            original_get_agent_dir = Settings.get_agent_dir
+
+            def patched_get_agent_dir(self, agent_name: str) -> Path:
+                if not self._is_valid_agent_name(agent_name):
+                    msg = (
+                        f"Invalid agent name: {agent_name!r}. Agent names can only "
+                        "contain letters, numbers, hyphens, underscores, and spaces."
+                    )
+                    raise ValueError(msg)
+                return Path.home() / ".zjcode" / agent_name
+
+            Settings.get_agent_dir = patched_get_agent_dir
+            patched += 1
+
+        except Exception as e:
+            logger.warning(f"[zjcode] Failed to patch Settings paths: {e}")
 
         if patched > 0:
             logger.info(f"[zjcode] Patched {patched} path constants")
