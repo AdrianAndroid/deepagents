@@ -52,6 +52,46 @@ VIDEO_EXTENSIONS: frozenset[str] = frozenset(
 MAX_MEDIA_BYTES: int = 20 * 1024 * 1024
 """Maximum media file size (20 MB). Keeps base64 payload under ~27 MB."""
 
+PASTED_MEDIA_DIR: pathlib.Path = pathlib.Path.home() / ".zjcode" / "pasted"
+"""Directory where pasted media is archived for local reference.
+
+Images pasted into the TUI are decoded and written here so the user can inspect
+or forward the original file later. The base64 payload is still what gets sent
+to the model; this local copy is purely an archive of what was pasted.
+"""
+
+
+def save_pasted_media(
+    base64_data: str, stem: str, image_format: str
+) -> pathlib.Path | None:
+    """Persist a pasted media payload to `PASTED_MEDIA_DIR` as `<stem>.<ext>`.
+
+    Failures are logged and swallowed: the local archive is a convenience, not
+    a hard requirement. The caller keeps the in-memory base64 blob regardless.
+
+    Args:
+        base64_data: Base64-encoded media bytes (no data-URL prefix).
+        stem: File stem (typically the placeholder id such as
+            ``img_20250115143022``). Callers guarantee uniqueness within the
+            current draft.
+        image_format: Image format label (e.g. ``"png"``, ``"jpeg"``); used to
+            derive the file extension.
+
+    Returns:
+        The absolute path written on success, ``None`` when the write failed.
+    """
+    try:
+        PASTED_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        extension = image_format.lower() or "png"
+        if extension == "jpeg":
+            extension = "jpg"
+        target = PASTED_MEDIA_DIR / f"{stem}.{extension}"
+        target.write_bytes(base64.b64decode(base64_data))
+    except (OSError, ValueError) as exc:
+        logger.warning("Failed to archive pasted media to %s: %s", PASTED_MEDIA_DIR, exc)
+        return None
+    return target
+
 
 def strip_media_placeholders(
     text: str,
