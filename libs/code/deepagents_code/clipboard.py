@@ -6,11 +6,18 @@ import base64
 import logging
 import os
 import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
 from typing import TYPE_CHECKING, Literal
 
 from textual.dom import NoScreen
 
 from deepagents_code.config import get_glyphs
+
+if TYPE_CHECKING:
+    from deepagents_code.media_utils import ImageData
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from textual.app import App
-    from textual.screen import Screen
 
 _PREVIEW_MAX_LENGTH = 40
 
@@ -142,22 +148,15 @@ def copy_text_with_feedback(
     return success
 
 
-def copy_selection_to_clipboard(app: App, *, screen: Screen) -> None:
-    """Copy selected text from one screen's widgets to the clipboard.
+def copy_selection_to_clipboard(app: App) -> None:
+    """Copy selected text from app widgets to clipboard.
 
-    Selections live on the screen that owns them (`Screen.selections`) and
-    survive a modal being pushed on top, so a scan has to target exactly one
-    screen. `screen` is required rather than defaulting to the active screen
-    because this runs deferred, by which point the active screen may no longer
-    be the one the caller meant — the caller pins it at event time instead.
-
-    Args:
-        app: The active Textual app, used for the clipboard backend and toasts.
-        screen: Screen whose widgets are scanned for selections.
+    This queries all widgets for their text_selection and copies
+    any selected text to the system clipboard.
     """
     selected_texts = []
 
-    for widget in screen.query("*"):
+    for widget in app.query("*"):
         # Skip detached widgets before touching `text_selection` — the
         # property reads `widget.screen.selections`, which raises `NoScreen`
         # for transient toasts mid-mount. `hasattr` is not a safe precheck
@@ -223,3 +222,87 @@ def copy_selection_to_clipboard(app: App, *, screen: Screen) -> None:
         timeout=3,
         markup=False,
     )
+
+
+def copy_image_to_clipboard(image_data: "ImageData") -> tuple[bool, str | None]:
+    """Copy an ImageData object to the system clipboard.
+
+    Currently supports macOS only. Other platforms will return a not-supported error.
+
+    Args:
+        image_data: ImageData object containing base64-encoded image data.
+
+    Returns:
+        Tuple of `(success, error_message)`.
+        `success` is `True` when the copy operation completed successfully.
+        `error_message` is `None` on success.
+    """
+    if sys.platform == "darwin":
+        osascript_path = shutil.which("osascript")
+        if not osascript_path:
+            return False, "osascript not found on macOS"
+
+        fd, temp_path = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+
+        try:
+            image_bytes = base64.b64decode(image_data.base64_data)
+            pathlib.Path(temp_path).write_bytes(image_bytes)
+
+            script = f"""
+            set the clipboard to (read (POSIX file "{temp_path}") as «class PNGf»)
+            """
+
+            result = subprocess.run(
+                [osascript_path, "-e", script],
+                capture_output=True,
+                check=False,
+                timeout=5,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                error = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+                logger.debug("Failed to copy image via osascript: %s", error)
+                return False, error
+
+            return True, None
+        except subprocess.TimeoutExpired:
+            logger.debug("osascript timed out while copying image to clipboard")
+            return False, "Timeout copying image to clipboard"
+        except OSError as e:
+            logger.debug("OSError copying image to clipboard: %s", e)
+            return False, str(e)
+        finally:
+            if pathlib.Path(temp_path).exists():
+                pathlib.Path(temp_path).unlink()
+    else:
+        return (
+            False,
+            "Image clipboard copy is currently only supported on macOS",
+        )
+
+
+def copy_image_with_feedback(app: "App", image_data: "ImageData") -> bool:
+    """Copy an image to the clipboard and surface the outcome as a toast.
+
+    Args:
+        app: The active Textual app, used for toasts.
+        image_data: ImageData object to copy.
+
+    Returns:
+        `True` when the copy succeeded.
+    """
+    success, error = copy_image_to_clipboard(image_data)
+    if success:
+        app.notify("Image copied to clipboard", timeout=3, markup=False)
+    else:
+        app.notify(
+            f"Failed to copy image: {error}"
+            if error
+            else "Failed to copy image - no clipboard method available",
+            severity="warning",
+            timeout=3,
+            markup=False,
+        )
+    return success
