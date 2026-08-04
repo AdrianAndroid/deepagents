@@ -28,7 +28,7 @@ from deepagents_code._env_vars import (
     is_env_truthy,
 )
 from deepagents_code._git import resolve_git_branch
-from deepagents_code._version import __version__
+from deepagents_code._version import DISTRIBUTION_NAME, __version__
 from deepagents_code.config_manifest import (
     INTERPRETER_ENABLE_DEFAULT,
     INTERPRETER_MAX_PTC_CALLS_DEFAULT,
@@ -1316,7 +1316,7 @@ def _resolve_editable_info() -> tuple[bool, str | None]:
     path: str | None = None
 
     try:
-        dist = distribution("deepagents-code")
+        dist = distribution(DISTRIBUTION_NAME)
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)

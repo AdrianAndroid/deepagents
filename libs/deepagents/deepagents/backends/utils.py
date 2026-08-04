@@ -645,16 +645,24 @@ def to_posix_path(path: str) -> str:
     return path.replace("\\", "/")
 
 
-def validate_path(path: str, *, allowed_prefixes: Sequence[str] | None = None) -> str:
+def validate_path(
+    path: str,
+    *,
+    allowed_prefixes: Sequence[str] | None = None,
+    allow_native_absolute: bool = False,
+) -> str:
     r"""Validate and normalize file path for security.
 
     Ensures paths are safe to use by preventing directory traversal attacks
     and enforcing consistent formatting. All paths are normalized to use
     forward slashes and start with a leading slash.
 
-    This function is designed for virtual filesystem paths and rejects
-    Windows absolute paths (e.g., `C:/...`, `F:/...`) to maintain consistency
-    and prevent path format ambiguity.
+    This function is designed for virtual filesystem paths by default and
+    rejects Windows absolute paths (e.g., `C:/...`, `F:/...`) to maintain
+    consistency and prevent path format ambiguity. When
+    `allow_native_absolute=True`, a Windows drive-letter path is returned
+    verbatim so callers backed by an on-disk `FilesystemBackend` (or
+    `LocalShellBackend`) can pass it through to the host OS for resolution.
 
     Args:
         path: The path to validate and normalize.
@@ -662,14 +670,23 @@ def validate_path(path: str, *, allowed_prefixes: Sequence[str] | None = None) -
 
             If provided, the normalized path must start with one of
             these prefixes.
+        allow_native_absolute: If `True`, Windows drive-letter absolute
+            paths are accepted unchanged. The caller must only pass
+            `True` when the underlying backend will resolve the path on the
+            real filesystem (e.g. `FilesystemBackend` in non-virtual mode),
+            not when a sandbox or virtual backend is in play.
 
     Returns:
         Normalized canonical path starting with `/` and using forward slashes.
+        With `allow_native_absolute=True`, a Windows drive-letter path is
+        returned verbatim (preserved as-is) so the caller can pass it
+        through to the OS.
 
     Raises:
-        ValueError: If path contains traversal sequences (`..` or `~`), is a
-            Windows absolute path (e.g., `C:/...`), or does not start with an
-            allowed prefix when `allowed_prefixes` is specified.
+        ValueError: If path contains traversal sequences (`..` or `~`), or
+            with `allow_native_absolute=False` is a Windows absolute path,
+            or does not start with an allowed prefix when
+            `allowed_prefixes` is specified.
 
     Example:
         ```python
@@ -677,6 +694,7 @@ def validate_path(path: str, *, allowed_prefixes: Sequence[str] | None = None) -
         validate_path("/./foo//bar")  # Returns: "/foo/bar"
         validate_path("../etc/passwd")  # Raises ValueError
         validate_path(r"C:\\Users\\file.txt")  # Raises ValueError
+        validate_path(r"C:\\Users\\file.txt", allow_native_absolute=True)  # OK (returned as-is)
         validate_path("/data/file.txt", allowed_prefixes=["/data/"])  # OK
         validate_path("/etc/file.txt", allowed_prefixes=["/data/"])  # Raises ValueError
         ```
@@ -688,8 +706,12 @@ def validate_path(path: str, *, allowed_prefixes: Sequence[str] | None = None) -
         msg = f"Path traversal not allowed: {path}"
         raise ValueError(msg)
 
-    # Reject Windows absolute paths (e.g., C:\..., D:/...)
+    # Accept Windows drive-letter absolute paths verbatim when the caller is
+    # backed by an on-disk backend. The traversal check above already
+    # guarantees no `..` segments inside, so passing the path through is safe.
     if re.match(r"^[a-zA-Z]:", path):
+        if allow_native_absolute:
+            return path
         msg = f"Windows absolute paths are not supported: {path}. Please use virtual paths starting with / (e.g., /workspace/file.txt)"
         raise ValueError(msg)
 

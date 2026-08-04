@@ -103,6 +103,16 @@ DEFAULT_DEBUG_FILE = "/tmp/deepagents_debug.log"  # noqa: S108  # opt-in debug l
 """Default path for the debug log when `DEBUG_FILE` is unset."""
 
 DEBUG_MCP_PROJECT_TRUST = "DEEPAGENTS_CODE_DEBUG_MCP_PROJECT_TRUST"
+"""Disable Textual mouse tracking when enabled.
+
+Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` (case-insensitive)
+as enabled, and `0`, `false`, `no`, `off`, empty string, or unset as disabled.
+
+Web-based terminals (1Panel, ttyd, wetty) commonly need this because they
+forward mouse events but strip the ESC prefix from SGR mouse-report
+sequences, causing garbled input like `[<35;36;33M...` to leak into the
+input. Equivalent to the `--no-mouse` CLI flag.
+"""
 """Force the project MCP approval prompt for manual UI testing.
 
 Set to a truthy value when launching the interactive TUI to render the
@@ -258,6 +268,18 @@ When enabled, the memory prompt tells the agent to proactively persist
 learnings to the `AGENTS.md` memory files. Set to a falsy value (`0`, `false`,
 `no`, `off`, or empty) to keep loading memory into context while disabling the
 auto-save guidance; explicit saves (e.g. the `remember` skill) still work.
+"""
+
+NO_MOUSE = "DEEPAGENTS_CODE_NO_MOUSE"
+"""Disable Textual mouse tracking when enabled.
+
+Parsed by `is_env_truthy`: accepts `1`, `true`, `yes`, `on` (case-insensitive)
+as enabled, and `0`, `false`, `no`, `off`, empty string, or unset as disabled.
+
+Web-based terminals (1Panel, ttyd, wetty) commonly need this because they
+forward mouse events but strip the ESC prefix from SGR mouse-report
+sequences, causing garbled input like `[<35;36;33M...` to leak into the
+input. Equivalent to the `--no-mouse` CLI flag.
 """
 
 NO_TERMINAL_ESCAPE = "DEEPAGENTS_CODE_NO_TERMINAL_ESCAPE"

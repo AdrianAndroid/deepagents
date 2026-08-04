@@ -1906,14 +1906,16 @@ class TestDetectShadowedDcode:
         """
         uv_bin = tmp_path / "uv-bin"
         uv_bin.mkdir()
-        (uv_bin / "dcode").write_text("")  # the upgraded shim uv would install
+        (uv_bin / "deepagents-code").write_text(
+            ""
+        )  # the upgraded shim uv would install
         stale_bin = tmp_path / "stale-bin"
         stale_bin.mkdir()
-        stale = stale_bin / "dcode"
+        stale = stale_bin / "deepagents-code"
         stale.write_text("")
 
         def _which(name: str) -> str | None:
-            return str(stale) if name == "dcode" else None
+            return str(stale) if name == "deepagents-code" else None
 
         with (
             patch(
@@ -2030,7 +2032,7 @@ class TestDetectShadowedDcode:
         )
         rendered = format_shadowed_dcode_warning(shadow)
         assert str(shadow.shadowing_bin) in rendered
-        assert str(shadow.upgraded_bin_dir / "dcode") in rendered
+        assert str(shadow.upgraded_bin) in rendered
         assert "earlier on your PATH" in rendered
         command = format_shadowed_dcode_fix_command(shadow)
         assert command.replace("\n", "\n  ") in rendered

@@ -1,0 +1,110 @@
+name: Publish zjcode to PyPI
+
+# Publishes libs/code (zjcode) to PyPI via Trusted Publisher (OIDC).
+#
+# Triggers:
+#   - Push a tag matching `zjcode-v*` (e.g. `zjcode-v0.0.1`) — auto build & publish
+#   - Manual via workflow_dispatch — for testing / re-runs
+#
+# PyPI Trusted Publisher config on pypi.org must match:
+#   Owner:       AdrianAndroid
+#   Repository:  deepagents
+#   Workflow:    publish-zjcode.yml
+#   Environment: (any)
+
+on:
+  push:
+    tags:
+      - 'zjcode-v*'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Build only, do not publish'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+
+      - name: Verify version matches tag
+        if: startsWith(github.ref, 'refs/tags/zjcode-v')
+        working-directory: libs/code
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#zjcode-v}"
+          PKG_VERSION="$(uv run --no-project python -c 'import tomllib,pathlib;print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          echo "Tag version:  $TAG"
+          echo "pyproject:    $PKG_VERSION"
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag ($TAG) does not match pyproject.toml version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Relax deepagents pin for published wheel
+        working-directory: libs/code
+        run: |
+          set -euo pipefail
+          before="$(grep -E '"deepagents==0\.7\.0a[0-9]+"' pyproject.toml || true)"
+          if [ -z "$before" ]; then
+            echo "::error::Expected pin '\"deepagents==0.7.0aN\"' not found in libs/code/pyproject.toml. Update this step in publish-zjcode.yml."
+            exit 1
+          fi
+          sed -i -E 's|"deepagents==0\.7\.0a[0-9]+"|"deepagents>=0.7.0a7,<0.8.0"|' pyproject.toml
+          echo "before: $before"
+          echo "after:  $(grep '"deepagents' pyproject.toml | head -1)"
+
+      - name: Build
+        working-directory: libs/code
+        run: |
+          rm -rf dist/
+          uv build
+
+      - name: Show artifacts
+        working-directory: libs/code
+        run: ls -la dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zjcode-dist
+          path: libs/code/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.dry-run != 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC for PyPI Trusted Publisher
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: zjcode-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true

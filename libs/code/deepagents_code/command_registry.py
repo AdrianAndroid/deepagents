@@ -117,6 +117,12 @@ COMMANDS: tuple[SlashCommand, ...] = (
         bypass_tier=BypassTier.SIDE_EFFECT_FREE,
     ),
     SlashCommand(
+        name="/copy-image",
+        description="Copy the most recently pasted image to the system clipboard",
+        bypass_tier=BypassTier.SIDE_EFFECT_FREE,
+        hidden_keywords="image clipboard",
+    ),
+    SlashCommand(
         name="/cost",
         description="Show estimated thread cost",
         bypass_tier=BypassTier.QUEUED,
@@ -159,6 +165,13 @@ COMMANDS: tuple[SlashCommand, ...] = (
         bypass_tier=BypassTier.SIDE_EFFECT_FREE,
         hidden_keywords="servers oauth authenticate reconnect disable enable",
         argument_hint="[login <server> | reconnect]",
+    ),
+    SlashCommand(
+        name="/paste-image",
+        description="Paste an image from the system clipboard at cursor position",
+        bypass_tier=BypassTier.QUEUED,
+        hidden_keywords="image clipboard paste",
+        aliases=("/paste-img",),
     ),
     SlashCommand(
         name="/plugins",

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from packaging.requirements import Requirement
 
+from deepagents_code._version import DISTRIBUTION_NAME
 from deepagents_code.extras_info import (
     _COMPOSITE_EXTRAS,
     KNOWN_EXTRAS,
@@ -87,7 +88,7 @@ def _write_cli_pyproject(root: Path, requirement: str) -> None:
     """Write the minimal editable dcode project metadata used by version tests."""
     root.mkdir(parents=True, exist_ok=True)
     (root / "pyproject.toml").write_text(
-        f'[project]\nname = "deepagents-code"\ndependencies = ["{requirement}"]\n',
+        f'[project]\nname = "{DISTRIBUTION_NAME}"\ndependencies = ["{requirement}"]\n',
         encoding="utf-8",
     )
 
@@ -527,7 +528,7 @@ class TestResolveSdkVersion:
         code_dist.requires = ["deepagents==0.7.0a7"]
 
         def version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", DISTRIBUTION_NAME: "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -560,7 +561,7 @@ class TestResolveSdkVersion:
         )
 
         def version(name: str) -> str:
-            return {"deepagents": "0.7.1", "deepagents-code": "0.1.50"}[name]
+            return {"deepagents": "0.7.1", DISTRIBUTION_NAME: "0.1.50"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -592,7 +593,7 @@ class TestResolveSdkVersion:
         code_dist.requires = ["deepagents==0.7.0a8"]
 
         def version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", DISTRIBUTION_NAME: "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=version),
@@ -1634,7 +1635,7 @@ class TestCollectVersionInfo:
         code_dist.requires = ["deepagents==0.7.0a7"]
 
         def fake_version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", DISTRIBUTION_NAME: "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=fake_version),
@@ -1671,7 +1672,7 @@ class TestCollectVersionInfo:
         code_dist.requires = ["deepagents==0.7.0a8"]
 
         def fake_version(name: str) -> str:
-            return {"deepagents": "0.6.12", "deepagents-code": "0.1.45"}[name]
+            return {"deepagents": "0.6.12", DISTRIBUTION_NAME: "0.1.45"}[name]
 
         with (
             patch("deepagents_code.extras_info.pkg_version", side_effect=fake_version),

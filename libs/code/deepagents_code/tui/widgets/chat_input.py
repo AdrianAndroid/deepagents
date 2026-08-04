@@ -1183,7 +1183,31 @@ class ChatTextArea(PasteBurstTextArea):
         return False
 
     async def _on_paste(self, event: events.Paste) -> None:
-        """Handle paste events, detecting file paths and large pastes."""
+        """Handle paste events, detecting images, file paths, and large pastes."""
+        # First check if clipboard has an image
+        from deepagents_code.media_utils import get_clipboard_image
+
+        image = await asyncio.to_thread(get_clipboard_image)
+        if image is not None:
+            event.prevent_default()
+            event.stop()
+            # Bind a timestamped placeholder before archiving so the local
+            # filename matches the token the user sees (e.g. img_YYYYMMDDHHMMSS).
+            existing_text = self.text
+            placeholder = self._chat_input_owner._image_tracker.add_image(
+                image, existing_text=existing_text
+            )
+            stem = placeholder.strip("[]")
+            from deepagents_code.media_utils import save_pasted_media
+
+            await asyncio.to_thread(
+                save_pasted_media, image.base64_data, stem, image.format
+            )
+            # Insert placeholder at cursor position
+            self.insert(placeholder)
+            return
+
+        # Original text paste logic
         self._backslash_pending_time = None
         if self._paste_burst_buffer:
             await self._flush_paste_burst()
@@ -2652,6 +2676,33 @@ class ChatInput(Vertical):
         """Focus the input field."""
         if self._text_area:
             self._text_area.focus()
+
+    def paste_clipboard_image(self) -> bool:
+        """Paste the current system clipboard image into the chat input.
+
+        Reads an image from the system clipboard via
+        `get_clipboard_image` and inserts it as a `[img_...]` placeholder
+        alongside the base64 payload.
+
+        Returns:
+            `True` on success, `False` if the clipboard contains no image,
+            the platform is unsupported, or the input/tracker is not ready.
+        """
+        from deepagents_code.media_utils import get_clipboard_image
+
+        image = get_clipboard_image()
+        if image is None:
+            return False
+        if self._image_tracker is None or self._text_area is None:
+            return False
+        image = self._image_tracker.add_image(image)
+        placeholder = image.placeholder
+        if self._text_area.value:
+            self._text_area.insert_text(f" {placeholder}")
+        else:
+            self._text_area.insert_text(placeholder)
+        self._sync_media_tracker_to_text()
+        return True
 
     @property
     def value(self) -> str:

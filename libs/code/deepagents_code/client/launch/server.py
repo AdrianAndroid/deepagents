@@ -329,6 +329,12 @@ def _build_server_cmd(config_path: Path, *, host: str, port: int) -> list[str]:
         str(port),
         "--no-browser",
         "--no-reload",
+        # `langgraph dev` uses blockbuster to block certain blocking operations in
+        # the graph factory, but the agent graph factory does legitimate blocking
+        # reads at construction time (dotenv discovery, project-root detection,
+        # `Path.resolve()` -> `os.getcwd()`). Without this flag, the graph readiness
+        # check fails with a `BlockingError` before the server can start.
+        "--allow-blocking",
         "--config",
         str(config_path),
     ]
@@ -350,6 +356,10 @@ def _build_server_env() -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["LANGGRAPH_AUTH_TYPE"] = "noop"
+    # Belt-and-suspenders: `langgraph dev` will overwrite the env var from its
+    # own `--allow-blocking` flag value (defaulting to `"false"`), so setting
+    # it here alone is insufficient. The CLI flag above is the actual switch.
+    env["LANGGRAPH_ALLOW_BLOCKING"] = "true"
 
     # Capture a launch-time PYTHONPATH before stripping it. Never trust an
     # inherited carrier var: pop it first, then set it only from the real value.

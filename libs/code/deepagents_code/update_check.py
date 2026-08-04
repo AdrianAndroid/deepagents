@@ -37,7 +37,13 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
-from deepagents_code._version import PYPI_URL, SDK_PYPI_URL, USER_AGENT, __version__
+from deepagents_code._version import (
+    DISTRIBUTION_NAME,
+    PYPI_URL,
+    SDK_PYPI_URL,
+    USER_AGENT,
+    __version__,
+)
 from deepagents_code.model_config import DEFAULT_CONFIG_PATH, DEFAULT_STATE_DIR
 
 logger = logging.getLogger(__name__)
@@ -227,7 +233,7 @@ def is_installed_version_at_least(version: str) -> bool:
     try:
         from importlib.metadata import PackageNotFoundError, version as pkg_version
 
-        installed = _parse_version(pkg_version("deepagents-code"))
+        installed = _parse_version(pkg_version(DISTRIBUTION_NAME))
         target = _parse_version(version)
     except (InvalidVersion, PackageNotFoundError):
         return False
@@ -1513,7 +1519,7 @@ class ShadowedDcode:
         Keeps the `dcode` entry-point name owned by the type rather than
         re-derived at each call site (mirrors `DependencyChange.kind`).
         """
-        return self.upgraded_bin_dir / "dcode"
+        return self.upgraded_bin_dir / DISTRIBUTION_NAME
 
 
 def _uv_tool_bin_dir() -> Path | None:
@@ -1616,7 +1622,7 @@ def detect_shadowed_dcode() -> ShadowedDcode | None:
         return None
     # Check every supported entry point. One healthy command name does not
     # prove another command name cannot still be shadowed earlier on PATH.
-    for name in ("dcode", "deepagents-code"):
+    for name in (DISTRIBUTION_NAME,):
         resolved = shutil.which(name)
         if resolved is None:
             continue
@@ -2447,7 +2453,7 @@ def _uv_tool_python(tool_root: Path | None = None) -> str | None:
 
 def _uv_tool_with_packages(
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     tool_root: Path | None = None,
 ) -> tuple[str, ...]:
     """Return package names recorded as uv tool `--with` requirements.
@@ -2730,7 +2736,7 @@ def _prerelease_constraints_file(pins: Sequence[str]) -> Iterator[Path | None]:
 def upgrade_install_command(
     *,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     version: str | None = None,
     constraints_path: Path | None = None,
     prerelease_strategy: UvPrereleaseStrategy | None = None,
@@ -2787,7 +2793,7 @@ def dependency_refresh_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the uv command that refreshes deps for the current dcode version.
 
@@ -2819,7 +2825,7 @@ def dependency_refresh_dry_run_command(
     *,
     version: str = __version__,
     include_prereleases: bool | None = None,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
     python: str | None = None,
 ) -> str:
     """Return the uv command that plans a dependency refresh without installing.
@@ -2863,7 +2869,7 @@ def dependency_refresh_dry_run_command(
 def install_package_command(
     package: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the shell command that adds a package to the dcode tool env.
 
@@ -2945,7 +2951,7 @@ def install_extras_command(extras: Iterable[str]) -> str:
 def install_extra_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the install-script command that adds `extra` to dcode.
 
@@ -3032,7 +3038,7 @@ def safe_install_extra_recovery_command(extra: str, *, fallback: str) -> str:
 def _install_extra_uv_tool_command(
     extra: str,
     *,
-    distribution_name: str = "deepagents-code",
+    distribution_name: str = DISTRIBUTION_NAME,
 ) -> str:
     """Return the receipt-preserving uv command that installs one dcode extra.
 

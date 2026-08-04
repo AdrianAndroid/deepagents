@@ -960,6 +960,19 @@ _STATIC_OPTIONS: tuple[ConfigOption, ...] = (
         toml_keys=("ui", "theme"),
     ),
     ConfigOption(
+        key="display.no_mouse",
+        group="Display",
+        summary=(
+            "Disable Textual mouse tracking. Useful for web-based terminals "
+            "(1Panel, ttyd, wetty) that strip the ESC prefix from SGR "
+            "mouse-report sequences and leak garbled input into the prompt."
+        ),
+        kind=OptionKind.BOOL,
+        default=False,
+        env_var=_env_vars.NO_MOUSE,
+        cli_flag="--no-mouse",
+    ),
+    ConfigOption(
         key="display.cursor_style",
         group="Display",
         summary="Chat input cursor style ('block' or 'underline').",
