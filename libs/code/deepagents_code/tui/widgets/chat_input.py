@@ -2653,6 +2653,33 @@ class ChatInput(Vertical):
         if self._text_area:
             self._text_area.focus()
 
+    def paste_clipboard_image(self) -> bool:
+        """Paste the current system clipboard image into the chat input.
+
+        Reads an image from the system clipboard via
+        `get_clipboard_image` and inserts it as a `[img_...]` placeholder
+        alongside the base64 payload.
+
+        Returns:
+            `True` on success, `False` if the clipboard contains no image,
+            the platform is unsupported, or the input/tracker is not ready.
+        """
+        from deepagents_code.media_utils import get_clipboard_image
+
+        image = get_clipboard_image()
+        if image is None:
+            return False
+        if self._image_tracker is None or self._text_area is None:
+            return False
+        image = self._image_tracker.add_image(image)
+        placeholder = image.placeholder
+        if self._text_area.value:
+            self._text_area.insert_text(f" {placeholder}")
+        else:
+            self._text_area.insert_text(placeholder)
+        self._sync_media_tracker_to_text()
+        return True
+
     @property
     def value(self) -> str:
         """Current input value.

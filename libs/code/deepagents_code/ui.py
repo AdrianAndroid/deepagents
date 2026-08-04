@@ -246,6 +246,10 @@ def show_help() -> None:
     )
     console.print("  --yes                      Skip install confirmation prompts")
     console.print("  --acp                      Run as an ACP server over stdio")
+    console.print(
+        "  --no-mouse                 "
+        "Disable mouse tracking (for web terminals)"
+    )
     console.print("  -v, --version              Show dcode and SDK versions")
     console.print("  -h, --help                 Show this help message and exit")
     console.print()

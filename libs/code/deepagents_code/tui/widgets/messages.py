@@ -4846,3 +4846,94 @@ class SummarizationMessage(AppMessage):
         if isinstance(self._raw_message, Content):
             return self._raw_message
         return Content.styled(self._raw_message, f"bold {colors.primary}")
+
+
+class SessionSeparator(Static):
+    """Centered separator marking the start of a new assistant turn.
+
+    Rendered as a styled line of `✨` glyphs surrounding the marker
+    `【 NEW SESSION 】` so users can visually pick out turn boundaries in
+    long transcripts. Glyphs come from `get_glyphs()` so they degrade to
+    ASCII on terminals that need it.
+    """
+
+    DEFAULT_CSS = """
+    SessionSeparator {
+        height: auto;
+        width: 100%;
+        text-align: center;
+        color: $text-muted;
+        margin: 1 0 0 0;
+    }
+    """
+
+    def render(self) -> Content:
+        """Render the centered separator with theme-aware colors.
+
+        Returns:
+            Styled separator content.
+        """
+        from deepagents_code.config import get_glyphs
+        from deepagents_code.theme import get_theme_colors
+
+        glyphs = get_glyphs()
+        colors = get_theme_colors(self)
+        marker = glyphs.spinner_frames[0]
+        bar = f"{marker} {marker} {marker}"
+        text = f"{bar} ✨ 【 NEW SESSION 】 ✨ {bar}"
+        return Content.styled(text, f"dim {colors.muted}")
+
+
+class CopyTurnButton(Static):
+    """Compact copy-to-clipboard button overlaid on each assistant turn.
+
+    Hidden by default; the assistant message reveals it on hover/focus via
+    the `-visible` CSS class. Clicking walks the sibling tree to find the
+    nearest `UserMessage` and the `AssistantMessage` it belongs to, joins
+    their plain-text bodies, and copies the result through
+    `copy_text_with_feedback`.
+    """
+
+    DEFAULT_CSS = """
+    CopyTurnButton {
+        height: 1;
+        width: auto;
+        padding: 0 1;
+        display: none;
+    }
+    CopyTurnButton.-visible {
+        display: block;
+    }
+    """
+
+    @staticmethod
+    def on_mount() -> None:
+        """No-op mount; visibility is driven by the parent message."""
+
+    def on_click(self) -> None:
+        """Copy the user + assistant plain-text bodies to the clipboard."""
+        from deepagents_code.clipboard import copy_text_with_feedback
+
+        sibling = self.parent
+        while sibling is not None and not hasattr(sibling, "_content"):
+            sibling = sibling.parent
+        if sibling is None:
+            copy_text_with_feedback(self.app, "")
+            return
+        from deepagents_code.tui.widgets.messages import UserMessage
+
+        content = getattr(sibling, "_content", "")
+        if isinstance(content, list):
+            parts: list[str] = [block for block in content if isinstance(block, str)]
+            content = "".join(parts)
+        user_text = ""
+        node = sibling
+        while node is not None:
+            if isinstance(node, UserMessage) and node is not sibling:
+                user_text = node._content if isinstance(node._content, str) else ""
+                break
+            node = node.parent
+        joined = (
+            f"{user_text}\n\n{content}" if user_text and user_text.strip() else content
+        )
+        copy_text_with_feedback(self.app, joined)

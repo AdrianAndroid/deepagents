@@ -24640,7 +24640,7 @@ class TestNotificationCenterIntegration:
         )
 
         shadow = ShadowedDcode(
-            shadowing_bin=Path("/opt/stale/bin/dcode"),
+            shadowing_bin=Path("/opt/stale/bin/deepagents-code"),
             upgraded_bin_dir=Path("/home/user/.local/bin"),
         )
 
@@ -24678,8 +24678,8 @@ class TestNotificationCenterIntegration:
             assert isinstance(app.screen, UpdateProgressScreen)
             status = app.screen.query(Static).filter(".up-status").first()
             assert "Update complete" not in str(status.render())
-            assert "/opt/stale/bin/dcode" in str(status.render())
-            assert "/home/user/.local/bin/dcode" in str(status.render())
+            assert "/opt/stale/bin/deepagents-code" in str(status.render())
+            assert "/home/user/.local/bin/deepagents-code" in str(status.render())
             await pilot.press("c")
             await pilot.pause()
 
@@ -24693,7 +24693,7 @@ class TestNotificationCenterIntegration:
         )
         # The warning toast names both paths so the user can act on it.
         assert any(
-            "/opt/stale/bin/dcode" in m and "/home/user/.local/bin" in m
+            "/opt/stale/bin/deepagents-code" in m and "/home/user/.local/bin" in m
             for m in notified
         )
 
@@ -24718,7 +24718,7 @@ class TestNotificationCenterIntegration:
         from deepagents_code.update_check import ShadowedDcode
 
         shadow = ShadowedDcode(
-            shadowing_bin=Path("/opt/stale/bin/dcode"),
+            shadowing_bin=Path("/opt/stale/bin/deepagents-code"),
             upgraded_bin_dir=Path("/home/user/.local/bin"),
         )
 
@@ -24765,7 +24765,7 @@ class TestNotificationCenterIntegration:
         )
         # The warning toast names both paths so the user can act on it.
         assert any(
-            "/opt/stale/bin/dcode" in m and "/home/user/.local/bin" in m
+            "/opt/stale/bin/deepagents-code" in m and "/home/user/.local/bin" in m
             for m in notified
         )
 

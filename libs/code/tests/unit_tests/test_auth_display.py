@@ -24,9 +24,18 @@ from deepagents_code.model_config import (
 
 @pytest.fixture(autouse=True)
 def _clear_model_caches() -> Iterator[None]:
-    """Clear module-level model config caches around each test."""
+    """Clear module-level model config caches around each test.
+
+    The glyphs cache is process-global; a preceding test may leave it in
+    ASCII mode. Reset it so the parametrize values (evaluated at collection
+    time with unicode glyphs) stay consistent with runtime lookups.
+    """
+    from deepagents_code.config import reset_glyphs_cache
+
+    reset_glyphs_cache()
     model_config.clear_caches()
     yield
+    reset_glyphs_cache()
     model_config.clear_caches()
 
 

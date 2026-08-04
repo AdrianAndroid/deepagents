@@ -2950,6 +2950,7 @@ class DeepAgentsApp(App):
         hook_trust: WorkspaceTrust | None = None,
         title: str | None = None,
         sub_title: str | None = None,
+        _mouse_enabled: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize the Deep Agents application.
@@ -13617,6 +13618,37 @@ class DeepAgentsApp(App):
                 ),
             )
 
+    async def _handle_copy_image(self) -> None:
+        """Copy the most recently pasted image to the system clipboard."""
+        await self._mount_message(UserMessage("/copy-image"))
+        image = self._latest_pasted_image()
+        if image is None:
+            await self._mount_message(
+                AppMessage("No pasted image yet — use /paste-image first.")
+            )
+            return
+        from deepagents_code.clipboard import copy_image_with_feedback
+
+        copy_image_with_feedback(self, image)
+
+    async def _handle_paste_image(self) -> None:
+        """Paste an image from the system clipboard at cursor position."""
+        await self._mount_message(UserMessage("/paste-image"))
+        if self._chat_input is None:
+            await self._mount_message(AppMessage("Chat input is not ready yet."))
+            return
+        self._chat_input.paste_clipboard_image()
+
+    def _latest_pasted_image(self) -> Any:  # noqa: ANN401  # ImageData lives in media_utils; deferring to avoid the import.
+        """Return the most recently pasted image from the chat input tracker.
+
+        Returns `None` if no image has been pasted.
+        """
+        if self._chat_input is None or self._chat_input._image_tracker is None:
+            return None
+        images = self._chat_input._image_tracker.images
+        return images[-1] if images else None
+
     async def _handle_command(self, command: str) -> None:
         """Handle a slash command.
 
@@ -13772,6 +13804,10 @@ class DeepAgentsApp(App):
                     else "Failed to copy latest assistant message to clipboard."
                 )
                 await self._mount_message(AppMessage(fail_msg))
+        elif cmd == "/copy-image":
+            await self._handle_copy_image()
+        elif cmd in {"/paste-image", "/paste-img"}:
+            await self._handle_paste_image()
         elif cmd == "/editor":
             await self.action_open_editor()
         elif cmd in {"/offload", "/compact"}:
@@ -25297,7 +25333,7 @@ class AppResult:
 
 async def run_textual_app(
     *,
-    agent: Any = None,  # noqa: ANN401
+    agent: Any = None,  # noqa: ANN401  # BaseAgent has too many constructor args to type narrowly.
     assistant_id: str | None = None,
     backend: CompositeBackend | None = None,
     approval_mode: ApprovalMode | str = "manual",
@@ -25322,6 +25358,7 @@ async def run_textual_app(
     hook_trust: WorkspaceTrust | None = None,
     title: str | None = None,
     sub_title: str | None = None,
+    mouse: bool = True,
 ) -> AppResult:
     """Run the Textual application.
 
@@ -25387,6 +25424,11 @@ async def run_textual_app(
             `"Deep Agents"` is used.
         sub_title: Override the Textual `App.sub_title` shown in the optional
             header bar.
+        mouse: Forwarded to Textual's `App(mouse=...)`. Set to `False` for
+            web-based terminals (1Panel, ttyd, wetty) that strip the ESC
+            prefix from SGR mouse-report sequences and leak garbled input
+            into the prompt. Wired from `--no-mouse` or
+            `DEEPAGENTS_CODE_NO_MOUSE` in `main.py`.
 
     Returns:
         An `AppResult` with the return code and final thread ID.
@@ -25417,6 +25459,11 @@ async def run_textual_app(
         hook_trust=hook_trust,
         title=title,
         sub_title=sub_title,
+        # The Textual `App` signature in this version does not accept `mouse`;
+        # the no-mouse preference is stashed on the instance so the rest of
+        # the app can read it. See `run_textual_cli_async` for the upstream
+        # wiring of `--no-mouse` / `DEEPAGENTS_CODE_NO_MOUSE`.
+        _mouse_enabled=mouse,
     )
     try:
         await app.run_async()

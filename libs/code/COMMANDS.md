@@ -8,7 +8,7 @@ Regenerate this file with `make commands-catalog` after changing command names,
 aliases, descriptions, visibility, or hidden-command metadata.
 
 
-## Public (38)
+## Public (40)
 
 | Command | Aliases | Description |
 | --- | --- | --- |
@@ -19,6 +19,7 @@ aliases, descriptions, visibility, or hidden-command metadata.
 | `/changelog` |  | Open the changelog in a browser |
 | `/clear` |  | Clear the chat and start a new thread |
 | `/copy` |  | Copy the latest assistant message to clipboard |
+| `/copy-image` |  | Copy the most recently pasted image to the system clipboard |
 | `/cost` |  | Show estimated thread cost |
 | `/docs` |  | Open the docs |
 | `/editor` |  | Open prompt in an external editor ($EDITOR) |
@@ -33,6 +34,7 @@ aliases, descriptions, visibility, or hidden-command metadata.
 | `/model` |  | Switch models or edit model settings |
 | `/notifications` |  | Configure warning notifications |
 | `/offload` | `/compact` | Summarize and offload older messages to free context |
+| `/paste-image` | `/paste-img` | Paste an image from the system clipboard at cursor position |
 | `/plugins` |  | Manage plugins |
 | `/quit` | `/q` | Exit app |
 | `/reload` |  | Reload environment and config |

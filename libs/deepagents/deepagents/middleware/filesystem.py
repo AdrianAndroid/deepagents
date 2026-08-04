@@ -186,6 +186,27 @@ _TOOL_MESSAGE_FIELD_BY_BLOCK_TYPE: Final = {"image": "image_tool_message", "file
 """Extra `ModelProfile` field that can gate a block type specifically within a `ToolMessage`."""
 
 
+def _accepts_native_absolute_paths(backend: Any) -> bool:
+    """Return whether the backend will resolve Windows drive-letter paths.
+
+    A real on-disk `FilesystemBackend` (or `LocalShellBackend`) is allowed to
+    pass a Windows drive-letter path (`C:\\...`, `D:/...`) through to the
+    host OS for resolution. Virtual backends (state/store/sandbox/composite
+    routing to one) and `FilesystemBackend(virtual_mode=True)` would
+    silently shadow an attacker-supplied host path, so they must keep
+    treating the path as a virtual token and reject drive-letter prefixes.
+    """
+    from deepagents.backends import CompositeBackend, FilesystemBackend
+
+    candidate = backend
+    if isinstance(candidate, CompositeBackend):
+        candidate = candidate.default
+    return (
+        isinstance(candidate, FilesystemBackend)
+        and not getattr(candidate, "virtual_mode", False)
+    )
+
+
 def _model_tolerates_non_pdf_files(model: "BaseChatModel | None") -> bool:
     """Whether `model` is known to accept non-PDF `file` blocks.
 
@@ -1629,7 +1650,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for ls tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(path)
+                validated_path = validate_path(path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1668,7 +1689,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for ls tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(path)
+                validated_path = validate_path(path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1835,7 +1856,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for read_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1862,7 +1883,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for read_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1901,7 +1922,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for write_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1940,7 +1961,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for write_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -1995,7 +2016,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for edit_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2037,7 +2058,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for edit_file tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2088,7 +2109,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for delete tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2127,7 +2148,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for delete tool."""
             resolved_backend = self.backend
             try:
-                validated_path = validate_path(file_path)
+                validated_path = validate_path(file_path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2180,7 +2201,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for glob tool."""
             resolved_backend = self.backend
             try:
-                permission_path = validate_path(path if path is not None else "/")
+                permission_path = validate_path(path if path is not None else "/", allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2276,7 +2297,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for glob tool."""
             resolved_backend = self.backend
             try:
-                permission_path = validate_path(path if path is not None else "/")
+                permission_path = validate_path(path if path is not None else "/", allow_native_absolute=_accepts_native_absolute_paths(self.backend))
             except ValueError as e:
                 return ToolMessage(
                     content=f"Error: {e}",
@@ -2361,7 +2382,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Synchronous wrapper for grep tool."""
             if path is not None:
                 try:
-                    path = validate_path(path)
+                    path = validate_path(path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
                 except ValueError as e:
                     return ToolMessage(
                         content=f"Error: {e}",
@@ -2407,7 +2428,7 @@ class FilesystemMiddleware(AgentMiddleware[FilesystemState, ContextT, ResponseT]
             """Asynchronous wrapper for grep tool."""
             if path is not None:
                 try:
-                    path = validate_path(path)
+                    path = validate_path(path, allow_native_absolute=_accepts_native_absolute_paths(self.backend))
                 except ValueError as e:
                     return ToolMessage(
                         content=f"Error: {e}",

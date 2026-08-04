@@ -4,6 +4,22 @@
 # bump `__version__` in sync with `pyproject.toml` on every release PR.
 __version__ = "0.1.51"  # x-release-please-version
 
+DISTRIBUTION_NAME = "deepagents-code"
+"""PyPI distribution name (also the on-disk editable project name).
+
+Hardcoded to the upstream project name on `main` so `pkg_version(...)` and
+`distribution(...)` resolve to the installed package. A future zjcode
+rebrand touches this constant (and the matching string in `pyproject.toml`),
+nothing else.
+"""
+
+BRAND_NAME = "deepagents-code"
+"""User-facing brand name (CLI invocations, splash text, error messages).
+
+Separate from `DISTRIBUTION_NAME` so a brand-only rename (e.g. an alias
+wheel) does not require touching every place the package name is queried.
+"""
+
 DOCS_URL = "https://docs.langchain.com/oss/python/deepagents/code"
 """URL for `deepagents-code` documentation."""
 
