@@ -56,7 +56,7 @@ def read_pyproject_version(path: Path) -> str:
     text = path.read_text()
     match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
     if not match:
-        msg = f"No top-level `version = \"...\"` found in {path}"
+        msg = f'No top-level `version = "..."` found in {path}'
         raise SystemExit(msg)
     return match.group(1)
 
@@ -70,7 +70,7 @@ def read_version_py(path: Path) -> str:
     )
     if not match:
         msg = (
-            f"No `__version__ = \"...\"  # x-release-please-version` "
+            f'No `__version__ = "..."  # x-release-please-version` '
             f"line found in {path}."
         )
         raise SystemExit(msg)
@@ -89,7 +89,7 @@ def bump_pyproject(path: Path, new_version: str) -> str:
     pattern = re.compile(r'^(version\s*=\s*")([^"]+)(")', re.MULTILINE)
     match = pattern.search(text)
     if not match:
-        msg = f"No top-level `version = \"...\"` found in {path}"
+        msg = f'No top-level `version = "..."` found in {path}'
         raise SystemExit(msg)
     old = match.group(2)
     new_text = pattern.sub(rf"\g<1>{new_version}\g<3>", text, count=1)
@@ -106,7 +106,7 @@ def bump_version_py(path: Path, new_version: str) -> str:
     match = pattern.search(text)
     if not match:
         msg = (
-            f"No `__version__ = \"...\"  # x-release-please-version` "
+            f'No `__version__ = "..."  # x-release-please-version` '
             f"line found in {path}. This anchor is required for "
             f"release-please to keep tracking this file."
         )
@@ -207,9 +207,7 @@ def main() -> int:
                 f"[{MANIFEST_KEY}] : {cur_mf} -> {args.version}"
             )
         else:
-            print(
-                "  .release-please-manifest.json : (not found — will be skipped)"
-            )
+            print("  .release-please-manifest.json : (not found — will be skipped)")
         return 0
 
     old_py = bump_pyproject(PYPROJECT_PATH, args.version)

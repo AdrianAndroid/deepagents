@@ -226,6 +226,12 @@ division-by-zero = "error"
 # across environments.
 unused-ignore-comment = "ignore"
 
+[tool.ruff]
+extend-exclude = [
+    "run-publish.sh",   # shell scripts linted via shellcheck, not ruff
+    "*.sh",             # ditto for any other shell script
+]
+
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100
@@ -306,6 +312,25 @@ ignore-var-parameters = true
     "INP",      # Missing `__init__.py` — scripts are standalone
     "S",        # Security warnings — not applicable to scripts
     "T201",     # `print` found — scripts use print for output
+]
+"bump-version.py" = [
+    "ANN",      # Missing/extra annotations — CLI script, readability over typing
+    "BLE001",   # Blind exception catch — resilience in standalone scripts
+    "D",        # Docstring rules — CLI script, comments over docstrings
+    "EM",       # Error message string formatting
+    "EXE001",   # Shebang on first line is fine for CLI tools
+    "INP001",   # Missing `__init__.py` — script is standalone
+    "PTH118",   # pathlib.open without explicit encoding
+    "PTH123",   # pathlib.Path.open without explicit encoding
+    "PTH201",   # pathlib.Path(...) without open encoding
+    "PTH207",   # pathlib glob without encoding
+    "PLW1514",  # unspecified-encoding in open() — script uses defaults
+    "F541",     # f-string-without-interpolation — script uses str.print
+    "PTH",      # Prefer Path over os.path — script uses both for readability
+    "Q",        # Quote rules — script picks quotes per readability
+    "S",        # Security warnings — not applicable to scripts
+    "T201",     # `print` found — scripts use print for output
+    "TRY",      # try/except style — script prioritizes readability
 ]
 "examples/**" = [
     "ANN001",   # Missing type annotation for function argument — examples prioritize clarity
