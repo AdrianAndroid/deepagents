@@ -5103,3 +5103,139 @@ def _load_agents_field(field: str, config_path: Path | None = None) -> str | Non
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def save_custom_provider(
+    provider_id: str,
+    display_name: str,
+    base_url: str,
+    models: list[str] | None = None,
+    class_path: str = "langchain_openai:ChatOpenAI",
+    api_key_env: str | None = None,
+    api_key: str | None = None,
+    default_model: str | None = None,
+    max_input_tokens: int | None = None,
+    config_path: Path | None = None,
+) -> bool:
+    """Save a custom OpenAI-compatible provider to the config file.
+
+    Args:
+        provider_id: Short identifier for the provider.
+        display_name: Human-readable name for the provider shown in the UI.
+        base_url: Base URL for the provider's OpenAI-compatible API endpoint.
+        models: Model IDs supported by this provider.
+        class_path: Fully-qualified model class path.
+        api_key_env: Environment variable name for the provider API key.
+        api_key: API key to store for the provider.
+        default_model: Default model ID for this provider.
+        max_input_tokens: Optional context-window size (tokens) written to the
+            provider `profile` table. The API does not return this — declaring
+            it here is what lets the per-call info line render `ctx=used/limit~
+            (pct%)` for this provider's models.
+        config_path: Path to config file.
+
+    Returns:
+        `True` if save succeeded, `False` if it failed due to I/O errors.
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+
+    model_list = list(models or [])
+    if default_model and default_model not in model_list:
+        model_list.append(default_model)
+    if not api_key_env and class_path == "langchain_openai:ChatOpenAI":
+        api_key_env = "OPENAI_API_KEY"
+    elif api_key and not api_key_env:
+        api_key_env = _provider_api_key_env(provider_id)
+
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if config_path.exists():
+            with config_path.open("rb") as f:
+                data = tomllib.load(f)
+        else:
+            data = {}
+
+        models_section = data.setdefault("models", {})
+        providers_section = models_section.setdefault("providers", {})
+
+        provider_config: ProviderConfig = {
+            "display_name": display_name,
+            "base_url": base_url,
+            "class_path": class_path,
+            "models": model_list,
+        }
+        if api_key_env:
+            provider_config["api_key_env"] = api_key_env
+        if default_model:
+            provider_config["default_model"] = default_model
+        if isinstance(max_input_tokens, int) and max_input_tokens > 0:
+            provider_config["profile"] = {"max_input_tokens": max_input_tokens}
+        providers_section[provider_id] = provider_config
+
+        fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                tomli_w.dump(data, f)
+            Path(tmp_path).replace(config_path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                Path(tmp_path).unlink()
+            raise
+    except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
+        logger.exception("Could not save custom provider %s", provider_id)
+        return False
+
+    if api_key:
+        try:
+            auth_store.set_stored_key(provider_id, api_key, base_url=base_url)
+        except RuntimeError:
+            logger.exception("Could not save API key for provider %s", provider_id)
+            return False
+
+    clear_caches()
+    return True
+
+
+class ModelDiscoveryError(Exception):
+    """Raised when discovering models from a provider's `/models` endpoint fails.
+
+    The message is user-facing and safe to render verbatim in the TUI.
+    """
+
+
+def fetch_provider_models(
+    base_url: str,
+    api_key: str | None = None,
+    *,
+    timeout: float = 10.0,
+    include_retiring: bool = True,
+) -> list[str]:
+    """Fetch the list of available models from an OpenAI-compatible provider.
+
+    Calls `GET {base_url}/models` with a Bearer token when `api_key` is
+    provided. Filters out models whose `status` is `"Shutdown"` (a Volcengine
+    Ark extension); other providers usually omit the field, in which case all
+    models are kept.
+
+    Args:
+        base_url: Provider's OpenAI-compatible API base URL (with or without a
+            trailing slash).
+        api_key: Optional API key sent as `Authorization: Bearer <key>`.
+        timeout: Total request timeout in seconds.
+        include_retiring: When `False`, also drop models with `status="Retiring"`.
+
+    Returns:
+        Sorted list of unique model IDs.
+
+    Raises:
+        ModelDiscoveryError: If the request fails, the response is not
+            successful, or the payload cannot be parsed as an OpenAI-style
+            model list.
+    """
+    import httpx  # local import to avoid pulling httpx at module import time
+
+    if not base_url:
+        msg = "Base URL is required to discover models."
+        raise ModelDiscoveryError(msg)
