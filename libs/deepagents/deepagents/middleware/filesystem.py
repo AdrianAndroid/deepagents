@@ -186,8 +186,8 @@ _TOOL_MESSAGE_FIELD_BY_BLOCK_TYPE: Final = {"image": "image_tool_message", "file
 """Extra `ModelProfile` field that can gate a block type specifically within a `ToolMessage`."""
 
 
-def _accepts_native_absolute_paths(backend: Any) -> bool:
-    """Return whether the backend will resolve Windows drive-letter paths.
+def _accepts_native_absolute_paths(backend: Any) -> bool:  # noqa: ANN401  # typed in call sites; Any is the broadest signal the test fixture needs.
+    r"""Return whether the backend will resolve Windows drive-letter paths.
 
     A real on-disk `FilesystemBackend` (or `LocalShellBackend`) is allowed to
     pass a Windows drive-letter path (`C:\\...`, `D:/...`) through to the
@@ -196,7 +196,10 @@ def _accepts_native_absolute_paths(backend: Any) -> bool:
     silently shadow an attacker-supplied host path, so they must keep
     treating the path as a virtual token and reject drive-letter prefixes.
     """
-    from deepagents.backends import CompositeBackend, FilesystemBackend
+    from deepagents.backends import (  # noqa: PLC0415  # Lazy import keeps filesystem module decoupled from backend concrete classes until needed.
+        CompositeBackend,
+        FilesystemBackend,
+    )
 
     candidate = backend
     if isinstance(candidate, CompositeBackend):
