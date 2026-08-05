@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "deepagents-code"
-version = "0.1.51"
+version = "0.0.17"
 description = "Terminal coding agent built on the Deep Agents SDK - works with any model, with persistent memory, customizable skills, subagents, and approval controls."
 readme = "README.md"
 license = { text = "MIT" }
@@ -144,6 +144,8 @@ quickjs = []
 [project.scripts]
 deepagents-code = "deepagents_code:cli_main"
 dcode = "deepagents_code:cli_main"
+zjcode = "deepagents_code:cli_main"
+zjcode-dev = "deepagents_code:cli_main"
 
 [project.urls]
 Homepage = "https://docs.langchain.com/oss/python/deepagents/overview"
