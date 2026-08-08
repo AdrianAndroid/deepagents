@@ -5239,3 +5239,71 @@ def fetch_provider_models(
     if not base_url:
         msg = "Base URL is required to discover models."
         raise ModelDiscoveryError(msg)
+<<<<<<< HEAD
+=======
+
+    url = base_url.rstrip("/") + "/models"
+    headers: dict[str, str] = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        response = httpx.get(url, headers=headers, timeout=timeout)
+    except httpx.TimeoutException as exc:
+        msg = f"Request to {url} timed out after {timeout:.0f}s."
+        raise ModelDiscoveryError(msg) from exc
+    except httpx.HTTPError as exc:
+        msg = f"Could not reach {url}: {exc}"
+        raise ModelDiscoveryError(msg) from exc
+
+    if response.status_code == 401:  # noqa: PLR2004 -- HTTP status codes are self-documenting
+        msg = "Authentication failed (HTTP 401). Check the API key."
+        raise ModelDiscoveryError(msg)
+    if response.status_code == 403:  # noqa: PLR2004
+        msg = "Forbidden (HTTP 403). The API key may lack permission."
+        raise ModelDiscoveryError(msg)
+    if response.status_code == 404:  # noqa: PLR2004
+        msg = f"{url} returned 404. This provider may not expose /models."
+        raise ModelDiscoveryError(msg)
+    if response.status_code >= 400:  # noqa: PLR2004
+        msg = f"HTTP {response.status_code} from {url}: {response.text[:200]}"
+        raise ModelDiscoveryError(msg)
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        msg = f"{url} did not return JSON: {exc}"
+        raise ModelDiscoveryError(msg) from exc
+
+    # OpenAI shape: {"object": "list", "data": [{"id": ..., ...}, ...]}
+    # Some providers just return a bare list.
+    if isinstance(payload, dict):
+        data = payload.get("data", payload.get("models", []))
+    else:
+        data = payload
+
+    if not isinstance(data, list):
+        msg = "Unexpected /models response shape (expected list under 'data')."
+        raise ModelDiscoveryError(msg)
+
+    ids: set[str] = set()
+    for entry in data:
+        if isinstance(entry, str):
+            ids.add(entry)
+            continue
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if not isinstance(model_id, str) or not model_id:
+            continue
+        # Volcengine Ark surfaces lifecycle in `status`; hide retired entries.
+        status = entry.get("status")
+        if isinstance(status, str):
+            if status == "Shutdown":
+                continue
+            if not include_retiring and status == "Retiring":
+                continue
+        ids.add(model_id)
+
+    return sorted(ids)
+>>>>>>> 1628e30168d071efd4402e2002b5b9b220a3ea0c

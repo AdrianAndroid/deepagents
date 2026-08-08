@@ -1183,7 +1183,31 @@ class ChatTextArea(PasteBurstTextArea):
         return False
 
     async def _on_paste(self, event: events.Paste) -> None:
-        """Handle paste events, detecting file paths and large pastes."""
+        """Handle paste events, detecting images, file paths, and large pastes."""
+        # First check if clipboard has an image
+        from deepagents_code.media_utils import get_clipboard_image
+
+        image = await asyncio.to_thread(get_clipboard_image)
+        if image is not None:
+            event.prevent_default()
+            event.stop()
+            # Bind a timestamped placeholder before archiving so the local
+            # filename matches the token the user sees (e.g. img_YYYYMMDDHHMMSS).
+            existing_text = self.text
+            placeholder = self._chat_input_owner._image_tracker.add_image(
+                image, existing_text=existing_text
+            )
+            stem = placeholder.strip("[]")
+            from deepagents_code.media_utils import save_pasted_media
+
+            await asyncio.to_thread(
+                save_pasted_media, image.base64_data, stem, image.format
+            )
+            # Insert placeholder at cursor position
+            self.insert(placeholder)
+            return
+
+        # Original text paste logic
         self._backslash_pending_time = None
         if self._paste_burst_buffer:
             await self._flush_paste_burst()
